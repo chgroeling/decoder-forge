@@ -1,6 +1,7 @@
 from bit_match_gen.patricia.patricia import PatriciaTree
 
-def example1():
+
+def example1(): 
     # Example usage
     tree = PatriciaTree()
     tree.insert("hello", lambda: print("Hello"))
@@ -21,11 +22,13 @@ def example2():
     tree = PatriciaTree()
     tree.insert("110001", lambda: print("Hello"))
     tree.insert("110010", lambda: print("Helium"))
-    tree.insert("110100", lambda: print("Hero"))
+    tree.insert("110.00", lambda: print("<-- Wildcard"))
+    tree.insert("11.010", lambda: print("Helium"))
+    tree.insert("110100", lambda: print("<-- Match"))
     tree.insert("110000", lambda: print("Master"))
     tree.insert("111000", lambda: print("Mastering"))
-    tree.insert("011111", lambda: print(""))
-    action = tree.search("mastering")
+    tree.insert("011111", lambda: print("vdvd"))
+    action = tree.search("110100")
     if action:
         action()  # Should print "Hello"
 
