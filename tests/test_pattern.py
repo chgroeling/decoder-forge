@@ -1,4 +1,4 @@
-from src.bit_match_gen.pattern import Pattern
+from bit_match_gen.pattern import Pattern
 import pytest
 
 
@@ -93,3 +93,68 @@ def test_str_with_fixedmask_0xF_fixedbits_0xF_and_bit_length_5_set_returns_x1111
     pattern = Pattern(fixedmask=0xF, fixedbits=0xF, bit_length=5)
     pattern_str = str(pattern)
     assert pattern_str == "x1111"
+
+
+def test_eq_equal_patterns_returns_true():
+    pat_a = Pattern(fixedmask=0x3, fixedbits=0xA, bit_length=5)
+    pat_b = Pattern(fixedmask=0x3, fixedbits=0xA, bit_length=5)
+
+    assert pat_a == pat_b
+    assert pat_b == pat_a
+
+
+def test_eq_fixedmask_different_returns_false():
+    pat_a = Pattern(fixedmask=0x3, fixedbits=0xA, bit_length=5)
+    pat_b = Pattern(fixedmask=0x4, fixedbits=0xA, bit_length=5)
+
+    assert pat_a != pat_b
+    assert pat_b != pat_a
+
+
+def test_eq_fixedbits_different_returns_false():
+    pat_a = Pattern(fixedmask=0x3, fixedbits=0xA, bit_length=5)
+    pat_b = Pattern(fixedmask=0x3, fixedbits=0xB, bit_length=5)
+
+    assert pat_a != pat_b
+    assert pat_b != pat_a
+
+
+def test_eq_bit_length_different_returns_false():
+    pat_a = Pattern(fixedmask=0x3, fixedbits=0xA, bit_length=5)
+    pat_b = Pattern(fixedmask=0x3, fixedbits=0xA, bit_length=6)
+
+    assert pat_a != pat_b
+    assert pat_b != pat_a
+
+
+def test_separate_empty_fixedmask_return_matchall_same():
+    # pat_a = "xx10"
+    pat = Pattern(fixedmask=0x3, fixedbits=0x2, bit_length=4)
+    fixedmask = 0x0
+
+    pat_a, pat_b = pat.split_by_mask(fixedmask)
+
+    assert pat_a == Pattern(fixedmask=0x0, fixedbits=0x0, bit_length=4)
+    assert pat_b == Pattern(fixedmask=0x3, fixedbits=0x2, bit_length=4)
+
+
+def test_split_by_mask_one_bit_fixedmask_return_separate_bitmasks():
+    # pat_a = "xx10"
+    pat = Pattern(fixedmask=0x3, fixedbits=0x2, bit_length=4)
+    fixedmask = 0x2
+
+    pat_a, pat_b = pat.split_by_mask(fixedmask)
+
+    assert pat_a == Pattern(fixedmask=0x2, fixedbits=0x2, bit_length=4)
+    assert pat_b == Pattern(fixedmask=0x1, fixedbits=0x0, bit_length=4)
+
+
+def test_split_by_mask_one_bit_fixedmask_2_return_separate_bitmasks():
+    # pat_a = "xx10"
+    pat = Pattern(fixedmask=0x3, fixedbits=0x2, bit_length=4)
+    fixedmask = 0x1
+
+    pat_a, pat_b = pat.split_by_mask(fixedmask)
+
+    assert pat_a == Pattern(fixedmask=0x1, fixedbits=0x0, bit_length=4)
+    assert pat_b == Pattern(fixedmask=0x2, fixedbits=0x2, bit_length=4)

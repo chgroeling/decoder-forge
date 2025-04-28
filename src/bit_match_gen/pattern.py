@@ -12,12 +12,15 @@ class Pattern:
     A class representing a bit pattern with fixed and wildcard (don't care) bits.
 
     The pattern is defined by:
-      - fixedmask: a bitmask where each bit set to 1 indicates that the corresponding bit in the pattern is fixed.
-      - fixedbits: a number that gives the fixed bits' values in positions indicated by fixedmask.
-      - bit_length: the total number of bits in the pattern.
+    - fixedmask: a bitmask where each bit set to 1 indicates that the corresponding
+      bit in the pattern is fixed.
+    - fixedbits: a number that gives the fixed bits' values in positions indicated
+      by fixedmask.
+    - bit_length: the total number of bits in the pattern.
 
-    The class provides utilities to parse a string representation of a bit pattern and to convert the pattern
-    back into a string form.
+    The class provides utilities to parse a string representation of a bit pattern,
+    convert the pattern back into a string, and separate the pattern based on a given
+    mask.
     """
 
     def __init__(self, fixedmask: int = 0x0, fixedbits: int = 0x0, bit_length: int = 1):
@@ -25,13 +28,15 @@ class Pattern:
         Initialize a Pattern instance.
 
         Parameters:
-            fixedmask (int): A bitmask indicating which bits are fixed (1) and which are wildcards (0).
+            fixedmask (int): A bitmask indicating which bits are fixed (1) and which
+              are wildcards (0).
             fixedbits (int): The fixed bit values corresponding to the fixedmask.
             bit_length (int): The total length of the bit pattern.
 
         Raises:
-            AssertionError: If the parameters do not meet the required type, value conditions, or size constraints.
-            Specifically, if fixedmask or fixedbits cannot be represented within the bit_length.
+            AssertionError: If the parameters do not meet the required type, value
+              conditions, or size constraints. Specifically, if fixedmask
+              or fixedbits cannot be represented within the bit_length.
         """
 
         assert isinstance(fixedmask, int)
@@ -52,7 +57,8 @@ class Pattern:
     @staticmethod
     def parse_pattern(pat_str: str) -> "Pattern":
         """
-        Parse a string representation of a bit pattern and return a corresponding Pattern object.
+        Parse a string representation of a bit pattern and return a corresponding Pattern
+        object.
 
         The input string should contain characters representing bits:
           - '0' or '1' indicate fixed bits.
@@ -62,19 +68,20 @@ class Pattern:
             pat_str (str): The string representation of the bit pattern.
 
         Returns:
-            Pattern: A Pattern object containing the fixedmask, fixedbits, and bit length derived from the input.
+            Pattern: A Pattern object containing the fixedmask, fixedbits, and bit
+                     length derived from the input.
 
         Raises:
             ValueError: If the input string is empty.
 
         Example:
             >>> Pattern.parse_pattern("10x1")
-            Pattern(fixedmask=0xD, fixedbits=0x9, width=4)
+            Pattern(fixedmask=0xD, fixedbits=0x9, bit_length=4)
         """
 
         assert isinstance(pat_str, str)
-        width = len(pat_str)
-        if width == 0:
+        bit_length = len(pat_str)
+        if bit_length == 0:
             raise ValueError("No empty string allowed")
 
         # 1 if the bit is 0 or 1. 0 if wildcard
@@ -91,7 +98,7 @@ class Pattern:
         pat = Pattern(
             fixedmask=int(fixedmask_str, 2),
             fixedbits=int(fixedbits_str, 2),
-            bit_length=width,
+            bit_length=bit_length,
         )
         return pat
 
@@ -139,6 +146,71 @@ class Pattern:
             "Pattern("
             + f"fixedmask=0x{self.fixedmask:x}, "
             + f"fixedbits=0x{self.fixedbits:x}, "
-            + f"width={self.bit_length}"
+            + f"bit_length={self.bit_length}"
             + ")"
         )
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, self.__class__):
+            if other.fixedmask != self.fixedmask:
+                return False
+
+            if other.fixedbits != self.fixedbits:
+                return False
+
+            if other.bit_length != self.bit_length:
+                return False
+
+            return True
+        else:
+            return False
+
+    def split_by_mask(self, mask) -> ("Pattern", "Pattern"):
+        """
+        Splits the current Pattern into two based on the given mask.
+
+        The given mask must be fully contained within the fixedmask of this pattern.
+        The function returns a tuple of two Pattern objects:
+          - The first Pattern (pat_1) corresponds to the bits selected by the mask.
+          - The second Pattern (pat_2) corresponds to the remaining bits not selected by
+            the mask.
+
+        Parameters:
+            mask (int): An integer mask indicating which bits to separate.
+
+        Returns:
+            (Pattern, Pattern): A tuple containing the separated Pattern objects.
+
+        Raises:
+            ValueError: If the provided mask is not fully contained within the fixedmask
+                        of this Pattern.
+
+        Example:
+            >>> orig = Pattern(0b111, 0b101, 3)
+            >>> pat_a, pat_b = orig.separate(0b101)
+            >>> pat_a
+            Pattern(fixedmask=0x5, fixedbits=0x5, bit_length=3)
+            >>> pat_b
+            Pattern(fixedmask=0x2, fixedbits=0x0, bit_length=3)
+        """
+
+        # check if mask is contained in this pattern
+        if (self.fixedmask | mask) != self.fixedmask:
+            raise ValueError(
+                "The provided mask is not fully contained within the "
+                + "Pattern's fixedmask"
+            )
+
+        pat_1 = Pattern(
+            fixedmask=mask,
+            fixedbits=self.fixedbits & mask,
+            bit_length=self.bit_length,
+        )
+
+        pat_2 = Pattern(
+            fixedmask=self.fixedmask & ~mask,
+            fixedbits=self.fixedbits & ~mask,
+            bit_length=self.bit_length,
+        )
+
+        return pat_1, pat_2
