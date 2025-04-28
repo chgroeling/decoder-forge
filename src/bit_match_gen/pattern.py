@@ -165,6 +165,9 @@ class Pattern:
         else:
             return False
 
+    def __hash__(self):
+        return hash((self.fixedmask, self.fixedbits, self.bit_length))
+
     def split_by_mask(self, mask) -> ("Pattern", "Pattern"):
         """
         Splits the current Pattern into two based on the given mask.

@@ -24,4 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ('x', 'X', '.', including undefined) bits respectively.
 - Added new file pattern_algorithms.py:
   – Introduces the compute_common_fixedmask function, which computes the bitwise AND (intersection) of the fixedmask values from a list of Pattern objects.
+  - Added the new function group_patterns_by_common_fixedmask to pattern_algorithms.py. This function computes a common fixed mask from a list of Pattern objects (using a bitwise AND on their fixedmask attributes) and then groups the patterns based on the fixed portion obtained from splitting each pattern by that common mask.
+
 
