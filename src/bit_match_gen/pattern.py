@@ -51,7 +51,9 @@ class Pattern:
         assert fixedbits.bit_length() <= bit_length
 
         self.fixedmask = fixedmask
-        self.fixedbits = fixedbits
+
+        # Set all bits to zero which are not part of mask
+        self.fixedbits = fixedbits & self.fixedmask
         self.bit_length = bit_length
 
     @staticmethod
