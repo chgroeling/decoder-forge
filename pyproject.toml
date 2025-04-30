@@ -20,3 +20,6 @@ bit-match-gen = "bit_match_gen:main"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
 
+
+[tool.poetry.dependencies]
+click = "^8.1.8"

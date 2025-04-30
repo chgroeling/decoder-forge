@@ -1,39 +1,40 @@
-from bit_match_gen.patricia.patricia import PatriciaTree
+import click
+import logging
+from bit_match_gen.uc_show_decode_tree import uc_show_decode_tree
+from bit_match_gen.external.printer import Printer
+
+logger = logging.getLogger(__name__)
 
 
-def example1(): 
-    # Example usage
-    tree = PatriciaTree()
-    tree.insert("hello", lambda: print("Hello"))
-    tree.insert("helium", lambda: print("Helium"))
-    tree.insert("hero", lambda: print("Hero"))
-    tree.insert("master", lambda: print("Master"))
-    tree.insert("mastering", lambda: print("Mastering"))
-    tree.insert("mastricht", lambda: print(""))
-    action = tree.search("mastering")
-    if action:
-        action()  # Should print "Hello"
+@click.group()
+@click.option("-v", "--verbose", count=True)
+@click.pass_context
+def cli(ctx, verbose):
+    # ensure that ctx.obj exists and is a dict (in case `cli()` is called
+    # by means other than the `if` block below)
+    ctx.ensure_object(dict)
 
-    tree.print_tree()  # Visualize the tree
+    level = logging.CRITICAL
+    if verbose >= 2:
+        level = logging.DEBUG
+    elif verbose == 1:
+        level = logging.INFO
+
+    logging.basicConfig(encoding="utf-8", level=level)
+
+    ctx.obj["verbosity"] = verbose
 
 
-def example2():
-    # Example usage
-    tree = PatriciaTree()
-    tree.insert("110001", lambda: print("Hello"))
-    tree.insert("110010", lambda: print("Helium"))
-    tree.insert("110.00", lambda: print("<-- Wildcard"))
-    tree.insert("11.010", lambda: print("Helium"))
-    tree.insert("110100", lambda: print("<-- Match"))
-    tree.insert("110000", lambda: print("Master"))
-    tree.insert("111000", lambda: print("Mastering"))
-    tree.insert("011111", lambda: print("vdvd"))
-    action = tree.search("110100")
-    if action:
-        action()  # Should print "Hello"
+@cli.command()
+@click.pass_context
+def show_tree(ctx):
+    """ shows the decode tree of an instruction set.
 
-    tree.print_tree()  # Visualize the tree
+    The instruction set is given by a file in json format.
+    """
+    printer = Printer()
+    uc_show_decode_tree(printer, None)
 
 
 def main():
-    example2()
+    cli()
