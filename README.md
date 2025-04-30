@@ -1,33 +1,13 @@
-# bit-match-gen
+# decoder-forge 🔨  
+**Craft Decoders for Machine Instructions, Binary Protocols, and Beyond**  
 
-**bit-match-gen** is a Python code generator that creates C++ bit pattern matching algorithms from a JSON configuration file.
+Decoder-forge is a *Python-powered toolkit* that generates source code for decoders used in decoding machine instructions (like ARMv7-M), structured data formats (e.g., MessagePack), and proprietary binary protocols. Whether you’re reverse-engineering firmware, analyzing network packets, or debugging IoT devices, Decoder-forge transforms raw bytes into human-readable insights with flexibility and speed, allowing you to easily create and customize your own decoders.
 
 ## Features
 
-- Generate efficient C++ code for bit pattern matching
+- Generate efficient C++/Python code for bit pattern matching
 - Simple JSON input format for easy configuration
 - Extensible and customizable for various use cases
-
-## Installation
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/bit-match-gen.git
-   cd bit-match-gen
-   ```
-
-2. Install the required dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-## Usage
-
-Create a JSON file defining your bit patterns, then run:
-```bash
-python generate.py your_patterns.json
-```
-This will output the generated C++ code.
 
 ## License
 

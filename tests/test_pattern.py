@@ -1,4 +1,4 @@
-from bit_match_gen.pattern import Pattern
+from decoder_forge.pattern import Pattern
 import pytest
 
 

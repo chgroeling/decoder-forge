@@ -1,6 +1,6 @@
 import json
 import logging
-from bit_match_gen.i_printer import IPrinter
+from decoder_forge.i_printer import IPrinter
 
 logger = logging.getLogger(__name__)
 

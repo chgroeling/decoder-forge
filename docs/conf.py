@@ -6,7 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "bit-match-gen"
+project = "decoder-forge"
 copyright = "2025, Christian Gröling"
 author = "Christian Gröling"
 

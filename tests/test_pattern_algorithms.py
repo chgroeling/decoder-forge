@@ -1,10 +1,10 @@
-from bit_match_gen.pattern_algorithms import (
+from decoder_forge.pattern_algorithms import (
     compute_common_fixedmask,
     generate_tree_by_common_bits,
     PatternTree,
     PatternLeaf,
 )
-from bit_match_gen.pattern import Pattern
+from decoder_forge.pattern import Pattern
 import pytest
 
 

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added the `bit-match-gen` CLI application, located in `bit_match_gen.main`.
+- Added the `decoder-forge` CLI application, located in `decoder_forge.main`.
   - The CLI utilizes the `click` library for command line functionality.
   - Introduced an option to modify the application's logging verbosity (-v and -vv).
   - Added the `show-tree` command, which displays the decode tree for the specified bit patterns contained in a JSON file.

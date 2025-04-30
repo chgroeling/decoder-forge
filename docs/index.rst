@@ -1,4 +1,4 @@
-bit-match-gen documentation
+decoder-forge documentation
 ===========================
 
 Add your content using ``reStructuredText`` syntax. See the
@@ -10,4 +10,4 @@ documentation for details.
    :caption: Contents:
 
              
-.. autofunction:: bit_match_gen.pattern_algorithms.compute_common_fixedmask
+.. autofunction:: decoder_forge.pattern_algorithms.compute_common_fixedmask

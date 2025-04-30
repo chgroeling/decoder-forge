@@ -1,7 +1,7 @@
 import click
 import logging
-from bit_match_gen.uc_show_decode_tree import uc_show_decode_tree
-from bit_match_gen.external.printer import Printer
+from decoder_forge.uc_show_decode_tree import uc_show_decode_tree
+from decoder_forge.external.printer import Printer
 
 logger = logging.getLogger(__name__)
 

@@ -3,7 +3,7 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [project]
-name = "bit-match-gen"          
+name = "decoder-forge"          
 version = "0.1.0"               
 description = "A Python tool that generates efficient C++ bit pattern matching algorithms from a simple JSON configuration file."
 authors = [
@@ -14,7 +14,7 @@ license = "MIT"
 readme = "README.md"            
 
 [project.scripts]
-bit-match-gen = "bit_match_gen:main"
+decoder-forge = "decoder_forge:main"
 
 
 [tool.poetry.group.dev.dependencies]
