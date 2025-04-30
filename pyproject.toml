@@ -9,7 +9,7 @@ description = "A Python tool that generates efficient C++ bit pattern matching a
 authors = [
     {name = "Christian Gröling", email = "contact@christiangroeling.de"}
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 license = "MIT"                 
 readme = "README.md"            
 
@@ -23,3 +23,5 @@ pytest = "^8.3.5"
 
 [tool.poetry.dependencies]
 click = "^8.1.8"
+sphinx = "^8.2.3"
+sphinx-rtd-theme = "^3.0.2"

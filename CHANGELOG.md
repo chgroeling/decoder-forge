@@ -30,3 +30,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the `Printer` class in `printer.py` and the `IPrinter` interface in `i_printer.py`. Both are designed to abstract the print command for more testable use cases.
 
 - Added the `uc_show_decode_tree` use case in `uc_show_decode_tree.py`. This use case is designed to display the decode tree using a specified JSON file that contains bit patterns for building the tree.
+
+- Added Sphinx documentation to thr project
