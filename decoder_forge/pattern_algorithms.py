@@ -66,7 +66,7 @@ def compute_fixed_bit_groups(pats: list[Pattern]):
 
         - The remainder of the pattern after splitting
         - The original Pattern object before the split
-
+ 
     Raises:
         ValueError: If 'split_by_mask' is invoked with a mask not contained within the
             pattern's fixedmask.
@@ -85,7 +85,7 @@ def compute_fixed_bit_groups(pats: list[Pattern]):
     return groups
 
 
-def generate_tree_by_common_bits(
+def build_pattern_tree_by_fixed_bits(
     pats: list[Pattern],
 ) -> dict[Pattern, [Pattern]]:
     """
@@ -119,7 +119,7 @@ def generate_tree_by_common_bits(
 
     Example:
         >>> # Assuming pattern1, pattern2, and pattern3 are valid Pattern objects with 'split_by_mask'
-        >>> tree = generate_tree_by_common_bits([pattern1, pattern2, pattern3])
+        >>> tree = build_pattern_tree_by_fixed_bits([pattern1, pattern2, pattern3])
         >>> print(tree)
     """
 

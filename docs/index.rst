@@ -11,4 +11,4 @@ Decoder-forge is a *Python-powered toolkit* that generates source code for decod
              
 .. autofunction:: decoder_forge.pattern_algorithms.compute_common_fixedmask
 .. autofunction:: decoder_forge.pattern_algorithms.compute_fixed_bit_groups
-.. autofunction:: decoder_forge.pattern_algorithms.generate_tree_by_common_bits
+.. autofunction:: decoder_forge.pattern_algorithms.build_pattern_tree_by_fixed_bits

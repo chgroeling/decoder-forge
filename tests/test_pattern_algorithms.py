@@ -1,7 +1,7 @@
 from decoder_forge.pattern_algorithms import (
     compute_common_fixedmask,
     compute_fixed_bit_groups,
-    generate_tree_by_common_bits,
+    build_pattern_tree_by_fixed_bits,
     PatternTree,
     PatternLeaf,
 )
@@ -82,11 +82,11 @@ def test_compute_fixed_bit_groups_three_patterns_two_with_exclusive_bits_returns
     }
 
 
-def test_generate_tree_by_common_bits_one_pattern_returns_correct_tree():
+def test_build_pattern_tree_by_fixed_bits_one_pattern_returns_correct_tree():
     # pat_a = "11x00x11"
     pat_a = Pattern(fixedmask=0xDB, fixedbits=0xC3, bit_length=8)
 
-    tree = generate_tree_by_common_bits([pat_a])
+    tree = build_pattern_tree_by_fixed_bits([pat_a])
 
     assert tree == PatternTree(
         pat=None,
@@ -101,14 +101,14 @@ def test_generate_tree_by_common_bits_one_pattern_returns_correct_tree():
     )
 
 
-def test_generate_tree_by_common_bits_two_patterns_contained_returns_correct_tree():
+def test_build_pattern_tree_by_fixed_bits_two_patterns_contained_returns_correct_tree():
     # pat_a = "11x00x11"
     pat_a = Pattern(fixedmask=0xDB, fixedbits=0xC3, bit_length=8)
 
     # pat_b = "11xxx0xx"
     pat_b = Pattern(fixedmask=0xC4, fixedbits=0xC0, bit_length=8)
 
-    tree = generate_tree_by_common_bits([pat_a, pat_b])
+    tree = build_pattern_tree_by_fixed_bits([pat_a, pat_b])
     assert tree == PatternTree(
         pat=None,
         children=[
@@ -135,7 +135,7 @@ def test_generate_tree_by_common_bits_two_patterns_contained_returns_correct_tre
     )
 
 
-def test_generate_tree_by_common_bits_three_patterns_two_with_exclusive_bits_returns_correct_tree():
+def test_build_pattern_tree_by_fixed_bits_three_patterns_two_with_exclusive_bits_returns_correct_tree():
     # pat_a = "11xxxxx0"
     pat_a = Pattern(fixedmask=0xC1, fixedbits=0xC0, bit_length=8)
 
@@ -145,7 +145,7 @@ def test_generate_tree_by_common_bits_three_patterns_two_with_exclusive_bits_ret
     # pat_c= "11xxxx11"
     pat_c = Pattern(fixedmask=0xC3, fixedbits=0xC3, bit_length=8)
 
-    tree = generate_tree_by_common_bits([pat_a, pat_b, pat_c])
+    tree = build_pattern_tree_by_fixed_bits([pat_a, pat_b, pat_c])
 
     assert tree == PatternTree(
         pat=None,
