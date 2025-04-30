@@ -64,21 +64,25 @@ def generate_tree_by_common_bits(
     The function begins by wrapping every Pattern in a PatternUnfolded node so that they
     can be processed by splitting them using a common mask. For each iteration, it does
     the following:
-      1. Computes a common fixed mask for all current unfolded Patterns.
-      2. Splits each Pattern using its 'split_by_mask' method with the computed mask. The
-         'split_by_mask' method divides a Pattern into two parts:
-           - The first part represents the bits selected by the mask (fixed portion).
-           - The second part contains the remaining bits.
-         Note: The mask must be fully contained within the pattern's fixedmask, or a
-         ValueError is raised.
-      3. Groups the Patterns based on their fixed portion (pa).
-      4. For each group:
-           - If there is only one Pattern, a PatternLeaf node is created.
-           - If multiple Patterns share a significant fixed portion (i.e., from_pat.fixedmask != 0),
-             a new PatternTree node is created with children as PatternUnfolded nodes to be processed
-             in the next iteration.
-           - If the fixed portion is not significant (i.e., fixedmask is 0), each Pattern becomes
-             a PatternLeaf node directly.
+
+    1. Computes a common fixed mask for all current unfolded Patterns.
+    2. Splits each Pattern using its 'split_by_mask' method with the computed mask. The
+       'split_by_mask' method divides a Pattern into two parts:
+
+       - The first part represents the bits selected by the mask (fixed portion).
+       - The second part contains the remaining bits.
+
+       Note: The mask must be fully contained within the pattern's fixedmask, or a
+       ValueError is raised.
+    3. Groups the Patterns based on their fixed portion (pa).
+    4. For each group:
+
+       - If there is only one Pattern, a PatternLeaf node is created.
+       - If multiple Patterns share a significant fixed portion (i.e., from_pat.fixedmask != 0),
+         a new PatternTree node is created with children as PatternUnfolded nodes to be processed
+         in the next iteration.
+       - If the fixed portion is not significant (i.e., fixedmask is 0), each Pattern becomes
+         a PatternLeaf node directly.
 
     Args:
         pats (list[Pattern]): A list of Pattern objects to be organized into a tree by their shared fixed bits.
