@@ -49,7 +49,7 @@ def compute_common_fixedmask(pats: list[Pattern]) -> int:
     return out
 
 
-def compute_fixed_bit_groups(pats: list[Pattern]):
+def build_groups_by_fixed_bits(pats: list[Pattern]):
     """
     Group Patterns based on their fixed bits after splitting by a common mask.
 
@@ -142,7 +142,7 @@ def build_pattern_tree_by_fixed_bits(
         pats_to_origins = {i.pat: i.origin for i in pats}
 
         # split pats into groups with fixed bits
-        fgrps = compute_fixed_bit_groups([i.pat for i in pats])
+        fgrps = build_groups_by_fixed_bits([i.pat for i in pats])
 
         for outter_pat, inner_pats in fgrps.items():
             if len(inner_pats) == 1:

@@ -1,13 +1,12 @@
 from decoder_forge.pattern_algorithms import (
     compute_common_fixedmask,
-    compute_fixed_bit_groups,
+    build_groups_by_fixed_bits,
     build_pattern_tree_by_fixed_bits,
     PatternTree,
     PatternLeaf,
 )
 from decoder_forge.pattern import Pattern
 import pytest
-import pprint
 
 
 def test_compute_common_fixedmask_with_2_equal_pats_returns_common_fixedmask():
@@ -49,7 +48,7 @@ def test_compute_common_fixedmask_with_3_different_pats_returns_common_fixedmask
     assert pat_common == 0x80
 
 
-def test_compute_fixed_bit_groups_three_patterns_two_with_exclusive_bits_returns_correct_dict():
+def test_build_groups_by_fixed_bits_three_patterns_two_with_exclusive_bits_returns_correct_dict():
     # pat_a = "11xxxxx0"
     pat_a = Pattern(fixedmask=0xC1, fixedbits=0xC0, bit_length=8)
 
@@ -59,9 +58,8 @@ def test_compute_fixed_bit_groups_three_patterns_two_with_exclusive_bits_returns
     # pat_c= "11xxxx11"
     pat_c = Pattern(fixedmask=0xC3, fixedbits=0xC3, bit_length=8)
 
-    groups = compute_fixed_bit_groups([pat_a, pat_b, pat_c])
+    groups = build_groups_by_fixed_bits([pat_a, pat_b, pat_c])
 
-    pprint.pprint(groups)
     assert groups == {
         Pattern(fixedmask=0xC1, fixedbits=0xC1, bit_length=8): [  # pat: "11xxxxx1"
             (

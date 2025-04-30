@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     
 - Added new file `pattern_algorithms.py`:
   – Added the `compute_common_fixedmask` function, which computes the bitwise AND (intersection) of the fixedmask values from a list of Pattern objects.
-  - Added the `compute_fixed_bit_groups` function, which groups patterns by their fixed part (the key) and associates each group with tuples of (remaining part, original pattern).
+  - Added the `build_groups_by_fixed_bits` function, which groups patterns by their fixed part (the key) and associates each group with tuples of (remaining part, original pattern).
   - Added the `build_pattern_tree_by_fixed_bits` function, which constructs a hierarchical tree of Patterns. It computes a common fixed bit mask, then recursively groups 
     Patterns based on their matching fixed bits, representing each group as either a leaf or a tree node depending on the significance of the fixed bits.
 
