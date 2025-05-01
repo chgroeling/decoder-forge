@@ -66,7 +66,7 @@ def build_groups_by_fixed_bits(pats: list[Pattern]):
 
         - The remainder of the pattern after splitting
         - The original Pattern object before the split
- 
+
     Raises:
         ValueError: If 'split_by_mask' is invoked with a mask not contained within the
             pattern's fixedmask.
@@ -167,3 +167,48 @@ def build_pattern_tree_by_fixed_bits(
                     current_tree.children.extend(children)
 
     return root
+
+
+def flatten_pattern_tree(tree: PatternTree):
+    """
+    Flatten a hierarchical PatternTree into a list of tuples.
+
+    This function converts a PatternTree hierarchy into a flat list for easier
+    traversal or debugging. Each element in the list is a tuple containing:
+
+    - The Pattern object at that node.
+    - The original Pattern object (None for internal tree nodes).
+    - The depth level of the node within the tree.
+    - A boolean indicating if the node is the last child (used for backtracking
+      information during visual representation).
+
+    Args:
+        tree (PatternTree): The root node of the PatternTree to be flattened.
+
+    Returns:
+        list: A list of tuples, each containing:
+            (Pattern, origin Pattern or None, depth integer, last_child flag boolean).
+
+    Example:
+        >>> flat_list = build_flat_tree(tree)
+        >>> for node in flat_list:
+        ...     print(node)
+
+    """
+
+    stack = []
+    stack.extend(((i, 0, idx == 0) for idx, i in enumerate(reversed(tree.children))))
+    flattend_tree = []
+    while len(stack) != 0:
+        item, depth, last_child = stack.pop()
+        if isinstance(item, PatternLeaf):
+            flattend_tree.append((item.pat, item.origin, depth, last_child))
+        elif isinstance(item, PatternTree):
+            flattend_tree.append((item.pat, None, depth, last_child))
+            stack.extend(
+                (
+                    (i, depth + 1, idx == 0)
+                    for idx, i in enumerate(reversed(item.children))
+                )
+            )
+    return flattend_tree

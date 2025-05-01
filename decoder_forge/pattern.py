@@ -12,6 +12,7 @@ class Pattern:
     A class representing a bit pattern with fixed and wildcard (don't care) bits.
 
     The pattern is defined by:
+
     - fixedmask: a bitmask where each bit set to 1 indicates that the corresponding
       bit in the pattern is fixed.
     - fixedbits: a number that gives the fixed bits' values in positions indicated
@@ -63,8 +64,9 @@ class Pattern:
         object.
 
         The input string should contain characters representing bits:
-          - '0' or '1' indicate fixed bits.
-          - 'x', 'X', '.', 'o', or 'O' represent wildcard/undefined bits.
+
+        - '0' or '1' indicate fixed bits.
+        - 'x', 'X', '.', 'o', or 'O' represent wildcard/undefined bits.
 
         Parameters:
             pat_str (str): The string representation of the bit pattern.
@@ -110,8 +112,9 @@ class Pattern:
         Convert the given Pattern object to its string representation.
 
         This method creates a binary string representation where for each bit:
-          - If the corresponding bit in fixedmask is 0, the bit is represented by 'x' (denoting a wildcard).
-          - If the bit is fixed (mask bit is 1), the corresponding bit from fixedbits is used.
+
+        - If the corresponding bit in fixedmask is 0, the bit is represented by 'x' (denoting a wildcard).
+        - If the bit is fixed (mask bit is 1), the corresponding bit from fixedbits is used.
 
         Parameters:
             pat (Pattern): The Pattern object to be converted into a string.
@@ -170,15 +173,16 @@ class Pattern:
     def __hash__(self):
         return hash((self.fixedmask, self.fixedbits, self.bit_length))
 
-    def split_by_mask(self, mask) -> ("Pattern", "Pattern"):
+    def split_by_mask(self, mask: int) -> ("Pattern", "Pattern"):
         """
         Splits the current Pattern into two based on the given mask.
 
         The given mask must be fully contained within the fixedmask of this pattern.
         The function returns a tuple of two Pattern objects:
-          - The first Pattern (pat_1) corresponds to the bits selected by the mask.
-          - The second Pattern (pat_2) corresponds to the remaining bits not selected by
-            the mask.
+
+        - The first Pattern (pat_1) corresponds to the bits selected by the mask.
+        - The second Pattern (pat_2) corresponds to the remaining bits not selected by
+          the mask.
 
         Parameters:
             mask (int): An integer mask indicating which bits to separate.

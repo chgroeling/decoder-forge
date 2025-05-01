@@ -26,14 +26,22 @@ def cli(ctx, verbose):
 
 
 @cli.command()
+@click.argument("INPUT_PATH")
 @click.pass_context
-def show_tree(ctx):
-    """ shows the decode tree of an instruction set.
+def show_tree(ctx, input_path: str):
+    """Shows the decode tree of an instruction set.
 
-    The instruction set is given by a file in json format.
+    Opens the file at INPUT_PATH, reads it as JSON,
+    decodes the binary instruction definitions it contains,
+    and outputs their decode tree.
     """
+
+    json_buf = ""
+    with open(input_path, "r", encoding="utf-8") as fp:
+        json_buf = fp.read()
+
     printer = Printer()
-    uc_show_decode_tree(printer, None)
+    uc_show_decode_tree(printer, json_buf)
 
 
 def main():
