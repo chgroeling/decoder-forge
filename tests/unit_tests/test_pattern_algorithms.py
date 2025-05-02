@@ -133,6 +133,30 @@ def test_build_decode_tree_by_fixed_bits_two_patterns_contained_returns_correct_
     )
 
 
+def test_build_decode_tree_by_fixed_bits_two_patterns_one_longer_returns_correct_tree():
+    # pat_a = "0x"
+    pat_a = Pattern(fixedmask=0x2, fixedbits=0x0, bit_length=2)
+
+    # pat_b = "11"
+    pat_b = Pattern(fixedmask=0x3, fixedbits=0x3, bit_length=2)
+
+    tree = build_decode_tree_by_fixed_bits([pat_a, pat_b])
+
+    assert tree == DecodeTree(
+        pat=None,
+        children=[
+            DecodeLeaf(
+                pat=Pattern(fixedmask=0x2, fixedbits=0x0, bit_length=2),  # pat = "0x"
+                origin=Pattern(fixedmask=0x2, fixedbits=0x0, bit_length=2),
+            ),
+            DecodeLeaf(
+                pat=Pattern(fixedmask=0x3, fixedbits=0x3, bit_length=2),  # pat = "11"
+                origin=Pattern(fixedmask=0x3, fixedbits=0x3, bit_length=2),
+            ),
+        ],
+    )
+
+
 def test_build_decode_tree_by_fixed_bits_three_patterns_two_with_exclusive_bits_returns_correct_tree():
     # pat_a = "11xxxxx0"
     pat_a = Pattern(fixedmask=0xC1, fixedbits=0xC0, bit_length=8)

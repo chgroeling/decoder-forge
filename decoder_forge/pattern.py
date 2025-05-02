@@ -20,8 +20,8 @@ class Pattern:
     - bit_length: the total number of bits in the pattern.
 
     The class provides utilities to parse a string representation of a bit pattern,
-    convert the pattern back into a string, and separate the pattern based on a given
-    mask.
+    convert the pattern back into a string, combine two patterns, and separate the 
+    pattern based on a given mask.
     """
 
     def __init__(self, fixedmask: int = 0x0, fixedbits: int = 0x0, bit_length: int = 1):
@@ -172,6 +172,47 @@ class Pattern:
 
     def __hash__(self):
         return hash((self.fixedmask, self.fixedbits, self.bit_length))
+
+    def combine(self, other: "Pattern") -> "Pattern":
+        """
+        Combine this Pattern with another, creating a new Pattern that represents the
+        union of the fixed bits of both patterns.
+
+        The resulting Pattern's fixedmask is the bitwise OR of the fixedmasks, and its
+        fixedbits is the bitwise OR of the fixedbits of both patterns. The method
+        ensures that for each of the original patterns, their fixed bits remain
+        unchanged within the combined pattern.
+
+        Parameters:
+            other (Pattern): The Pattern to combine with.
+
+        Returns:
+            Pattern: A new Pattern representing the combination of the two patterns.
+
+        Raises:
+            ValueError: If the fixedbits of either original Pattern are modified during
+                the combination.
+
+        Example:
+            >>> p1 = Pattern.parse_pattern("10x1")
+            >>> p2 = Pattern.parse_pattern("x1x0")
+            >>> p_combined = p1.combine(p2)
+        """
+
+        new_fixedmask = self.fixedmask | other.fixedmask
+        new_fixedbits = self.fixedbits | other.fixedbits
+
+        if new_fixedbits & self.fixedmask != self.fixedbits:
+            raise ValueError
+
+        if new_fixedbits & other.fixedmask != other.fixedbits:
+            raise ValueError
+
+        return Pattern(
+            fixedmask=new_fixedmask,
+            fixedbits=new_fixedbits,
+            bit_length=self.bit_length,
+        )
 
     def split_by_mask(self, mask: int) -> ("Pattern", "Pattern"):
         """

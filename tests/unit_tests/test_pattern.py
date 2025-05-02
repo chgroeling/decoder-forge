@@ -151,3 +151,58 @@ def test_split_by_mask_one_bit_fixedmask_2_return_separate_bitmasks():
 
     assert pat_a == Pattern(fixedmask=0x1, fixedbits=0x0, bit_length=4)
     assert pat_b == Pattern(fixedmask=0x2, fixedbits=0x2, bit_length=4)
+
+
+def test_combine_exclusive_masks_correct_combination():
+    # pat_a = "1x"
+    pat_a = Pattern(fixedmask=0x2, fixedbits=0x2, bit_length=4)
+    # pat_b = "x0"
+    pat_b = Pattern(fixedmask=0x1, fixedbits=0x1, bit_length=4)
+
+    pat_comb = pat_a.combine(pat_b)
+
+    assert pat_comb == Pattern(fixedmask=0x3, fixedbits=0x3, bit_length=4)
+
+
+def test_combine_inclusive_masks_correct_combination():
+    # pat_a = "1x"
+    pat_a = Pattern(fixedmask=0x2, fixedbits=0x2, bit_length=4)
+    # pat_b = "10"
+    pat_b = Pattern(fixedmask=0x3, fixedbits=0x2, bit_length=4)
+
+    pat_comb = pat_a.combine(pat_b)
+
+    assert pat_comb == Pattern(fixedmask=0x3, fixedbits=0x2, bit_length=4)
+
+
+def test_combine_inclusive_masks_only_zeros_correct_combination():
+    # pat_a = "0x"
+    pat_a = Pattern(fixedmask=0x2, fixedbits=0x0, bit_length=4)
+    # pat_b = "00"
+    pat_b = Pattern(fixedmask=0x3, fixedbits=0x0, bit_length=4)
+
+    pat_comb = pat_a.combine(pat_b)
+
+    assert pat_comb == Pattern(fixedmask=0x3, fixedbits=0x0, bit_length=4)
+
+
+def test_combine_identical_masks_correct_combination():
+    # pat_a = "10"
+    pat_a = Pattern(fixedmask=0x3, fixedbits=0x1, bit_length=4)
+    # pat_b = "10"
+    pat_b = Pattern(fixedmask=0x3, fixedbits=0x1, bit_length=4)
+
+    pat_comb = pat_a.combine(pat_b)
+
+    assert pat_comb == Pattern(fixedmask=0x3, fixedbits=0x1, bit_length=4)
+
+
+def test_combine_incompatible_masks_raises_value_error():
+    # pat_a = "x0"
+    pat_a = Pattern(fixedmask=0x1, fixedbits=0x0, bit_length=4)
+    # pat_b = "x1"
+    pat_b = Pattern(fixedmask=0x1, fixedbits=0x1, bit_length=4)
+
+    with pytest.raises(ValueError):
+        _ = pat_a.combine(pat_b)
+

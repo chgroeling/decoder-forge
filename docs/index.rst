@@ -11,7 +11,8 @@ Decoder-forge is a *Python-powered toolkit* that generates source code for decod
 
 .. autofunction:: decoder_forge.uc_show_decode_tree.print_tree
 .. autofunction:: decoder_forge.uc_show_decode_tree.uc_show_decode_tree
-   
+
+                  
 .. autofunction:: decoder_forge.pattern_algorithms.compute_common_fixedmask
 .. autofunction:: decoder_forge.pattern_algorithms.build_groups_by_fixed_bits
 .. autofunction:: decoder_forge.pattern_algorithms.build_decode_tree_by_fixed_bits
@@ -20,3 +21,6 @@ Decoder-forge is a *Python-powered toolkit* that generates source code for decod
 .. autoclass:: decoder_forge.pattern.Pattern
    :members:               
                
+.. autoclass:: decoder_forge.pattern_algorithms.DecodeNode
+.. autoclass:: decoder_forge.pattern_algorithms.DecodeLeaf
+.. autoclass:: decoder_forge.pattern_algorithms.DecodeTree               

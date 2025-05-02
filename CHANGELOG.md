@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - A to_string method to convert a Pattern back to its string representation.
     - The split_by_mask method to divide a Pattern into two based on a provided mask.
     - Utility functions (is_undef_bit and is_wildcard_bit) to detect undefined or wildcard bits.
+    - A combine method, which computes the union of the fixed masks and fixed bits by performing bitwise OR operations. 
 
 - Added the module decoder_forge.pattern_algorithms which:
   - Provides compute_common_fixedmask to compute the bitwise AND (intersection) of fixedmask values across patterns.

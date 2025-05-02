@@ -3,18 +3,41 @@ from functools import reduce
 from dataclasses import dataclass
 
 
+@dataclass(eq=True, frozen=True)
 class DecodeNode:
+    """Base class for nodes in a decode tree.
+
+    This class acts as an abstract base class for different node types used in
+    representing a hierarchical decode tree built from Pattern objects.
+    """
+
     pass
 
 
 @dataclass(eq=True, frozen=True)
 class DecodeLeaf(DecodeNode):
+    """Leaf node in a decode tree holding a Pattern and its original form.
+
+    Attributes:
+        pat (Pattern): The pattern after processing (e.g. after applying a mask).
+        origin (Pattern): The original Pattern from which this leaf was derived.
+    """
+
     pat: Pattern
     origin: Pattern
 
 
 @dataclass(eq=True, frozen=True)
 class DecodeTree(DecodeNode):
+    """Internal tree node representing a group of Patterns sharing fixed bits.
+
+    Attributes:
+        pat (Pattern): A Pattern representing the common fixed bits for this group.
+            Can be None for the root node.
+        children (list[DecodeNode]): A list of child nodes (either DecodeLeaf or
+            DecodeTree) representing further subdivisions of patterns.
+    """
+
     pat: Pattern
     children: list[DecodeNode]
 
@@ -88,36 +111,32 @@ def build_decode_tree_by_fixed_bits(
     pats: list[Pattern],
 ) -> dict[Pattern, [Pattern]]:
     """
-    Generate a hierarchical tree of Patterns grouped by shared fixed bits.
+    Construct a hierarchical decode tree of Pattern objects grouped by shared fixed bits.
 
-    This function organizes a list of Pattern objects into a tree structure based on
-    their common fixed bits. It starts by wrapping each Pattern in a DecodeLeaf node
-    and using these nodes as children of a root DecodeTree node. Then, in each
-    iteration:
+    This function organizes the provided list of Pattern objects into a tree structure.
+    Each Pattern is first wrapped as a DecodeLeaf node and set as a child of the root
+    DecodeTree node. The tree is built iteratively by:
 
-      1. It clears the current node's children and groups the patterns based on fixed
-         bits by computing a common fixed mask and splitting them with 'split_by_mask'.
-      2. For each group:
+    1. Clearing the children of the current tree node.
+    2. Grouping its Patterns by computing the common fixed mask and splitting them.
+    3. For each group:
 
-         - If the group has a single element, a DecodeLeaf node is created.
-         - If the group's fixed portion (outer pattern) has a non-zero fixedmask, a new
-           DecodeTree node is created with DecodeLeaf children, and that subtree is
-           scheduled for further processing.
-         - Otherwise, each pattern in the group becomes a DecodeLeaf node.
+       - If the group has a single member, combine the fixed bits with the inner pattern
+         (using the combine method) and create a DecodeLeaf.
+       - If the group's fixed portion (outer pattern) has a non-zero fixedmask, create a new DecodeTree
+         with DecodeLeaf children, and schedule that subtree for further processing.
+       - Otherwise, simply append the corresponding DecodeLeaf nodes.
 
     Args:
-        pats (list[Pattern]): A list of Pattern objects to be organized.
+        pats (list[Pattern]): A list of Pattern objects to be organized into a decode tree.
 
     Returns:
-        DecodeTree: The root node of the generated pattern tree containing hierarchical
-        grouping based on common fixed bits.
+        DecodeTree: The root node of the constructed decode tree representing hierarchical grouping.
 
     Raises:
-        ValueError: If 'split_by_mask' is invoked with a mask not contained in a
-            Pattern's 'fixedmask'.
+        ValueError: If 'split_by_mask' is invoked with an invalid mask for any Pattern.
 
     Example:
-        >>> # Assuming pattern1, pattern2, and pattern3 are valid Pattern objects with 'split_by_mask'
         >>> tree = build_decode_tree_by_fixed_bits([pattern1, pattern2, pattern3])
         >>> print(tree)
     """
@@ -143,19 +162,20 @@ def build_decode_tree_by_fixed_bits(
         # split pats into groups with fixed bits
         fgrps = build_groups_by_fixed_bits([i.pat for i in pats])
 
-        for outter_pat, inner_pats in fgrps.items():
+        for outer_pat, inner_pats in fgrps.items():
             if len(inner_pats) == 1:
+                combined_pat = outer_pat.combine(inner_pats[0][0])
                 src_pat = inner_pats[0][1]
-                fpat = DecodeLeaf(pat=outter_pat, origin=pats_to_origins[src_pat])
+                fpat = DecodeLeaf(pat=combined_pat, origin=pats_to_origins[src_pat])
                 current_tree.children.append(fpat)
             else:
-                if outter_pat.fixedmask != 0x0:  # catch all
+                if outer_pat.fixedmask != 0x0:  # catch all
                     children = [
                         DecodeLeaf(pat=i, origin=pats_to_origins[src_pat])
                         for (i, src_pat) in inner_pats
                     ]
 
-                    fpat = DecodeTree(pat=outter_pat, children=children)
+                    fpat = DecodeTree(pat=outer_pat, children=children)
                     current_tree.children.append(fpat)
                     stack.append(fpat)  # process during next cycles
                 else:
