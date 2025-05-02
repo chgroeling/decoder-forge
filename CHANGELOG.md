@@ -38,8 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the module decoder_forge.pattern_algorithms which:
   - Provides compute_common_fixedmask to compute the bitwise AND (intersection) of fixedmask values across patterns.
   - Introduces build_groups_by_fixed_bits to group patterns based on their fixed bits.
-  - Implements build_pattern_tree_by_fixed_bits to construct a hierarchical tree of Patterns by recursively grouping them.
-  - Adds flattend_pattern_tree to convert a hierarchical PatternTree into a flat list for easier traversal or debugging.
+  - Implements build_decode_tree_by_fixed_bits to construct a hierarchical tree of Patterns by recursively grouping them.
+  - Adds flattend_pattern_tree to convert a hierarchical DecodeTree into a flat list for easier traversal or debugging.
 
 - Added a Printer class (in decoder_forge.external.printer) and an IPrinter interface (in decoder_forge.i_printer) to abstract printing operations for testability.
 

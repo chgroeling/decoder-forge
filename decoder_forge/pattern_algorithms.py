@@ -3,21 +3,20 @@ from functools import reduce
 from dataclasses import dataclass
 
 
-@dataclass(eq=True, frozen=True)
-class PatternNode:
+class DecodeNode:
     pass
 
 
 @dataclass(eq=True, frozen=True)
-class PatternLeaf(PatternNode):
+class DecodeLeaf(DecodeNode):
     pat: Pattern
     origin: Pattern
 
 
 @dataclass(eq=True, frozen=True)
-class PatternTree(PatternNode):
+class DecodeTree(DecodeNode):
     pat: Pattern
-    children: list[PatternNode]
+    children: list[DecodeNode]
 
 
 def compute_common_fixedmask(pats: list[Pattern]) -> int:
@@ -85,32 +84,32 @@ def build_groups_by_fixed_bits(pats: list[Pattern]):
     return groups
 
 
-def build_pattern_tree_by_fixed_bits(
+def build_decode_tree_by_fixed_bits(
     pats: list[Pattern],
 ) -> dict[Pattern, [Pattern]]:
     """
     Generate a hierarchical tree of Patterns grouped by shared fixed bits.
 
     This function organizes a list of Pattern objects into a tree structure based on
-    their common fixed bits. It starts by wrapping each Pattern in a PatternLeaf node
-    and using these nodes as children of a root PatternTree node. Then, in each
+    their common fixed bits. It starts by wrapping each Pattern in a DecodeLeaf node
+    and using these nodes as children of a root DecodeTree node. Then, in each
     iteration:
 
       1. It clears the current node's children and groups the patterns based on fixed
          bits by computing a common fixed mask and splitting them with 'split_by_mask'.
       2. For each group:
 
-         - If the group has a single element, a PatternLeaf node is created.
+         - If the group has a single element, a DecodeLeaf node is created.
          - If the group's fixed portion (outer pattern) has a non-zero fixedmask, a new
-           PatternTree node is created with PatternLeaf children, and that subtree is
+           DecodeTree node is created with DecodeLeaf children, and that subtree is
            scheduled for further processing.
-         - Otherwise, each pattern in the group becomes a PatternLeaf node.
+         - Otherwise, each pattern in the group becomes a DecodeLeaf node.
 
     Args:
         pats (list[Pattern]): A list of Pattern objects to be organized.
 
     Returns:
-        PatternTree: The root node of the generated pattern tree containing hierarchical
+        DecodeTree: The root node of the generated pattern tree containing hierarchical
         grouping based on common fixed bits.
 
     Raises:
@@ -119,12 +118,12 @@ def build_pattern_tree_by_fixed_bits(
 
     Example:
         >>> # Assuming pattern1, pattern2, and pattern3 are valid Pattern objects with 'split_by_mask'
-        >>> tree = build_pattern_tree_by_fixed_bits([pattern1, pattern2, pattern3])
+        >>> tree = build_decode_tree_by_fixed_bits([pattern1, pattern2, pattern3])
         >>> print(tree)
     """
 
-    pats_unfolded = [PatternLeaf(pat=i, origin=i) for i in pats]
-    root = PatternTree(pat=None, children=pats_unfolded)
+    pats_unfolded = [DecodeLeaf(pat=i, origin=i) for i in pats]
+    root = DecodeTree(pat=None, children=pats_unfolded)
 
     stack = []
     stack.append(root)
@@ -147,21 +146,21 @@ def build_pattern_tree_by_fixed_bits(
         for outter_pat, inner_pats in fgrps.items():
             if len(inner_pats) == 1:
                 src_pat = inner_pats[0][1]
-                fpat = PatternLeaf(pat=outter_pat, origin=pats_to_origins[src_pat])
+                fpat = DecodeLeaf(pat=outter_pat, origin=pats_to_origins[src_pat])
                 current_tree.children.append(fpat)
             else:
                 if outter_pat.fixedmask != 0x0:  # catch all
                     children = [
-                        PatternLeaf(pat=i, origin=pats_to_origins[src_pat])
+                        DecodeLeaf(pat=i, origin=pats_to_origins[src_pat])
                         for (i, src_pat) in inner_pats
                     ]
 
-                    fpat = PatternTree(pat=outter_pat, children=children)
+                    fpat = DecodeTree(pat=outter_pat, children=children)
                     current_tree.children.append(fpat)
                     stack.append(fpat)  # process during next cycles
                 else:
                     children = [
-                        PatternLeaf(pat=i, origin=pats_to_origins[src_pat])
+                        DecodeLeaf(pat=i, origin=pats_to_origins[src_pat])
                         for (i, src_pat) in inner_pats
                     ]
                     current_tree.children.extend(children)
@@ -169,11 +168,11 @@ def build_pattern_tree_by_fixed_bits(
     return root
 
 
-def flatten_pattern_tree(tree: PatternTree):
+def flatten_decode_tree(tree: DecodeTree):
     """
-    Flatten a hierarchical PatternTree into a list of tuples.
+    Flatten a hierarchical DecodeTree into a list of tuples.
 
-    This function converts a PatternTree hierarchy into a flat list for easier
+    This function converts a DecodeTree hierarchy into a flat list for easier
     traversal or debugging. Each element in the list is a tuple containing:
 
     - The Pattern object at that node.
@@ -183,7 +182,7 @@ def flatten_pattern_tree(tree: PatternTree):
       information during visual representation).
 
     Args:
-        tree (PatternTree): The root node of the PatternTree to be flattened.
+        tree (DecodeTree): The root node of the DecodeTree to be flattened.
 
     Returns:
         list: A list of tuples, each containing:
@@ -201,9 +200,9 @@ def flatten_pattern_tree(tree: PatternTree):
     flattend_tree = []
     while len(stack) != 0:
         item, depth, last_child = stack.pop()
-        if isinstance(item, PatternLeaf):
+        if isinstance(item, DecodeLeaf):
             flattend_tree.append((item.pat, item.origin, depth, last_child))
-        elif isinstance(item, PatternTree):
+        elif isinstance(item, DecodeTree):
             flattend_tree.append((item.pat, None, depth, last_child))
             stack.extend(
                 (

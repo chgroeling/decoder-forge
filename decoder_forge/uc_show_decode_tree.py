@@ -2,27 +2,27 @@ import json
 import logging
 from decoder_forge.i_printer import IPrinter
 from decoder_forge.pattern import Pattern
-from decoder_forge.pattern_algorithms import build_pattern_tree_by_fixed_bits
-from decoder_forge.pattern_algorithms import flatten_pattern_tree
-from decoder_forge.pattern_algorithms import PatternTree
+from decoder_forge.pattern_algorithms import build_decode_tree_by_fixed_bits
+from decoder_forge.pattern_algorithms import flatten_decode_tree
+from decoder_forge.pattern_algorithms import DecodeTree
 
 logger = logging.getLogger(__name__)
 
 TREE_INDENT_WIDTH = 20
 
 
-def print_tree(printer: IPrinter, pat_tree: PatternTree, repo):
+def print_tree(printer: IPrinter, decode_tree: DecodeTree, repo):
     """
     Print a hierarchical tree of patterns in a formatted manner.
 
-    This function first flattens the hierarchical PatternTree into a list of tuples.
+    This function first flattens the hierarchical DecodeTree into a list of tuples.
     Each tuple contains a Pattern, its origin, the depth in the tree, and a flag
     indicating if it is the first child at that level. It then formats each node
     with appropriate indentation and prints it using the provided printer.
 
     Args:
         printer (IPrinter): An instance of IPrinter used to output text.
-        pat_tree (PatternTree): The root of the PatternTree to be printed.
+        pat_tree (DecodeTree): The root of the DecodeTree to be printed.
         repo (dict): A repository mapping patterns to additional metadata (e.g., names).
 
     Examples:
@@ -31,7 +31,7 @@ def print_tree(printer: IPrinter, pat_tree: PatternTree, repo):
         >>> print_tree(printer, pattern_tree, repo)
     """
 
-    flattend_tree = flatten_pattern_tree(pat_tree)
+    flattend_tree = flatten_decode_tree(decode_tree)
 
     for item, origin_pat, depth, back_track in flattend_tree:
         indent = "│ " * depth
@@ -89,6 +89,6 @@ def uc_show_decode_tree(printer: IPrinter, input_json: str):
     repo = {i["pattern"]: {k: v for k, v in i.items() if k != "pattern"} for i in ins}
 
     # build decode tree
-    decode_tree = build_pattern_tree_by_fixed_bits(pats)
+    decode_tree = build_decode_tree_by_fixed_bits(pats)
 
     print_tree(printer, decode_tree, repo)

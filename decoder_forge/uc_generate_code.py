@@ -3,8 +3,8 @@ from decoder_forge.i_template_engine import ITemplateEngine
 import logging
 import json
 from decoder_forge.pattern import Pattern
-from decoder_forge.pattern_algorithms import build_pattern_tree_by_fixed_bits
-from decoder_forge.pattern_algorithms import flatten_pattern_tree
+from decoder_forge.pattern_algorithms import build_decode_tree_by_fixed_bits
+from decoder_forge.pattern_algorithms import flatten_decode_tree
 
 logger = logging.getLogger(__name__)
 
@@ -50,8 +50,8 @@ def uc_generate_code(printer: IPrinter, tengine: ITemplateEngine, input_json: st
     repo = {i["pattern"]: {k: v for k, v in i.items() if k != "pattern"} for i in ins}
 
     # build decode tree
-    decode_tree = build_pattern_tree_by_fixed_bits(pats)
-    flat_decode_tree = flatten_pattern_tree(decode_tree)
+    decode_tree = build_decode_tree_by_fixed_bits(pats)
+    flat_decode_tree = flatten_decode_tree(decode_tree)
 
     tengine.load("python")
     context = {
