@@ -1,0 +1,6 @@
+from typing import Protocol
+
+
+class ITemplateEngine(Protocol):
+    def load(self, template_key: str) -> None: ...
+    def generate(self, context: dict) -> str: ...

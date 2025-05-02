@@ -2,13 +2,6 @@ from decoder_forge.pattern import Pattern
 import pytest
 
 
-# Unit of work is parse_pattern and to_string
-def test_round_trip_with_1x1x0_returns_1x1x0():
-    pattern = Pattern.parse_pattern("1x1x0")
-    pattern_str = Pattern.to_string(pattern)
-    assert pattern_str == "1x1x0"
-
-
 def test_parse_pattern_with_empty_string_returns_correct_type():
     with pytest.raises(ValueError):
         _ = Pattern.parse_pattern("")

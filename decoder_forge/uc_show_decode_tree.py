@@ -88,7 +88,7 @@ def uc_show_decode_tree(printer: IPrinter, input_json: str):
     pats = [i["pattern"] for i in ins]
     repo = {i["pattern"]: {k: v for k, v in i.items() if k != "pattern"} for i in ins}
 
-    # build tree
-    pat_tree = build_pattern_tree_by_fixed_bits(pats)
+    # build decode tree
+    decode_tree = build_pattern_tree_by_fixed_bits(pats)
 
-    print_tree(printer, pat_tree, repo)
+    print_tree(printer, decode_tree, repo)
