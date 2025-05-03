@@ -1,24 +1,17 @@
-structs:
+struct_def:
 - name: "structE"
   members:
     - rd
 
-procedures:
-- {dest: rd, name: extract_rd, op: bit_range, range: [15,10]}
+operations:
+- {name: extract_rd, dest: rd, op: bit_range, range: [4,3]}
   
-  
-mappings:
-- from: instr_E0
-  to: structE
-  procs: [extract_rd]
-  
-
 patterns:
-- {pattern: "00xxx00x", name: "instr_A0"}
-- {pattern: "00xxx01x", name: "instr_A1"}
-- {pattern: "010xxxxx", name: "instr_B0"}
-- {pattern: "011xxxxx", name: "instr_B1"}
-- {pattern: "10xxxxxx", name: "instr_C0"}
-- {pattern: "111xxxxx", name: "instr_D0"}
-- {pattern: "110xxxxx", name: "instr_D1"}
-- {pattern: "00xxx111", name: "instr_E0"}
+  00xxx00x: {name: instr_A0}
+  00xxx01x: {name: instr_A1}
+  010xxxxx: {name: instr_B0}
+  011xxxxx: {name: instr_B1}
+  10xxxxxx: {name: instr_C0}
+  111xxxxx: {name: instr_D0}
+  110xxxxx: {name: instr_D1}
+  00xxx111: {name: instr_E0, to: structE, ops: [extract_rd]}

@@ -5,14 +5,14 @@ from decoder_forge.i_printer import IPrinter
 from importlib.resources import files
 
 
-def extract_generated_code(printer_mock: Mock(spec=IPrinter)):
+def extract_generated_code(printer_mock: Mock):
     # call[0] is the list of positional arg, call[0][0] is the first positional arg
     generated_code = [call[0][0] for call in printer_mock.print.call_args_list]
 
     # generated code is in a list ... join it to get a string
-    generated_code = "\n".join(generated_code)
+    generated_code_str = "\n".join(generated_code)
 
-    return generated_code
+    return generated_code_str
 
 
 def test_uc_generate_code_generate_and_eval_python_code_empty_format_outputs_None():

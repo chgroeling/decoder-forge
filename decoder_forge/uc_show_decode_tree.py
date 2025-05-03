@@ -76,13 +76,6 @@ def uc_show_decode_tree(printer: IPrinter, input_yaml: str):
         >>> uc_show_decode_tree(printer, yaml_input)
     """
 
-    def pattern_decoder(dct):
-        """Decode a dictionary into a Pattern object if applicable."""
-        if "pattern" in dct:
-            dct["pattern"] = Pattern.parse_pattern(dct["pattern"])
-
-        return dct  # fallback to default behavior
-
     logger.info("Call: uc_show_decode_tree")
     ins = yaml.load(input_yaml, Loader=yaml.Loader)
 
@@ -90,16 +83,15 @@ def uc_show_decode_tree(printer: IPrinter, input_yaml: str):
         ins = {}
 
     if "patterns" not in ins:
-        ins["patterns"] = []
+        ins["patterns"] = dict()
 
-    # convert
-    ins = [pattern_decoder(dct) for dct in ins["patterns"]]
+    # build pattern list
+    pats = [Pattern.parse_pattern(pat) for pat, dct in ins["patterns"].items()]
 
-    # build pattern list and repository
-    pats = [i["pattern"] for i in ins]
-    repo = {i["pattern"]: {k: v for k, v in i.items() if k != "pattern"} for i in ins}
+    # build pattern repo
+    pat_repo = {Pattern.parse_pattern(pat): dct for pat, dct in ins["patterns"].items()}
 
     # build decode tree
     decode_tree = build_decode_tree_by_fixed_bits(pats)
 
-    print_tree(printer, decode_tree, repo)
+    print_tree(printer, decode_tree, pat_repo)
