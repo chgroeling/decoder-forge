@@ -1,6 +1,8 @@
 from decoder_forge.pattern import Pattern
 from functools import reduce
 from dataclasses import dataclass
+from typing import cast
+from typing import Optional
 
 
 @dataclass(eq=True, frozen=True)
@@ -38,7 +40,7 @@ class DecodeTree(DecodeNode):
             DecodeTree) representing further subdivisions of patterns.
     """
 
-    pat: Pattern
+    pat: Optional[Pattern]
     children: list[DecodeNode]
 
 
@@ -71,7 +73,9 @@ def compute_common_fixedmask(pats: list[Pattern]) -> int:
     return out
 
 
-def build_groups_by_fixed_bits(pats: list[Pattern]):
+def build_groups_by_fixed_bits(
+    pats: list[Pattern],
+) -> dict[Pattern, list[tuple[Pattern, Pattern]]]:
     """
     Group Patterns based on their fixed bits after splitting by a common mask.
 
@@ -97,7 +101,7 @@ def build_groups_by_fixed_bits(pats: list[Pattern]):
     # find fixed parts
     mask = compute_common_fixedmask(pats)
 
-    groups = {}
+    groups: dict[Pattern, list[tuple[Pattern, Pattern]]] = {}
     for pn in pats:
         pa, pb = pn.split_by_mask(mask)
         group = groups.get(pa, list())
@@ -109,9 +113,10 @@ def build_groups_by_fixed_bits(pats: list[Pattern]):
 
 def build_decode_tree_by_fixed_bits(
     pats: list[Pattern],
-) -> dict[Pattern, [Pattern]]:
+) -> DecodeTree:
     """
-    Construct a hierarchical decode tree of Pattern objects grouped by shared fixed bits.
+    Construct a hierarchical decode tree of Pattern objects grouped by shared fixed
+    bits.
 
     This function organizes the provided list of Pattern objects into a tree structure.
     Each Pattern is first wrapped as a DecodeLeaf node and set as a child of the root
@@ -123,15 +128,18 @@ def build_decode_tree_by_fixed_bits(
 
        - If the group has a single member, combine the fixed bits with the inner pattern
          (using the combine method) and create a DecodeLeaf.
-       - If the group's fixed portion (outer pattern) has a non-zero fixedmask, create a new DecodeTree
-         with DecodeLeaf children, and schedule that subtree for further processing.
+       - If the group's fixed portion (outer pattern) has a non-zero fixedmask, create a
+         new DecodeTree with DecodeLeaf children, and schedule that subtree for further
+         processing.
        - Otherwise, simply append the corresponding DecodeLeaf nodes.
 
     Args:
-        pats (list[Pattern]): A list of Pattern objects to be organized into a decode tree.
+        pats (list[Pattern]): A list of Pattern objects to be organized into a decode
+          tree.
 
     Returns:
-        DecodeTree: The root node of the constructed decode tree representing hierarchical grouping.
+        DecodeTree: The root node of the constructed decode tree representing
+        hierarchical grouping.
 
     Raises:
         ValueError: If 'split_by_mask' is invoked with an invalid mask for any Pattern.
@@ -141,15 +149,15 @@ def build_decode_tree_by_fixed_bits(
         >>> print(tree)
     """
 
-    pats_unfolded = [DecodeLeaf(pat=i, origin=i) for i in pats]
+    pats_unfolded: list[DecodeNode] = [DecodeLeaf(pat=i, origin=i) for i in pats]
     root = DecodeTree(pat=None, children=pats_unfolded)
 
-    stack = []
+    stack: list[DecodeTree] = []
     stack.append(root)
 
     while len(stack) != 0:
         current_tree = stack.pop()
-        pats = [i for i in current_tree.children]
+        leafs = cast(list[DecodeLeaf], [i for i in current_tree.children])
 
         if len(pats) == 0:
             continue
@@ -157,10 +165,10 @@ def build_decode_tree_by_fixed_bits(
         current_tree.children.clear()
 
         # remember which patterns were orginated by which origin
-        pats_to_origins = {i.pat: i.origin for i in pats}
+        pats_to_origins = {i.pat: i.origin for i in leafs}
 
         # split pats into groups with fixed bits
-        fgrps = build_groups_by_fixed_bits([i.pat for i in pats])
+        fgrps = build_groups_by_fixed_bits([i.pat for i in leafs])
 
         for outer_pat, inner_pats in fgrps.items():
             if len(inner_pats) == 1:
@@ -170,14 +178,17 @@ def build_decode_tree_by_fixed_bits(
                 current_tree.children.append(fpat)
             else:
                 if outer_pat.fixedmask != 0x0:  # catch all
-                    children = [
-                        DecodeLeaf(pat=i, origin=pats_to_origins[src_pat])
-                        for (i, src_pat) in inner_pats
-                    ]
+                    children = cast(
+                        list[DecodeNode],
+                        [
+                            DecodeLeaf(pat=i, origin=pats_to_origins[src_pat])
+                            for (i, src_pat) in inner_pats
+                        ],
+                    )
 
-                    fpat = DecodeTree(pat=outer_pat, children=children)
-                    current_tree.children.append(fpat)
-                    stack.append(fpat)  # process during next cycles
+                    dtree = DecodeTree(pat=outer_pat, children=children)
+                    current_tree.children.append(dtree)
+                    stack.append(dtree)  # process during next cycles
                 else:
                     children = [
                         DecodeLeaf(pat=i, origin=pats_to_origins[src_pat])
@@ -216,14 +227,14 @@ def flatten_decode_tree(tree: DecodeTree):
 
     """
 
-    stack = []
+    stack: list[tuple[DecodeNode, int, bool, bool]] = []
     stack.extend(
         (
             (i, 0, idx == len(tree.children) - 1, idx == 0)
             for idx, i in enumerate(reversed(tree.children))
         )
     )
-    flattend_tree = []
+    flattend_tree: list[tuple[Pattern, Optional[Pattern], int, bool, bool]] = []
     while len(stack) != 0:
         item, depth, first_child, last_child = stack.pop()
         if isinstance(item, DecodeLeaf):
@@ -231,7 +242,10 @@ def flatten_decode_tree(tree: DecodeTree):
                 (item.pat, item.origin, depth, first_child, last_child)
             )
         elif isinstance(item, DecodeTree):
-            flattend_tree.append((item.pat, None, depth, first_child, last_child))
+            dtree = cast(DecodeTree, item)
+            flattend_tree.append(
+                (cast(Pattern, dtree.pat), None, depth, first_child, last_child)
+            )
             stack.extend(
                 (
                     (i, depth + 1, idx == len(item.children) - 1, idx == 0)

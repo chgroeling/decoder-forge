@@ -222,7 +222,7 @@ class Pattern:
             bit_length=self.bit_length,
         )
 
-    def split_by_mask(self, mask: int) -> ("Pattern", "Pattern"):
+    def split_by_mask(self, mask: int) -> tuple["Pattern", "Pattern"]:
         """
         Splits the current Pattern into two based on the given mask.
 
