@@ -1,3 +1,6 @@
+import copy
+
+
 def is_undef_bit(ch: str):
     return ch in ("o", "O")
 
@@ -20,7 +23,7 @@ class Pattern:
     - bit_length: the total number of bits in the pattern.
 
     The class provides utilities to parse a string representation of a bit pattern,
-    convert the pattern back into a string, combine two patterns, and separate the 
+    convert the pattern back into a string, combine two patterns, and separate the
     pattern based on a given mask.
     """
 
@@ -60,8 +63,8 @@ class Pattern:
     @staticmethod
     def parse_pattern(pat_str: str) -> "Pattern":
         """
-        Parse a string representation of a bit pattern and return a corresponding Pattern
-        object.
+        Parse a string representation of a bit pattern and return a corresponding
+        Pattern object.
 
         The input string should contain characters representing bits:
 
@@ -113,8 +116,10 @@ class Pattern:
 
         This method creates a binary string representation where for each bit:
 
-        - If the corresponding bit in fixedmask is 0, the bit is represented by 'x' (denoting a wildcard).
-        - If the bit is fixed (mask bit is 1), the corresponding bit from fixedbits is used.
+        - If the corresponding bit in fixedmask is 0, the bit is represented by 'x'
+          (denoting a wildcard).
+        - If the bit is fixed (mask bit is 1), the corresponding bit from fixedbits is
+          used.
 
         Parameters:
             pat (Pattern): The Pattern object to be converted into a string.
@@ -202,11 +207,14 @@ class Pattern:
         new_fixedmask = self.fixedmask | other.fixedmask
         new_fixedbits = self.fixedbits | other.fixedbits
 
+        if self.bit_length != other.bit_length:
+            raise ValueError("Patterns must match in length")
+
         if new_fixedbits & self.fixedmask != self.fixedbits:
-            raise ValueError
+            raise ValueError("Conflicting patterns should be combined")
 
         if new_fixedbits & other.fixedmask != other.fixedbits:
-            raise ValueError
+            raise ValueError("Conflicting patterns should be combined")
 
         return Pattern(
             fixedmask=new_fixedmask,
@@ -264,3 +272,19 @@ class Pattern:
         )
 
         return pat_1, pat_2
+
+    def align_high_to_bit_length(self, bit_length: int) -> "Pattern":
+        if bit_length < self.bit_length:
+            raise ValueError("Pattern bit length is to big")
+
+        if bit_length == self.bit_length:  # exact representation
+            return copy.copy(self)
+
+        fixedmask = self.fixedmask << (bit_length - self.bit_length)
+        fixedbits = self.fixedbits << (bit_length - self.bit_length)
+
+        return Pattern(
+            fixedmask=fixedmask,
+            fixedbits=fixedbits,
+            bit_length=self.bit_length,
+        )

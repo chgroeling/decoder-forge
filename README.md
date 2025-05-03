@@ -6,7 +6,7 @@ Decoder-forge is a *Python-powered toolkit* that generates source code for decod
 ## Features
 
 - Generate efficient C++/Python code for bit pattern matching
-- Simple JSON input format for easy configuration
+- Simple YAML input format for easy configuration
 - Extensible and customizable for various use cases
 
 ## License

@@ -1,4 +1,4 @@
-import json
+import yaml
 import logging
 from decoder_forge.i_printer import IPrinter
 from decoder_forge.pattern import Pattern
@@ -16,9 +16,10 @@ def print_tree(printer: IPrinter, decode_tree: DecodeTree, repo):
     Print a hierarchical tree of patterns in a formatted manner.
 
     This function first flattens the hierarchical DecodeTree into a list of tuples.
-    Each tuple contains a Pattern, its origin, the depth in the tree, and a flag
-    indicating if it is the first child at that level. It then formats each node
-    with appropriate indentation and prints it using the provided printer.
+    Each tuple contains a Pattern, its origin, the depth in the tree, a flag
+    indicating if it is the first child and a flag indicating if it is the last
+    child at that level. It then formats each node with appropriate indentation
+    and prints it using the provided printer.
 
     Args:
         printer (IPrinter): An instance of IPrinter used to output text.
@@ -33,13 +34,13 @@ def print_tree(printer: IPrinter, decode_tree: DecodeTree, repo):
 
     flattend_tree = flatten_decode_tree(decode_tree)
 
-    for item, origin_pat, depth, back_track in flattend_tree:
+    for item, origin_pat, depth, first_child, last_child in flattend_tree:
         indent = "│ " * depth
         if depth == 0:
             printer.print("")
 
         if origin_pat is not None:
-            if not back_track:
+            if not last_child:
                 tree_node = f"{indent}├─ x"
             else:  # in case the next element will be one depth up
                 tree_node = f"{indent}└─ x"
@@ -53,25 +54,26 @@ def print_tree(printer: IPrinter, decode_tree: DecodeTree, repo):
             printer.print(f"{fmt_tree_node}| {str(item)}")
 
 
-def uc_show_decode_tree(printer: IPrinter, input_json: str):
-    """Decode a JSON string to build and display a pattern tree.
+def uc_show_decode_tree(printer: IPrinter, input_yaml: str):
+    """Decode a YAML string to build and display a pattern tree.
 
-    This function takes a JSON string which encodes a list of pattern dictionaries.
-    It decodes the JSON into Python objects using the pattern_decoder, extracts patterns
+    This function takes a YAML string which encodes a list of pattern dictionaries.
+    It decodes the YAML into Python objects using the pattern_decoder, extracts patterns
     to build a repository mapping, organizes these patterns into a hierarchical tree
     based on fixed bits, and finally prints the tree using the provided printer.
 
     Args:
         printer (IPrinter): An instance of IPrinter used for printing the tree.
-        input_json (str): A JSON string containing a list of pattern dictionaries.
+        input_yaml (str): A YAML string containing a list of pattern dictionaries.
 
     Raises:
-        json.JSONDecodeError: If the input JSON is not valid.
+        yaml.YAMLErrors: If the input YAML is not valid.
         Exception: Any exception raised during pattern processing or tree building.
 
     Examples:
-        >>> json_input = '[{"pattern": "some pattern", "name": "Pattern1"}, {"pattern": "another pattern", "name": "Pattern2"}]'
-        >>> uc_show_decode_tree(printer, json_input)
+        >>> yaml_input = '[{"pattern": "some pattern", "name": "Pattern1"},
+            {"pattern": "another pattern", "name": "Pattern2"}]'
+        >>> uc_show_decode_tree(printer, yaml_input)
     """
 
     def pattern_decoder(dct):
@@ -82,7 +84,16 @@ def uc_show_decode_tree(printer: IPrinter, input_json: str):
         return dct  # fallback to default behavior
 
     logger.info("Call: uc_show_decode_tree")
-    ins = json.loads(input_json, object_hook=pattern_decoder)
+    ins = yaml.load(input_yaml, Loader=yaml.Loader)
+
+    if ins is None:
+        ins = {}
+
+    if "patterns" not in ins:
+        ins["patterns"] = []
+
+    # convert
+    ins = [pattern_decoder(dct) for dct in ins["patterns"]]
 
     # build pattern list and repository
     pats = [i["pattern"] for i in ins]

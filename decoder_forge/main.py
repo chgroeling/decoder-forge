@@ -31,25 +31,25 @@ def cli(ctx, verbose):
 @click.argument("INPUT_PATH")
 @click.pass_context
 def generate_code(self, input_path: str):
-    """Generate decoder code from JSON pattern definitions.
+    """Generate decoder code from YAML pattern definitions.
 
-    This command reads a JSON file from the specified INPUT_PATH, which is expected to
+    This command reads a YAML file from the specified INPUT_PATH, which is expected to
     contain binary instruction definitions.It the generates decoder code based on the
     contained patterns using a template engine, and prints the generated code line by
     line to the standard output.
 
-    INPUT_PATH: The file path to a JSON file containing pattern definitions.
+    INPUT_PATH: The file path to a YAML file containing pattern definitions.
 
     Example:
-        $ python cli.py generate_code patterns.json
+        $ python cli.py generate_code patterns.yaml
     """
-    json_buf = ""
+    yaml_buf = ""
     with open(input_path, "r", encoding="utf-8") as fp:
-        json_buf = fp.read()
+        yaml_buf = fp.read()
 
     printer = Printer()
     tengine = TemplateEngine()
-    uc_generate_code(printer, tengine, json_buf)
+    uc_generate_code(printer, tengine, yaml_buf)
 
 
 @cli.command()
@@ -59,22 +59,22 @@ def show_tree(ctx, input_path: str):
     """
     Show the decode tree of an instruction set.
 
-    This command reads a JSON file from the specified INPUT_PATH, which is expected to
+    This command reads a YAML file from the specified INPUT_PATH, which is expected to
     contain binary instruction definitions. It decodes these definitions to build their
     decode tree and outputs the tree using a printer.
 
-    INPUT_PATH: The file path to a JSON file containing pattern definitions.
+    INPUT_PATH: The file path to a YAML file containing pattern definitions.
 
     Example:
         $ python cli.py show_tree instructions.json
     """
 
-    json_buf = ""
+    yaml_buf = ""
     with open(input_path, "r", encoding="utf-8") as fp:
-        json_buf = fp.read()
+        yaml_buf = fp.read()
 
     printer = Printer()
-    uc_show_decode_tree(printer, json_buf)
+    uc_show_decode_tree(printer, yaml_buf)
 
 
 def main():

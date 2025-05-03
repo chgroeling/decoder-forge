@@ -198,6 +198,7 @@ def flatten_decode_tree(tree: DecodeTree):
     - The Pattern object at that node.
     - The original Pattern object (None for internal tree nodes).
     - The depth level of the node within the tree.
+    - A boolean indicating if the node is the first child
     - A boolean indicating if the node is the last child (used for backtracking
       information during visual representation).
 
@@ -216,17 +217,24 @@ def flatten_decode_tree(tree: DecodeTree):
     """
 
     stack = []
-    stack.extend(((i, 0, idx == 0) for idx, i in enumerate(reversed(tree.children))))
+    stack.extend(
+        (
+            (i, 0, idx == len(tree.children) - 1, idx == 0)
+            for idx, i in enumerate(reversed(tree.children))
+        )
+    )
     flattend_tree = []
     while len(stack) != 0:
-        item, depth, last_child = stack.pop()
+        item, depth, first_child, last_child = stack.pop()
         if isinstance(item, DecodeLeaf):
-            flattend_tree.append((item.pat, item.origin, depth, last_child))
+            flattend_tree.append(
+                (item.pat, item.origin, depth, first_child, last_child)
+            )
         elif isinstance(item, DecodeTree):
-            flattend_tree.append((item.pat, None, depth, last_child))
+            flattend_tree.append((item.pat, None, depth, first_child, last_child))
             stack.extend(
                 (
-                    (i, depth + 1, idx == 0)
+                    (i, depth + 1, idx == len(item.children) - 1, idx == 0)
                     for idx, i in enumerate(reversed(item.children))
                 )
             )

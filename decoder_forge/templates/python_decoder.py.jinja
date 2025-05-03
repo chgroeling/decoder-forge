@@ -1,4 +1,38 @@
+{% macro match_pat(pat, first_child) -%}
+    {% if first_child -%}
+        if{{" "}}
+    {%- else -%}
+        elif{{" "}} 
+    {%- endif -%}
+    
+    (code & {{-" 0x%x" % pat.fixedmask}}) == {{"0x%x" % pat.fixedbits-}}:  # {{pat}}
+{%- endmacro -%}
 
+{% macro gen_pat(pat, first_child, origin) -%}
+    {{ match_pat(pat, first_child) }}    
+    {%- if origin == None %}
+    {%- else %}
+        return "{{repo[origin]["name"]}}"
+    {%- endif %}
+{%- endmacro -%}
+
+{% macro no_match() -%}
+    return None  # no match
+    {{""}}
+{%- endmacro -%}
 
 def decode(code: int):
-    return None
+{%- for pat, origin, depth, first_child, last_child in flat_decode_tree %}
+    {{gen_pat(pat, first_child, origin) | indent(depth*4, first=True) }}
+    {%- if loop.nextitem is defined %}
+        {%- set backtrack = depth-loop.nextitem[2] %}
+        {%- if backtrack>0 %}
+            {%- for bs in range(0, backtrack) %}
+        {{no_match() | indent((depth-bs-1)*4, first=True)}}
+            {%- endfor %}
+        {%- endif %}
+    {%- else %}
+        {{no_match() | indent((depth-1)*4, first=True)}}  
+    {%- endif %}
+{%- endfor %}
+    return None # no match

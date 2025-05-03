@@ -13,19 +13,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   – Uses the Click library for command-line functionality.
   – Supports logging verbosity options (-v and -vv).
   – Introduces two new commands:
-    ○ show-tree: Displays the decode tree for bit patterns provided in a JSON file.
+    ○ show-tree: Displays the decode tree for bit patterns provided in a YAML file.
     ○ generate_code: Generates code for a binary decoder using the Jinja2 template engine.
 
 - Added the module decoder_forge.uc_show_decode_tree that:
-  – Introduces the uc_show_decode_tree use case to display the decode tree using a specified JSON file.
+  – Introduces the uc_show_decode_tree use case to display the decode tree using a specified YAML file.
   – Provides the print_tree function to format and print a hierarchical decode tree using proper indentations and node symbols.
 
 - Added the module decoder_forge.uc_generate_code that:
   - Implements the uc_generate_code function to:
-    - Decode a JSON string defining pattern definitions.
+    - Decode a YAML string defining pattern definitions.
     - Build both a hierarchical decode tree and its flattened representation.
     - Generate decoder code in a specified language using a Jinja2 template.
     - Print the generated code line by line using a provided printer.
+
+- Added jinja template module in decoder_forge.templates
+  - Added template python_decoder.py.jinja which is used to generate decoders in python.
 
 - Added the module decoder_forge.pattern which:
   – Introduces the Pattern class to encapsulate a bit mask (fixedmask), fixed bits (fixedbits), and the total bit length.

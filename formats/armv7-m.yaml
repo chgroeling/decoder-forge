@@ -1,4 +1,4 @@
-[
+patterns: [
 {"pattern": "0000000000xxxxxxxxxxxxxxxxxxxxxx", "name": "mov_register_t2"},
 {"pattern": "00000xxxxxxxxxxxxxxxxxxxxxxxxxxx", "name": "lsl_immediate_t1"},
 {"pattern": "00001xxxxxxxxxxxxxxxxxxxxxxxxxxx", "name": "lsr_immediate_t1"},
