@@ -29,7 +29,8 @@ def uc_generate_code(printer: IPrinter, tengine: ITemplateEngine, input_yaml: st
 
     Raises:
         yaml.YAMLError: If the input YAML is invalid.
-        Exception: For any unexpected error during pattern processing or code generation.
+        Exception: For any unexpected error during pattern processing or code
+          generation.
 
     Example:
         >>> yaml_input = '[{"pattern": "1010", "name": "PatternA"}]'

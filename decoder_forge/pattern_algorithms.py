@@ -174,17 +174,14 @@ def build_decode_tree_by_fixed_bits(
             if len(inner_pats) == 1:
                 combined_pat = outer_pat.combine(inner_pats[0][0])
                 src_pat = inner_pats[0][1]
-                fpat = DecodeLeaf(pat=combined_pat, origin=pats_to_origins[src_pat])
-                current_tree.children.append(fpat)
+                dleaf = DecodeLeaf(pat=combined_pat, origin=pats_to_origins[src_pat])
+                current_tree.children.append(dleaf)
             else:
                 if outer_pat.fixedmask != 0x0:  # catch all
-                    children = cast(
-                        list[DecodeNode],
-                        [
-                            DecodeLeaf(pat=i, origin=pats_to_origins[src_pat])
-                            for (i, src_pat) in inner_pats
-                        ],
-                    )
+                    children: list[DecodeNode] = [
+                        DecodeLeaf(pat=i, origin=pats_to_origins[src_pat])
+                        for (i, src_pat) in inner_pats
+                    ]
 
                     dtree = DecodeTree(pat=outer_pat, children=children)
                     current_tree.children.append(dtree)
@@ -243,9 +240,8 @@ def flatten_decode_tree(tree: DecodeTree):
             )
         elif isinstance(item, DecodeTree):
             dtree = cast(DecodeTree, item)
-            flattend_tree.append(
-                (cast(Pattern, dtree.pat), None, depth, first_child, last_child)
-            )
+            assert dtree.pat is not None
+            flattend_tree.append((dtree.pat, None, depth, first_child, last_child))
             stack.extend(
                 (
                     (i, depth + 1, idx == len(item.children) - 1, idx == 0)
