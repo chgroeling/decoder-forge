@@ -49,7 +49,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added a TemplateEngine class (in decoder_forge.external.template_engine) and an ITemplateEngine interface (in decoder_forge.template_engine) to standardize source code generation using Jinja2.
 
+- Added the module decoder_forge.AssociatedStructRepo which:
+  - Introduced the `AssociatedStructRepo` class which manages a repository of structure definitions and provides a mapping between `Pattern` objects and their corresponding `Struct` objects.
+
 - Added a templates module under decoder_forge that includes:
   – A template for generating Python decoders.
 
 - Added Sphinx-based documentation to the project.
+

@@ -50,4 +50,4 @@ def test_uc_generate_code_generate_and_eval_python_code_test_format_outputs_None
 
     # call the decoder
     decode_output = test_namespace["decode"](0x0F)
-    assert decode_output == "instr_E0"
+    assert decode_output == "instr_D0"

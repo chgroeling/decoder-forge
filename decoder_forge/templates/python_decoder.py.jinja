@@ -12,7 +12,7 @@
     {{ match_pat(pat, first_child) }}    
     {%- if origin == None %}
     {%- else %}
-        return "{{repo[origin]["name"]}}"
+        return "{{pat_repo[origin]["name"]}}"
     {%- endif %}
 {%- endmacro -%}
 

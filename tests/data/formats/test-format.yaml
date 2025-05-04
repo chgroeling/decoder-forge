@@ -1,17 +1,18 @@
 struct_def:
-- name: "structE"
-  members:
-    - rd
+  StructA: {members: [ra0, ra1]}
+  StructB: {members: [rb0]}
+  StructC: {members: [rc0, rc1]}
+  StructD: {members: [rd0]}
 
 operations:
-- {name: extract_rd, dest: rd, op: bit_range, range: [4,3]}
+  extract_rd: {dest: rd, op: bit_range, range: [4,3]}
   
 patterns:
-  00xxx00x: {name: instr_A0}
-  00xxx01x: {name: instr_A1}
-  010xxxxx: {name: instr_B0}
-  011xxxxx: {name: instr_B1}
-  10xxxxxx: {name: instr_C0}
-  111xxxxx: {name: instr_D0}
-  110xxxxx: {name: instr_D1}
-  00xxx111: {name: instr_E0, to: structE, ops: [extract_rd]}
+  00xxx00x: {name: instr_A0, to: StructA}
+  00xxx01x: {name: instr_A1, to: StructA}
+  010xxxxx: {name: instr_B0, to: StructB}
+  011xxxxx: {name: instr_UNDEF0}
+  10xxxxxx: {name: instr_UNDEF1}
+  111xxxxx: {name: instr_C0, to: StructC}
+  110xxxxx: {name: instr_C1, to: StructC}
+  00xxx111: {name: instr_D0, to: StructD, ops: [extract_rd]}
