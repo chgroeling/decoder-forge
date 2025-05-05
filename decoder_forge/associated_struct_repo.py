@@ -83,7 +83,9 @@ class AssociatedStructRepo:
 
         # Read all structs
         name_to_struct = {
-            name: StructDef(name=name, members=list(i["members"]))
+            name: StructDef(
+                name=name, members=list(i["members"] if "members" in i else list())
+            )
             for name, i in struct_def.items()
         }
 

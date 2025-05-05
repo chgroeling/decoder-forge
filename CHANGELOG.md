@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Print the generated code line by line using a provided printer.
 
 - Added jinja template module in decoder_forge.templates
-  - Added template python_decoder.py.jinja which is used to generate decoders in python.
+  - Added template python_decoder.py.jinja. This template is used to generate decoders in python.
 
 - Added the module decoder_forge.pattern which:
   – Introduces the Pattern class to encapsulate a bit mask (fixedmask), fixed bits (fixedbits), and the total bit length.

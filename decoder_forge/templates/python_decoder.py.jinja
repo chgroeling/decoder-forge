@@ -12,15 +12,29 @@
     {{ match_pat(pat, first_child) }}    
     {%- if origin == None %}
     {%- else %}
-        return "{{pat_repo[origin]["name"]}}"
+        return {{as_repo.pat_to_struct[origin].name}}()
     {%- endif %}
 {%- endmacro -%}
 
 {% macro no_match() -%}
-    return None  # no match
+    return Undef()  # no match
     {{""}}
 {%- endmacro -%}
-
+from dataclasses import dataclass
+{{""}}
+{%- for struct in as_repo.structs %}
+@dataclass(frozen=True, eq=True)
+class {{struct.name}}:
+    {%- if struct.members|length == 0 %}
+    pass
+    {%- else %}
+        {%- for member in struct.members %}
+    {{ member }} : int = 0
+        {%- endfor %}
+    {%- endif %}
+    {{""}}
+{%- endfor -%}
+{{""}}
 def decode(code: int):
 {%- for pat, origin, depth, first_child, last_child in flat_decode_tree %}
     {{gen_pat(pat, first_child, origin) | indent(depth*4, first=True) }}
@@ -35,4 +49,4 @@ def decode(code: int):
         {{no_match() | indent((depth-1)*4, first=True)}}  
     {%- endif %}
 {%- endfor %}
-    return None # no match
+    return Undef() # no match

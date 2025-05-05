@@ -55,8 +55,10 @@ def uc_generate_code(printer: IPrinter, tengine: ITemplateEngine, input_yaml: st
     # build pattern repo
     pat_repo = {Pattern.parse_pattern(pat): dct for pat, dct in ins["patterns"].items()}
 
-    as_repo = AssociatedStructRepo.build(struct_def=ins["struct_def"], pat_repo=pat_repo)
-    
+    as_repo = AssociatedStructRepo.build(
+        struct_def=ins["struct_def"], pat_repo=pat_repo
+    )
+
     # build decode tree
     decode_tree = build_decode_tree_by_fixed_bits(pats)
     flat_decode_tree = flatten_decode_tree(decode_tree)

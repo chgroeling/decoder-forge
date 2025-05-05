@@ -1,6 +1,6 @@
 struct_def:
   StructA: {members: [ra0, ra1]}
-  StructB: {members: [rb0]}
+  StructB: {}
   StructC: {members: [rc0, rc1]}
   StructD: {members: [rd0]}
 
