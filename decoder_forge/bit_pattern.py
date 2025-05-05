@@ -10,7 +10,7 @@ def is_wildcard_bit(ch: str):
     return ch in ("x", "X", ".") or is_undef_bit(ch)
 
 
-class Pattern:
+class BitPattern:
     """
     A class representing a bit pattern with fixed and wildcard (don't care) bits.
 
@@ -29,7 +29,7 @@ class Pattern:
 
     def __init__(self, fixedmask: int = 0x0, fixedbits: int = 0x0, bit_length: int = 1):
         """
-        Initialize a Pattern instance.
+        Initialize a BitPattern instance.
 
         Parameters:
             fixedmask (int): A bitmask indicating which bits are fixed (1) and which
@@ -61,10 +61,10 @@ class Pattern:
         self.bit_length = bit_length
 
     @staticmethod
-    def parse_pattern(pat_str: str) -> "Pattern":
+    def parse_pattern(pat_str: str) -> "BitPattern":
         """
         Parse a string representation of a bit pattern and return a corresponding
-        Pattern object.
+        BitPattern object.
 
         The input string should contain characters representing bits:
 
@@ -75,15 +75,15 @@ class Pattern:
             pat_str (str): The string representation of the bit pattern.
 
         Returns:
-            Pattern: A Pattern object containing the fixedmask, fixedbits, and bit
+            BitPattern: A BitPattern object containing the fixedmask, fixedbits, and bit
                      length derived from the input.
 
         Raises:
             ValueError: If the input string is empty.
 
         Example:
-            >>> Pattern.parse_pattern("10x1")
-            Pattern(fixedmask=0xD, fixedbits=0x9, bit_length=4)
+            >>> BitPattern.parse_pattern("10x1")
+            BitPattern(fixedmask=0xD, fixedbits=0x9, bit_length=4)
         """
 
         assert isinstance(pat_str, str)
@@ -102,7 +102,7 @@ class Pattern:
         fixedmask_str = "".join(pat_to_fixedmask(i) for i in pat_str)
         fixedbits_str = "".join(pat_to_fixedbits(i) for i in pat_str)
 
-        pat = Pattern(
+        pat = BitPattern(
             fixedmask=int(fixedmask_str, 2),
             fixedbits=int(fixedbits_str, 2),
             bit_length=bit_length,
@@ -110,9 +110,9 @@ class Pattern:
         return pat
 
     @staticmethod
-    def to_string(pat: "Pattern") -> str:
+    def to_string(pat: "BitPattern") -> str:
         """
-        Convert the given Pattern object to its string representation.
+        Convert the given BitPattern object to its string representation.
 
         This method creates a binary string representation where for each bit:
 
@@ -122,18 +122,18 @@ class Pattern:
           used.
 
         Parameters:
-            pat (Pattern): The Pattern object to be converted into a string.
+            pat (BitPattern): The BitPattern object to be converted into a string.
 
         Returns:
             str: The string representation of the bit pattern.
 
         Example:
-            >>> p = Pattern(6, 2, 3)  # Represents pattern "01x"
-            >>> Pattern.to_string(p)
+            >>> p = BitPattern(6, 2, 3)  # Represents pattern "01x"
+            >>> BitPattern.to_string(p)
             '01x'
         """
 
-        assert isinstance(pat, Pattern)
+        assert isinstance(pat, BitPattern)
 
         # represent number as binary with self.width digits
         format_str = f"{{:0{pat.bit_length}b}}"
@@ -149,11 +149,11 @@ class Pattern:
         return "".join(pattern_str)
 
     def __str__(self) -> str:
-        return Pattern.to_string(self)
+        return BitPattern.to_string(self)
 
     def __repr__(self) -> str:
         return (
-            "Pattern("
+            "BitPattern("
             + f"fixedmask=0x{self.fixedmask:x}, "
             + f"fixedbits=0x{self.fixedbits:x}, "
             + f"bit_length={self.bit_length}"
@@ -178,29 +178,30 @@ class Pattern:
     def __hash__(self):
         return hash((self.fixedmask, self.fixedbits, self.bit_length))
 
-    def combine(self, other: "Pattern") -> "Pattern":
+    def combine(self, other: "BitPattern") -> "BitPattern":
         """
-        Combine this Pattern with another, creating a new Pattern that represents the
-        union of the fixed bits of both patterns.
+        Combine this BitPattern with another, creating a new BitPattern that represents
+        the union of the fixed bits of both patterns.
 
-        The resulting Pattern's fixedmask is the bitwise OR of the fixedmasks, and its
-        fixedbits is the bitwise OR of the fixedbits of both patterns. The method
+        The resulting BitPattern's fixedmask is the bitwise OR of the fixedmasks, and
+        its fixedbits is the bitwise OR of the fixedbits of both patterns. The method
         ensures that for each of the original patterns, their fixed bits remain
         unchanged within the combined pattern.
 
         Parameters:
-            other (Pattern): The Pattern to combine with.
+            other (BitPattern): The BitPattern to combine with.
 
         Returns:
-            Pattern: A new Pattern representing the combination of the two patterns.
+            BitPattern: A new BitPattern representing the combination of the two
+            patterns.
 
         Raises:
-            ValueError: If the fixedbits of either original Pattern are modified during
-                the combination.
+            ValueError: If the fixedbits of either original BitPattern are modified
+                during the combination.
 
         Example:
-            >>> p1 = Pattern.parse_pattern("10x1")
-            >>> p2 = Pattern.parse_pattern("x1x0")
+            >>> p1 = BitPattern.parse_pattern("10x1")
+            >>> p2 = BitPattern.parse_pattern("x1x0")
             >>> p_combined = p1.combine(p2)
         """
 
@@ -208,7 +209,7 @@ class Pattern:
         new_fixedbits = self.fixedbits | other.fixedbits
 
         if self.bit_length != other.bit_length:
-            raise ValueError("Patterns must match in length")
+            raise ValueError("BitPatterns must match in length")
 
         if new_fixedbits & self.fixedmask != self.fixedbits:
             raise ValueError("Conflicting patterns should be combined")
@@ -216,56 +217,57 @@ class Pattern:
         if new_fixedbits & other.fixedmask != other.fixedbits:
             raise ValueError("Conflicting patterns should be combined")
 
-        return Pattern(
+        return BitPattern(
             fixedmask=new_fixedmask,
             fixedbits=new_fixedbits,
             bit_length=self.bit_length,
         )
 
-    def split_by_mask(self, mask: int) -> tuple["Pattern", "Pattern"]:
+    def split_by_mask(self, mask: int) -> tuple["BitPattern", "BitPattern"]:
         """
-        Splits the current Pattern into two based on the given mask.
+        Splits the current BitPattern into two based on the given mask.
 
         The given mask must be fully contained within the fixedmask of this pattern.
-        The function returns a tuple of two Pattern objects:
+        The function returns a tuple of two BitPattern objects:
 
-        - The first Pattern (pat_1) corresponds to the bits selected by the mask.
-        - The second Pattern (pat_2) corresponds to the remaining bits not selected by
-          the mask.
+        - The first BitPattern (pat_1) corresponds to the bits selected by the mask.
+        - The second BitPattern (pat_2) corresponds to the remaining bits not selected
+          by the mask.
 
         Parameters:
             mask (int): An integer mask indicating which bits to separate.
 
         Returns:
-            (Pattern, Pattern): A tuple containing the separated Pattern objects.
+            (BitPattern, BitPattern): A tuple containing the separated BitPattern
+            objects.
 
         Raises:
             ValueError: If the provided mask is not fully contained within the fixedmask
-                        of this Pattern.
+                        of this BitPattern.
 
         Example:
-            >>> orig = Pattern(0b111, 0b101, 3)
+            >>> orig = BitPattern(0b111, 0b101, 3)
             >>> pat_a, pat_b = orig.separate(0b101)
             >>> pat_a
-            Pattern(fixedmask=0x5, fixedbits=0x5, bit_length=3)
+            BitPattern(fixedmask=0x5, fixedbits=0x5, bit_length=3)
             >>> pat_b
-            Pattern(fixedmask=0x2, fixedbits=0x0, bit_length=3)
+            BitPattern(fixedmask=0x2, fixedbits=0x0, bit_length=3)
         """
 
         # check if mask is contained in this pattern
         if (self.fixedmask | mask) != self.fixedmask:
             raise ValueError(
                 "The provided mask is not fully contained within the "
-                + "Pattern's fixedmask"
+                + "BitPattern's fixedmask"
             )
 
-        pat_1 = Pattern(
+        pat_1 = BitPattern(
             fixedmask=mask,
             fixedbits=self.fixedbits & mask,
             bit_length=self.bit_length,
         )
 
-        pat_2 = Pattern(
+        pat_2 = BitPattern(
             fixedmask=self.fixedmask & ~mask,
             fixedbits=self.fixedbits & ~mask,
             bit_length=self.bit_length,
@@ -273,9 +275,9 @@ class Pattern:
 
         return pat_1, pat_2
 
-    def align_high_to_bit_length(self, bit_length: int) -> "Pattern":
+    def align_high_to_bit_length(self, bit_length: int) -> "BitPattern":
         if bit_length < self.bit_length:
-            raise ValueError("Pattern bit length is to big")
+            raise ValueError("BitPattern bit length is to big")
 
         if bit_length == self.bit_length:  # exact representation
             return copy.copy(self)
@@ -283,7 +285,7 @@ class Pattern:
         fixedmask = self.fixedmask << (bit_length - self.bit_length)
         fixedbits = self.fixedbits << (bit_length - self.bit_length)
 
-        return Pattern(
+        return BitPattern(
             fixedmask=fixedmask,
             fixedbits=fixedbits,
             bit_length=self.bit_length,

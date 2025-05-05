@@ -1,4 +1,4 @@
-from decoder_forge.pattern import Pattern
+from decoder_forge.bit_pattern import BitPattern
 from dataclasses import dataclass
 
 
@@ -18,7 +18,7 @@ class StructDef:
 class AssociatedStructRepo:
     """Repository mapping patterns to structures.
 
-    This class holds a collection of structures along with a mapping from Pattern
+    This class holds a collection of structures along with a mapping from BitPattern
     objects to these structures. It is used to manage the association between individual
     patterns and their corresponding structure definitions.
     """
@@ -26,14 +26,14 @@ class AssociatedStructRepo:
     def __init__(
         self,
         structs: list[StructDef],
-        pat_to_struct: dict[Pattern, StructDef],
+        pat_to_struct: dict[BitPattern, StructDef],
     ):
         """Initializes the repository with given structures and pattern to structure
         mapping.
 
         Args:
             structs (list[Struct]): A list of structure objects.
-            pat_to_struct (dict[Pattern, Struct]): A dictionary mapping Pattern objects
+            pat_to_struct (dict[BitPattern, Struct]): A dictionary mapping BitPattern objects
                 to their corresponding Struct objects.
         """
 
@@ -51,13 +51,13 @@ class AssociatedStructRepo:
     @staticmethod
     def build(
         struct_def: dict[str, dict[str, str]],
-        pat_repo: dict[Pattern, dict[str, str]],
+        pat_repo: dict[BitPattern, dict[str, str]],
     ):
         """Builds an AssociatedStructRepo instance from structure definitions and
         a pattern repository.
 
         This method processes dictionary-based structure definitions and a repository
-        of patterns to create corresponding Struct objects, and maps each Pattern to a
+        of patterns to create corresponding Struct objects, and maps each BitPattern to a
         Struct. A special 'Undef' structure is added for internal purposes. If the
         structure definitions already contain a structure named 'Undef', a ValueError
         is raised.
@@ -67,14 +67,14 @@ class AssociatedStructRepo:
                 structure name and the value is another dictionary containing details
                 of the structure. Expected to have a key "members" with its value
                 (implicitly convertible to a list) representing the members.
-            pat_repo (dict[Pattern, dict[str, str]]): A dictionary mapping Pattern
+            pat_repo (dict[BitPattern, dict[str, str]]): A dictionary mapping BitPattern
                 objects to dictionaries containing pattern details. Each inner
                 dictionary may contain a "to" key indicating which structure the
                 pattern maps to.
 
         Returns:
             AssociatedStructRepo: An instance of AssociatedStructRepo containing all
-            created Structs and the mapping from Patterns to Structs.
+            created Structs and the mapping from BitPatterns to Structs.
 
         Raises:
             ValueError: If a structure with the name 'Undef' exists in the provided

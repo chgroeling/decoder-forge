@@ -1,4 +1,4 @@
-from decoder_forge.pattern import Pattern
+from decoder_forge.bit_pattern import BitPattern
 from functools import reduce
 from dataclasses import dataclass
 from typing import cast
@@ -10,7 +10,7 @@ class DecodeNode:
     """Base class for nodes in a decode tree.
 
     This class acts as an abstract base class for different node types used in
-    representing a hierarchical decode tree built from Pattern objects.
+    representing a hierarchical decode tree built from BitPattern objects.
     """
 
     pass
@@ -18,50 +18,50 @@ class DecodeNode:
 
 @dataclass(eq=True, frozen=True)
 class DecodeLeaf(DecodeNode):
-    """Leaf node in a decode tree holding a Pattern and its original form.
+    """Leaf node in a decode tree holding a BitPattern and its original form.
 
     Attributes:
-        pat (Pattern): The pattern after processing (e.g. after applying a mask).
-        origin (Pattern): The original Pattern from which this leaf was derived.
+        pat (BitPattern): The pattern after processing (e.g. after applying a mask).
+        origin (BitPattern): The original BitPattern from which this leaf was derived.
     """
 
-    pat: Pattern
-    origin: Pattern
+    pat: BitPattern
+    origin: BitPattern
 
 
 @dataclass(eq=True, frozen=True)
 class DecodeTree(DecodeNode):
-    """Internal tree node representing a group of Patterns sharing fixed bits.
+    """Internal tree node representing a group of BitPatterns sharing fixed bits.
 
     Attributes:
-        pat (Pattern): A Pattern representing the common fixed bits for this group.
+        pat (BitPattern): A BitPattern representing the common fixed bits for this group.
             Can be None for the root node.
         children (list[DecodeNode]): A list of child nodes (either DecodeLeaf or
             DecodeTree) representing further subdivisions of patterns.
     """
 
-    pat: Optional[Pattern]
+    pat: Optional[BitPattern]
     children: list[DecodeNode]
 
 
-def compute_common_fixedmask(pats: list[Pattern]) -> int:
+def compute_common_fixedmask(pats: list[BitPattern]) -> int:
     """
-    Compute the common fixed mask for a list of Pattern objects.
+    Compute the common fixed mask for a list of BitPattern objects.
 
     This function calculates the bitwise AND (intersection) of the fixedmask
-    attributes from all Pattern objects in the provided list. The result is an integer
+    attributes from all BitPattern objects in the provided list. The result is an integer
     that represents the bits that are fixed (common) across every pattern.
 
     Args:
-        pats (list[Pattern]): A list of Pattern objects whose fixedmask values will be
+        pats (list[BitPattern]): A list of BitPattern objects whose fixedmask values will be
             combined.
 
     Returns:
-        int: The bitwise AND of all fixedmask attributes of the Pattern objects.
+        int: The bitwise AND of all fixedmask attributes of the BitPattern objects.
 
     Examples:
-        >>> p1 = Pattern(0b111, 0b101, 3)
-        >>> p2 = Pattern(0b101, 0b001, 3)
+        >>> p1 = BitPattern(0b111, 0b101, 3)
+        >>> p2 = BitPattern(0b101, 0b001, 3)
         >>> compute_common_fixedmask([p1, p2])
         5
     """
@@ -74,24 +74,24 @@ def compute_common_fixedmask(pats: list[Pattern]) -> int:
 
 
 def build_groups_by_fixed_bits(
-    pats: list[Pattern],
-) -> dict[Pattern, list[tuple[Pattern, Pattern]]]:
+    pats: list[BitPattern],
+) -> dict[BitPattern, list[tuple[BitPattern, BitPattern]]]:
     """
-    Group Patterns based on their fixed bits after splitting by a common mask.
+    Group BitPatterns based on their fixed bits after splitting by a common mask.
 
-    This function computes a common fixed mask for the provided Pattern objects and
+    This function computes a common fixed mask for the provided BitPattern objects and
     then splits each pattern using the 'split_by_mask' method. The patterns are grouped
     by the part of the pattern that corresponds to the fixed bits of the computed mask.
 
     Args:
-        pats (list[Pattern]): A list of Pattern objects to be grouped.
+        pats (list[BitPattern]): A list of BitPattern objects to be grouped.
 
     Returns:
         dict: A dictionary where each key is the fixed portion (result of splitting by
         the mask) and each value is a list of tuples. Each tuple contains:
 
         - The remainder of the pattern after splitting
-        - The original Pattern object before the split
+        - The original BitPattern object before the split
 
     Raises:
         ValueError: If 'split_by_mask' is invoked with a mask not contained within the
@@ -101,7 +101,7 @@ def build_groups_by_fixed_bits(
     # find fixed parts
     mask = compute_common_fixedmask(pats)
 
-    groups: dict[Pattern, list[tuple[Pattern, Pattern]]] = {}
+    groups: dict[BitPattern, list[tuple[BitPattern, BitPattern]]] = {}
     for pn in pats:
         pa, pb = pn.split_by_mask(mask)
         group = groups.get(pa, list())
@@ -112,18 +112,18 @@ def build_groups_by_fixed_bits(
 
 
 def build_decode_tree_by_fixed_bits(
-    pats: list[Pattern],
+    pats: list[BitPattern],
 ) -> DecodeTree:
     """
-    Construct a hierarchical decode tree of Pattern objects grouped by shared fixed
+    Construct a hierarchical decode tree of BitPattern objects grouped by shared fixed
     bits.
 
-    This function organizes the provided list of Pattern objects into a tree structure.
-    Each Pattern is first wrapped as a DecodeLeaf node and set as a child of the root
+    This function organizes the provided list of BitPattern objects into a tree structure.
+    Each BitPattern is first wrapped as a DecodeLeaf node and set as a child of the root
     DecodeTree node. The tree is built iteratively by:
 
     1. Clearing the children of the current tree node.
-    2. Grouping its Patterns by computing the common fixed mask and splitting them.
+    2. Grouping its BitPatterns by computing the common fixed mask and splitting them.
     3. For each group:
 
        - If the group has a single member, combine the fixed bits with the inner pattern
@@ -134,7 +134,7 @@ def build_decode_tree_by_fixed_bits(
        - Otherwise, simply append the corresponding DecodeLeaf nodes.
 
     Args:
-        pats (list[Pattern]): A list of Pattern objects to be organized into a decode
+        pats (list[BitPattern]): A list of BitPattern objects to be organized into a decode
           tree.
 
     Returns:
@@ -142,7 +142,7 @@ def build_decode_tree_by_fixed_bits(
         hierarchical grouping.
 
     Raises:
-        ValueError: If 'split_by_mask' is invoked with an invalid mask for any Pattern.
+        ValueError: If 'split_by_mask' is invoked with an invalid mask for any BitPattern.
 
     Example:
         >>> tree = build_decode_tree_by_fixed_bits([pattern1, pattern2, pattern3])
@@ -203,8 +203,8 @@ def flatten_decode_tree(tree: DecodeTree):
     This function converts a DecodeTree hierarchy into a flat list for easier
     traversal or debugging. Each element in the list is a tuple containing:
 
-    - The Pattern object at that node.
-    - The original Pattern object (None for internal tree nodes).
+    - The BitPattern object at that node.
+    - The original BitPattern object (None for internal tree nodes).
     - The depth level of the node within the tree.
     - A boolean indicating if the node is the first child
     - A boolean indicating if the node is the last child (used for backtracking
@@ -215,7 +215,7 @@ def flatten_decode_tree(tree: DecodeTree):
 
     Returns:
         list: A list of tuples, each containing:
-            (Pattern, origin Pattern or None, depth integer, last_child flag boolean).
+            (BitPattern, origin BitPattern or None, depth integer, last_child flag boolean).
 
     Example:
         >>> flat_list = build_flat_tree(tree)
@@ -231,7 +231,7 @@ def flatten_decode_tree(tree: DecodeTree):
             for idx, i in enumerate(reversed(tree.children))
         )
     )
-    flattend_tree: list[tuple[Pattern, Optional[Pattern], int, bool, bool]] = []
+    flattend_tree: list[tuple[BitPattern, Optional[BitPattern], int, bool, bool]] = []
     while len(stack) != 0:
         item, depth, first_child, last_child = stack.pop()
         if isinstance(item, DecodeLeaf):

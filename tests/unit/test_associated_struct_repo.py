@@ -1,6 +1,6 @@
 from decoder_forge.associated_struct_repo import AssociatedStructRepo
 from decoder_forge.associated_struct_repo import StructDef
-from decoder_forge.pattern import Pattern
+from decoder_forge.bit_pattern import BitPattern
 
 
 def test_build_empty_struct_def_and_empty_pat_repo_has_structs_with_undef_member():
@@ -24,21 +24,21 @@ def test_build_empty_struct_def_and_empty_pat_repo_has_empty_pat_to_struct():
 def test_build_empty_struct_def_and_filled_pat_repo_has_correct_pat_to_struct():
     struct_def = {}
     pat_repo = {
-        Pattern(fixedmask=0x1, fixedbits=0x0, bit_length=8): {},
-        Pattern(fixedmask=0x2, fixedbits=0x0, bit_length=8): {},
-        Pattern(fixedmask=0x4, fixedbits=0x0, bit_length=8): {},
+        BitPattern(fixedmask=0x1, fixedbits=0x0, bit_length=8): {},
+        BitPattern(fixedmask=0x2, fixedbits=0x0, bit_length=8): {},
+        BitPattern(fixedmask=0x4, fixedbits=0x0, bit_length=8): {},
     }
 
     asrepo = AssociatedStructRepo.build(struct_def=struct_def, pat_repo=pat_repo)
 
     assert asrepo.pat_to_struct == {
-        Pattern(fixedmask=0x1, fixedbits=0x0, bit_length=8): StructDef(
+        BitPattern(fixedmask=0x1, fixedbits=0x0, bit_length=8): StructDef(
             name="Undef", members=["instr"]
         ),
-        Pattern(fixedmask=0x2, fixedbits=0x0, bit_length=8): StructDef(
+        BitPattern(fixedmask=0x2, fixedbits=0x0, bit_length=8): StructDef(
             name="Undef", members=["instr"]
         ),
-        Pattern(fixedmask=0x4, fixedbits=0x0, bit_length=8): StructDef(
+        BitPattern(fixedmask=0x4, fixedbits=0x0, bit_length=8): StructDef(
             name="Undef", members=["instr"]
         ),
     }
@@ -47,9 +47,9 @@ def test_build_empty_struct_def_and_filled_pat_repo_has_correct_pat_to_struct():
 def test_build_empty_struct_def_and_filled_pat_repo_has_structs_with_undef_member():
     struct_def = {}
     pat_repo = {
-        Pattern(fixedmask=0x1, fixedbits=0x0, bit_length=8): {},
-        Pattern(fixedmask=0x2, fixedbits=0x0, bit_length=8): {},
-        Pattern(fixedmask=0x4, fixedbits=0x0, bit_length=8): {},
+        BitPattern(fixedmask=0x1, fixedbits=0x0, bit_length=8): {},
+        BitPattern(fixedmask=0x2, fixedbits=0x0, bit_length=8): {},
+        BitPattern(fixedmask=0x4, fixedbits=0x0, bit_length=8): {},
     }
 
     asrepo = AssociatedStructRepo.build(struct_def=struct_def, pat_repo=pat_repo)
@@ -96,21 +96,21 @@ def test_build_filled_struct_def_and_filled_pat_repo_has_correct_pat_to_struct()
         "StructC": {"members": ["c"]},
     }
     pat_repo = {
-        Pattern(fixedmask=0x1, fixedbits=0x0, bit_length=8): {},
-        Pattern(fixedmask=0x2, fixedbits=0x0, bit_length=8): {"to": "StructA"},
-        Pattern(fixedmask=0x4, fixedbits=0x0, bit_length=8): {"to": "StructC"},
+        BitPattern(fixedmask=0x1, fixedbits=0x0, bit_length=8): {},
+        BitPattern(fixedmask=0x2, fixedbits=0x0, bit_length=8): {"to": "StructA"},
+        BitPattern(fixedmask=0x4, fixedbits=0x0, bit_length=8): {"to": "StructC"},
     }
 
     asrepo = AssociatedStructRepo.build(struct_def=struct_def, pat_repo=pat_repo)
 
     assert asrepo.pat_to_struct == {
-        Pattern(fixedmask=0x1, fixedbits=0x0, bit_length=8): StructDef(
+        BitPattern(fixedmask=0x1, fixedbits=0x0, bit_length=8): StructDef(
             name="Undef", members=["instr"]
         ),
-        Pattern(fixedmask=0x2, fixedbits=0x0, bit_length=8): StructDef(
+        BitPattern(fixedmask=0x2, fixedbits=0x0, bit_length=8): StructDef(
             name="StructA", members=["a"]
         ),
-        Pattern(fixedmask=0x4, fixedbits=0x0, bit_length=8): StructDef(
+        BitPattern(fixedmask=0x4, fixedbits=0x0, bit_length=8): StructDef(
             name="StructC", members=["c"]
         ),
     }
@@ -123,9 +123,9 @@ def test_build_filled_struct_def_and_filled_pat_repo_has_correct_structs():
         "StructC": {"members": ["c"]},
     }
     pat_repo = {
-        Pattern(fixedmask=0x1, fixedbits=0x0, bit_length=8): {},
-        Pattern(fixedmask=0x2, fixedbits=0x0, bit_length=8): {"to": "StructA"},
-        Pattern(fixedmask=0x4, fixedbits=0x0, bit_length=8): {"to": "StructC"},
+        BitPattern(fixedmask=0x1, fixedbits=0x0, bit_length=8): {},
+        BitPattern(fixedmask=0x2, fixedbits=0x0, bit_length=8): {"to": "StructA"},
+        BitPattern(fixedmask=0x4, fixedbits=0x0, bit_length=8): {"to": "StructC"},
     }
 
     asrepo = AssociatedStructRepo.build(struct_def=struct_def, pat_repo=pat_repo)

@@ -1,7 +1,7 @@
 import yaml
 import logging
 from decoder_forge.i_printer import IPrinter
-from decoder_forge.pattern import Pattern
+from decoder_forge.bit_pattern import BitPattern
 from decoder_forge.pattern_algorithms import build_decode_tree_by_fixed_bits
 from decoder_forge.pattern_algorithms import flatten_decode_tree
 from decoder_forge.pattern_algorithms import DecodeTree
@@ -13,10 +13,10 @@ TREE_INDENT_WIDTH = 20
 
 def print_tree(printer: IPrinter, decode_tree: DecodeTree, repo):
     """
-    Print a hierarchical tree of patterns in a formatted manner.
+    Print a hierarchical tree of bit patterns in a formatted manner.
 
     This function first flattens the hierarchical DecodeTree into a list of tuples.
-    Each tuple contains a Pattern, its origin, the depth in the tree, a flag
+    Each tuple contains a BitPattern, its origin, the depth in the tree, a flag
     indicating if it is the first child and a flag indicating if it is the last
     child at that level. It then formats each node with appropriate indentation
     and prints it using the provided printer.
@@ -55,12 +55,13 @@ def print_tree(printer: IPrinter, decode_tree: DecodeTree, repo):
 
 
 def uc_show_decode_tree(printer: IPrinter, input_yaml: str):
-    """Decode a YAML string to build and display a pattern tree.
+    """Decode a YAML string to build and display a decode tree.
 
     This function takes a YAML string which encodes a list of pattern dictionaries.
-    It decodes the YAML into Python objects using the pattern_decoder, extracts patterns
-    to build a repository mapping, organizes these patterns into a hierarchical tree
-    based on fixed bits, and finally prints the tree using the provided printer.
+    It decodes the YAML into Python objects using the pattern_decoder, extracts
+    bit patterns to build a repository mapping, organizes these patterns into a
+    hierarchical tree based on fixed bits, and finally prints the tree using the
+    provided printer.
 
     Args:
         printer (IPrinter): An instance of IPrinter used for printing the tree.
@@ -71,8 +72,8 @@ def uc_show_decode_tree(printer: IPrinter, input_yaml: str):
         Exception: Any exception raised during pattern processing or tree building.
 
     Examples:
-        >>> yaml_input = '[{"pattern": "some pattern", "name": "Pattern1"},
-            {"pattern": "another pattern", "name": "Pattern2"}]'
+        >>> yaml_input = '[{"pattern": "some pattern", "name": "BitPattern1"},
+            {"pattern": "another pattern", "name": "BitPattern2"}]'
         >>> uc_show_decode_tree(printer, yaml_input)
     """
 
@@ -86,10 +87,12 @@ def uc_show_decode_tree(printer: IPrinter, input_yaml: str):
         ins["patterns"] = dict()
 
     # build pattern list
-    pats = [Pattern.parse_pattern(pat) for pat, dct in ins["patterns"].items()]
+    pats = [BitPattern.parse_pattern(pat) for pat, dct in ins["patterns"].items()]
 
     # build pattern repo
-    pat_repo = {Pattern.parse_pattern(pat): dct for pat, dct in ins["patterns"].items()}
+    pat_repo = {
+        BitPattern.parse_pattern(pat): dct for pat, dct in ins["patterns"].items()
+    }
 
     # build decode tree
     decode_tree = build_decode_tree_by_fixed_bits(pats)
