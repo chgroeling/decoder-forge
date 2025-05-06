@@ -9,7 +9,7 @@ def test_build_empty_struct_def_and_empty_pat_repo_has_structs_with_undef_member
 
     asrepo = AssociatedStructRepo.build(struct_def=struct_def, pat_repo=pat_repo)
 
-    assert asrepo.structs == [StructDef(name="Undef", members=["instr"])]
+    assert asrepo.structs == [StructDef(name="Undef", members=["code"])]
 
 
 def test_build_empty_struct_def_and_empty_pat_repo_has_empty_pat_to_struct():
@@ -33,13 +33,13 @@ def test_build_empty_struct_def_and_filled_pat_repo_has_correct_pat_to_struct():
 
     assert asrepo.pat_to_struct == {
         BitPattern(fixedmask=0x1, fixedbits=0x0, bit_length=8): StructDef(
-            name="Undef", members=["instr"]
+            name="Undef", members=["code"]
         ),
         BitPattern(fixedmask=0x2, fixedbits=0x0, bit_length=8): StructDef(
-            name="Undef", members=["instr"]
+            name="Undef", members=["code"]
         ),
         BitPattern(fixedmask=0x4, fixedbits=0x0, bit_length=8): StructDef(
-            name="Undef", members=["instr"]
+            name="Undef", members=["code"]
         ),
     }
 
@@ -54,7 +54,7 @@ def test_build_empty_struct_def_and_filled_pat_repo_has_structs_with_undef_membe
 
     asrepo = AssociatedStructRepo.build(struct_def=struct_def, pat_repo=pat_repo)
 
-    assert asrepo.structs == [StructDef(name="Undef", members=["instr"])]
+    assert asrepo.structs == [StructDef(name="Undef", members=["code"])]
 
 
 def test_build_filled_struct_def_and_empty_pat_repo_has_correct_structs():
@@ -72,7 +72,7 @@ def test_build_filled_struct_def_and_empty_pat_repo_has_correct_structs():
         StructDef(name="StructA", members=["a"]),
         StructDef(name="StructB", members=["b"]),
         StructDef(name="StructC", members=["c"]),
-        StructDef(name="Undef", members=["instr"]),
+        StructDef(name="Undef", members=["code"]),
     ]
 
 
@@ -105,7 +105,7 @@ def test_build_filled_struct_def_and_filled_pat_repo_has_correct_pat_to_struct()
 
     assert asrepo.pat_to_struct == {
         BitPattern(fixedmask=0x1, fixedbits=0x0, bit_length=8): StructDef(
-            name="Undef", members=["instr"]
+            name="Undef", members=["code"]
         ),
         BitPattern(fixedmask=0x2, fixedbits=0x0, bit_length=8): StructDef(
             name="StructA", members=["a"]
@@ -134,5 +134,5 @@ def test_build_filled_struct_def_and_filled_pat_repo_has_correct_structs():
         StructDef(name="StructA", members=["a"]),
         StructDef(name="StructB", members=["b"]),
         StructDef(name="StructC", members=["c"]),
-        StructDef(name="Undef", members=["instr"]),
+        StructDef(name="Undef", members=["code"]),
     ]

@@ -12,12 +12,21 @@
     {{ match_pat(pat, first_child) }}    
     {%- if origin == None %}
     {%- else %}
+        {%- if as_repo.pat_to_struct[origin].members|length == 0 %}
         return {{as_repo.pat_to_struct[origin].name}}()
+        {%- else %}
+        return {{as_repo.pat_to_struct[origin].name}}( 
+            {%- for member in as_repo.pat_to_struct[origin].members -%}
+            {{ member }} = 0
+            {%- if not loop.last -%},{%- endif -%}
+            {%- endfor -%}
+        )
+        {%- endif %}
     {%- endif %}
 {%- endmacro -%}
 
 {% macro no_match() -%}
-    return Undef()  # no match
+    return Undef(code=code)  # no match
     {{""}}
 {%- endmacro -%}
 from dataclasses import dataclass
@@ -29,7 +38,7 @@ class {{struct.name}}:
     pass
     {%- else %}
         {%- for member in struct.members %}
-    {{ member }} : int = 0
+    {{ member }} : int
         {%- endfor %}
     {%- endif %}
     {{""}}
@@ -49,4 +58,4 @@ def decode(code: int):
         {{no_match() | indent((depth-1)*4, first=True)}}  
     {%- endif %}
 {%- endfor %}
-    return Undef() # no match
+    return Undef(code=code) # no match

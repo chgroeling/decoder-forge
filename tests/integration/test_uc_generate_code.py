@@ -33,7 +33,7 @@ def test_uc_generate_code_generate_and_eval_python_code_empty_format_outputs_Non
     decode_output = test_namespace["decode"](0xFF)
 
     # returns undef class
-    assert decode_output == test_namespace["Undef"]()
+    assert decode_output == test_namespace["Undef"](code=0xFF)
 
 
 def test_uc_generate_code_generate_and_eval_python_code_test_format_outputs_None():
@@ -52,4 +52,4 @@ def test_uc_generate_code_generate_and_eval_python_code_test_format_outputs_None
 
     # call the decoder
     decode_output = test_namespace["decode"](0x0F)
-    assert decode_output == test_namespace["StructD"]()
+    assert decode_output == test_namespace["StructD"](rd0=0)

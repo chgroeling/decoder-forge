@@ -95,7 +95,7 @@ class AssociatedStructRepo:
                 "The struct name 'Undef' is forbidden. Its used for internal purposes"
             )
 
-        name_to_struct["Undef"] = StructDef(name="Undef", members=["instr"])
+        name_to_struct["Undef"] = StructDef(name="Undef", members=["code"])
 
         # Map patterns on structs
         def get_to_or_undef(pat_data: dict[str, str]):
