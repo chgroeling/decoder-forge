@@ -5,14 +5,18 @@ struct_def:
   StructD: {members: [rd0]}
 
 operations:
-  extract_rd: {dest: rd, op: bit_range, range: [4,3]}
+  set_ra0_1 : {dest: ra0, op: set, args: [1]} # o=1
+  set_ra1_2 : {dest: ra1, op: set, args: [2]} # o=2
+  set_rc0_1 : {dest: rc0, op: set, args: [1]} # o=1
+  set_rc1_2 : {dest: rc1, op: set, args: [2]} # o=2
+  extract_rd: {dest: rd0, op: extract_bits, args: [5, 3]} # o=i[MSB:LSB]
   
 patterns:
-  00xxx00x: {name: instr_A0, to: StructA}
-  00xxx01x: {name: instr_A1, to: StructA}
+  00xxx00x: {name: instr_A0, to: StructA, ops: [set_ra0_1, set_ra1_2]}
+  00xxx01x: {name: instr_A1, to: StructA, ops: [set_ra0_1, set_ra1_2]}
   010xxxxx: {name: instr_B0, to: StructB}
   011xxxxx: {name: instr_UNDEF0}
   10xxxxxx: {name: instr_UNDEF1}
-  111xxxxx: {name: instr_C0, to: StructC}
-  110xxxxx: {name: instr_C1, to: StructC}
+  111xxxxx: {name: instr_C0, to: StructC, ops: [set_rc0_1, set_rc1_2]}
+  110xxxxx: {name: instr_C1, to: StructC, ops: [set_rc0_1, set_rc1_2]}
   00xxx111: {name: instr_D0, to: StructD, ops: [extract_rd]}

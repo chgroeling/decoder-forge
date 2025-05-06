@@ -25,7 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added Jinja template module in decoder_forge.templates:
   - Added the python_decoder.py.jinja template, which is used to generate Python bit-decoders.
-  
+
+- Added the module decoder_forge.bit_utils which:
+  - Introduces the function "create_bitmask", which constructs a bitmask with a specified number of consecutive bits set to 1. 
+
 - Added the module decoder_forge.bit_pattern which:
   – Introduces the BitPattern class to encapsulate a bit mask (fixedmask), fixed bits (fixedbits), and the total bit length.
   – Implements:

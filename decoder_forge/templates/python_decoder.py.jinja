@@ -1,4 +1,19 @@
-{% macro match_pat(pat, first_child) -%}
+{% macro op_set(op) -%}
+    {{op.dest}} = {{op.args[0]}}
+{%- endmacro -%}
+
+{% macro op_extract_bits(op) -%}
+    {%- set bit_mask = bit_utils.create_bit_mask(op.args[0]-op.args[1]+1) -%} 
+    {{op.dest}} = (code >> {{op.args[1]}}) & {{"0x%x"%bit_mask}} # code[{{op.args[0]}}:{{op.args[1]}}] 
+{%- endmacro -%}
+
+{% set op_map = {
+    "set": op_set,
+    "extract_bits" : op_extract_bits
+} -%}
+
+
+{%- macro match_pat(pat, first_child) -%}
     {% if first_child -%}
         if{{" "}}
     {%- else -%}
@@ -10,15 +25,22 @@
 
 {% macro gen_pat(pat, first_child, origin) -%}
     {{ match_pat(pat, first_child) }}    
+    {%- for op in aops_repo.pat_to_ops[origin] %}
+        {%- if op.op in op_map %}
+        {{op_map[op.op](op)}}
+        {%- else %}
+        {{op.dest}} = 0 # op not found ...
+        {%- endif %}
+    {%- endfor -%}      
     {%- if origin == None %}
     {%- else %}
         {%- if as_repo.pat_to_struct[origin].members|length == 0 %}
         return {{as_repo.pat_to_struct[origin].name}}()
         {%- else %}
-        return {{as_repo.pat_to_struct[origin].name}}( 
+        return {{as_repo.pat_to_struct[origin].name}}(
             {%- for member in as_repo.pat_to_struct[origin].members -%}
-            {{ member }} = 0
-            {%- if not loop.last -%},{%- endif -%}
+            {{ member }}
+            {%- if not loop.last -%},{{" "}}{%- endif -%}
             {%- endfor -%}
         )
         {%- endif %}
@@ -26,8 +48,7 @@
 {%- endmacro -%}
 
 {% macro no_match() -%}
-    return Undef(code=code)  # no match
-    {{""}}
+    return Undef(code)  # no match
 {%- endmacro -%}
 from dataclasses import dataclass
 {{""}}
@@ -58,4 +79,4 @@ def decode(code: int):
         {{no_match() | indent((depth-1)*4, first=True)}}  
     {%- endif %}
 {%- endfor %}
-    return Undef(code=code) # no match
+    return Undef(code) # no match

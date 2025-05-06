@@ -1,3 +1,11 @@
+struct_def:
+  LdrLiteral: {members: [flags, t, imm32]}
+
+operations:
+  init_flags: {dest: flags, op: set, args: [0]}
+  extract_t: {dest: t, op: extract_bits, args: [15, 12]} # o=i[MSB:LSB]
+  extract_imm32: {dest: imm32, op: extract_bits, args: [11, 0]} # o=i[MSB:LSB]
+  
 patterns:
   "0000000000xxxxxxxxxxxxxxxxxxxxxx": {"name": "mov_register_t2"}
   "00000xxxxxxxxxxxxxxxxxxxxxxxxxxx": {"name": "lsl_immediate_t1"}
@@ -135,7 +143,7 @@ patterns:
   "111110001011xxxxxxxxxxxxxxxxxxxx": {"name": "ldrh_immediate_t2"}
   "111110001100xxxxxxxxxxxxxxxxxxxx": {"name": "str_immediate_t3"}
   "111110001101xxxxxxxxxxxxxxxxxxxx": {"name": "ldr_immediate_t3"}
-  "11111000x1011111xxxxxxxxxxxxxxxx": {"name": "ldr_literal_t2"}
+  "11111000x1011111xxxxxxxxxxxxxxxx": {"name": "ldr_literal_t2", to: LdrLiteral, ops: [init_flags, extract_t, extract_imm32]}
   "111110010001xxxxxxxx1xxxxxxxxxxx": {"name": "ldrsb_immediate_t2"}
   "111110010011xxxxxxxx1xxxxxxxxxxx": {"name": "ldrsh_immediate_t2"}
   "111110011001xxxxxxxxxxxxxxxxxxxx": {"name": "ldrsb_immediate_t1"}

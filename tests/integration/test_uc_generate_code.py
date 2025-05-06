@@ -51,5 +51,5 @@ def test_uc_generate_code_generate_and_eval_python_code_test_format_outputs_None
     exec(generated_code, test_namespace)
 
     # call the decoder
-    decode_output = test_namespace["decode"](0x0F)
-    assert decode_output == test_namespace["StructD"](rd0=0)
+    decode_output = test_namespace["decode"](0x1F)
+    assert decode_output == test_namespace["StructD"](rd0=0x3)
