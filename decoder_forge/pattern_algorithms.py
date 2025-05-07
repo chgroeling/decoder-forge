@@ -112,44 +112,53 @@ def build_groups_by_fixed_bits(
 
 
 def build_decode_tree_by_fixed_bits(
-    pats: list[BitPattern],
+    pats: list[BitPattern], decoder_width: int
 ) -> DecodeTree:
     """
     Construct a hierarchical decode tree of BitPattern objects grouped by shared fixed
     bits.
 
-    This function organizes the provided list of BitPattern objects into a tree structure.
-    Each BitPattern is first wrapped as a DecodeLeaf node and set as a child of the root
-    DecodeTree node. The tree is built iteratively by:
+    This function organizes the provided list of BitPattern objects into a tree
+    structure. Each BitPattern is first extended to the desired decoder width by
+    calling the extend_and_shift_to_msb() method, and then it is wrapped as a
+    DecodeLeaf node and attached as a child of the root DecodeTree node. The tree is
+    built iteratively by:
 
     1. Clearing the children of the current tree node.
-    2. Grouping its BitPatterns by computing the common fixed mask and splitting them.
+    2. Grouping its BitPattern nodes by computing a common fixed mask and splitting them
+       using split_by_mask.
     3. For each group:
 
-       - If the group has a single member, combine the fixed bits with the inner pattern
-         (using the combine method) and create a DecodeLeaf.
-       - If the group's fixed portion (outer pattern) has a non-zero fixedmask, create a
-         new DecodeTree with DecodeLeaf children, and schedule that subtree for further
-         processing.
-       - Otherwise, simply append the corresponding DecodeLeaf nodes.
+       - If the group contains a single member, the fixed bits (outer portion) are
+         combined with the remainder (inner portion) using combine(), and a DecodeLeaf
+         is created.
+       - If the group’s fixed portion has a non-zero fixedmask, a new DecodeTree is
+         created with the corresponding DecodeLeaf children, and this subtree is
+         scheduled for further processing.
+       - Otherwise, the corresponding DecodeLeaf nodes are directly appended to the
+         current node.
 
     Args:
-        pats (list[BitPattern]): A list of BitPattern objects to be organized into a decode
-          tree.
+       pats (list[BitPattern]): A list of BitPattern objects to be organized into the
+         decode tree.
+       decoder_width (int): The target bit width to which each BitPattern is extended
+         before grouping.
 
     Returns:
-        DecodeTree: The root node of the constructed decode tree representing
-        hierarchical grouping.
+       DecodeTree: The root node of the constructed decode tree representing the
+       hierarchical grouping.
 
     Raises:
-        ValueError: If 'split_by_mask' is invoked with an invalid mask for any BitPattern.
+       ValueError: If any BitPattern cannot be split by the computed common fixed mask.
 
     Example:
-        >>> tree = build_decode_tree_by_fixed_bits([pattern1, pattern2, pattern3])
-        >>> print(tree)
+       >>> tree = build_decode_tree_by_fixed_bits([pattern1, pattern2, pattern3], decoder_width=8)
+       >>> print(tree)
     """
 
-    pats_unfolded: list[DecodeNode] = [DecodeLeaf(pat=i, origin=i) for i in pats]
+    pats_unfolded: list[DecodeNode] = [
+        DecodeLeaf(pat=i.extend_and_shift_to_msb(decoder_width), origin=i) for i in pats
+    ]
     root = DecodeTree(pat=None, children=pats_unfolded)
 
     stack: list[DecodeTree] = []

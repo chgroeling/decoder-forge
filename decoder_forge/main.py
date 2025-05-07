@@ -28,9 +28,15 @@ def cli(ctx, verbose):
 
 
 @cli.command()
-@click.argument("INPUT_PATH")
+@click.argument("INPUT_PATH", type=str)
+@click.option(
+    "--decoder_width",
+    help="Target bit width; patterns are extended to this width before decoding (default: 32)",
+    default=32,
+    type=int,
+)
 @click.pass_context
-def generate_code(self, input_path: str):
+def generate_code(self, input_path: str, decoder_width: int):
     """Generate decoder code from YAML pattern definitions.
 
     This command reads a YAML file from the specified INPUT_PATH, which is expected to
@@ -49,13 +55,19 @@ def generate_code(self, input_path: str):
 
     printer = Printer()
     tengine = TemplateEngine()
-    uc_generate_code(printer, tengine, yaml_buf)
+    uc_generate_code(printer, tengine, yaml_buf, decoder_width)
 
 
 @cli.command()
-@click.argument("INPUT_PATH")
+@click.argument("INPUT_PATH", type=str)
+@click.option(
+    "--decoder_width",
+    help="Target bit width; patterns are extended to this width before decoding (default: 32)",
+    default=32,
+    type=int,
+)
 @click.pass_context
-def show_tree(ctx, input_path: str):
+def show_tree(ctx, input_path: str, decoder_width: int):
     """
     Show the decode tree of an instruction set.
 
@@ -66,7 +78,7 @@ def show_tree(ctx, input_path: str):
     INPUT_PATH: The file path to a YAML file containing pattern definitions.
 
     Example:
-        $ python cli.py show_tree instructions.json
+        $ python cli.py show_tree instructions.yaml
     """
 
     yaml_buf = ""
@@ -74,7 +86,7 @@ def show_tree(ctx, input_path: str):
         yaml_buf = fp.read()
 
     printer = Printer()
-    uc_show_decode_tree(printer, yaml_buf)
+    uc_show_decode_tree(printer, yaml_buf, decoder_width)
 
 
 def main():

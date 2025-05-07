@@ -21,7 +21,7 @@ def test_uc_generate_code_generate_and_eval_python_code_empty_format_outputs_Non
     tengine = TemplateEngine()
 
     # method under test
-    uc_generate_code(printer_mock, tengine, yaml_buf)
+    uc_generate_code(printer_mock, tengine, yaml_buf, decoder_width=8)
 
     generated_code = extract_generated_code(printer_mock)
 
@@ -42,7 +42,7 @@ def test_uc_generate_code_generate_and_eval_python_code_test_format_outputs_None
 
     # method under test
     test_format = files("tests.data.formats").joinpath("test-format.yaml").read_text()
-    uc_generate_code(printer_mock, tengine, test_format)
+    uc_generate_code(printer_mock, tengine, test_format, decoder_width=8)
 
     generated_code = extract_generated_code(printer_mock)
 

@@ -275,7 +275,35 @@ class BitPattern:
 
         return pat_1, pat_2
 
-    def align_high_to_bit_length(self, bit_length: int) -> "BitPattern":
+    def extend_and_shift_to_msb(self, bit_length: int) -> "BitPattern":
+        """
+        Extend the BitPattern to a new higher bit length and shift it so that the
+        original bits occupy the most significant positions of the new representation.
+
+        This method increases the total number of bits in the pattern by shifting both
+        the fixedmask and fixedbits to the left. The effect is that the original pattern
+        is "extended" and its bits are aligned to the upper (more significant) bits of
+        the new bit length. If the provided bit_length equals the current bit_length,
+        a copy of the current BitPattern is returned.
+
+        Args:
+           bit_length (int): The desired total bit length for the extended and shifted
+             BitPattern.
+
+        Returns:
+          BitPattern: A new BitPattern instance with the pattern extended and aligned to
+          the specified bit_length.
+
+        Raises:
+          ValueError: If the provided bit_length is smaller than the current bit_length.
+
+        Example:
+          >>> bp = BitPattern.parse_pattern("101x")
+          >>> extended_bp = bp.extend_and_shift_to_msb(8)
+          >>> print(extended_bp)
+          101xxxxx
+        """
+
         if bit_length < self.bit_length:
             raise ValueError("BitPattern bit length is to big")
 
@@ -288,5 +316,5 @@ class BitPattern:
         return BitPattern(
             fixedmask=fixedmask,
             fixedbits=fixedbits,
-            bit_length=self.bit_length,
+            bit_length=bit_length,
         )

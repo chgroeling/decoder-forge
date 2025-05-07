@@ -54,7 +54,7 @@ def print_tree(printer: IPrinter, decode_tree: DecodeTree, repo):
             printer.print(f"{fmt_tree_node}| {str(item)}")
 
 
-def uc_show_decode_tree(printer: IPrinter, input_yaml: str):
+def uc_show_decode_tree(printer: IPrinter, input_yaml: str, decoder_width: int):
     """Decode a YAML string to build and display a decode tree.
 
     This function takes a YAML string which encodes a list of pattern dictionaries.
@@ -87,14 +87,14 @@ def uc_show_decode_tree(printer: IPrinter, input_yaml: str):
         ins["patterns"] = dict()
 
     # build pattern list
-    pats = [BitPattern.parse_pattern(pat) for pat, dct in ins["patterns"].items()]
+    pats = [BitPattern.parse_pattern(str(pat)) for pat, dct in ins["patterns"].items()]
 
     # build pattern repo
     pat_repo = {
-        BitPattern.parse_pattern(pat): dct for pat, dct in ins["patterns"].items()
+        BitPattern.parse_pattern(str(pat)): dct for pat, dct in ins["patterns"].items()
     }
 
     # build decode tree
-    decode_tree = build_decode_tree_by_fixed_bits(pats)
+    decode_tree = build_decode_tree_by_fixed_bits(pats, decoder_width=decoder_width)
 
     print_tree(printer, decode_tree, pat_repo)

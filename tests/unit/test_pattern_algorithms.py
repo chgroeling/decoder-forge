@@ -63,11 +63,15 @@ def test_build_groups_by_fixed_bits_three_patterns_two_with_exclusive_bits_retur
     assert groups == {
         BitPattern(fixedmask=0xC1, fixedbits=0xC1, bit_length=8): [  # pat: "11xxxxx1"
             (
-                BitPattern(fixedmask=0x2, fixedbits=0x0, bit_length=8),  # pat: "xxxxxx0x"
+                BitPattern(
+                    fixedmask=0x2, fixedbits=0x0, bit_length=8
+                ),  # pat: "xxxxxx0x"
                 BitPattern(fixedmask=0xC3, fixedbits=0xC1, bit_length=8),
             ),
             (
-                BitPattern(fixedmask=0x2, fixedbits=0x2, bit_length=8),  # pat: "xxxxxx1x"
+                BitPattern(
+                    fixedmask=0x2, fixedbits=0x2, bit_length=8
+                ),  # pat: "xxxxxx1x"
                 BitPattern(fixedmask=0xC3, fixedbits=0xC3, bit_length=8),
             ),
         ],
@@ -84,7 +88,7 @@ def test_build_decode_tree_by_fixed_bits_one_pattern_returns_correct_tree():
     # pat_a = "11x00x11"
     pat_a = BitPattern(fixedmask=0xDB, fixedbits=0xC3, bit_length=8)
 
-    tree = build_decode_tree_by_fixed_bits([pat_a])
+    tree = build_decode_tree_by_fixed_bits([pat_a], decoder_width=8)
 
     assert tree == DecodeTree(
         pat=None,
@@ -106,7 +110,7 @@ def test_build_decode_tree_by_fixed_bits_two_patterns_contained_returns_correct_
     # pat_b = "11xxx0xx"
     pat_b = BitPattern(fixedmask=0xC4, fixedbits=0xC0, bit_length=8)
 
-    tree = build_decode_tree_by_fixed_bits([pat_a, pat_b])
+    tree = build_decode_tree_by_fixed_bits([pat_a, pat_b], decoder_width=8)
     assert tree == DecodeTree(
         pat=None,
         children=[
@@ -140,17 +144,21 @@ def test_build_decode_tree_by_fixed_bits_two_patterns_one_longer_returns_correct
     # pat_b = "11"
     pat_b = BitPattern(fixedmask=0x3, fixedbits=0x3, bit_length=2)
 
-    tree = build_decode_tree_by_fixed_bits([pat_a, pat_b])
+    tree = build_decode_tree_by_fixed_bits([pat_a, pat_b], decoder_width=2)
 
     assert tree == DecodeTree(
         pat=None,
         children=[
             DecodeLeaf(
-                pat=BitPattern(fixedmask=0x2, fixedbits=0x0, bit_length=2),  # pat = "0x"
+                pat=BitPattern(
+                    fixedmask=0x2, fixedbits=0x0, bit_length=2
+                ),  # pat = "0x"
                 origin=BitPattern(fixedmask=0x2, fixedbits=0x0, bit_length=2),
             ),
             DecodeLeaf(
-                pat=BitPattern(fixedmask=0x3, fixedbits=0x3, bit_length=2),  # pat = "11"
+                pat=BitPattern(
+                    fixedmask=0x3, fixedbits=0x3, bit_length=2
+                ),  # pat = "11"
                 origin=BitPattern(fixedmask=0x3, fixedbits=0x3, bit_length=2),
             ),
         ],
@@ -167,7 +175,7 @@ def test_build_decode_tree_by_fixed_bits_three_patterns_two_with_exclusive_bits_
     # pat_c= "11xxxx11"
     pat_c = BitPattern(fixedmask=0xC3, fixedbits=0xC3, bit_length=8)
 
-    tree = build_decode_tree_by_fixed_bits([pat_a, pat_b, pat_c])
+    tree = build_decode_tree_by_fixed_bits([pat_a, pat_b, pat_c], decoder_width=8)
 
     assert tree == DecodeTree(
         pat=None,

@@ -37,10 +37,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - The split_by_mask method to divide a BitPattern into two based on a provided mask.
     - Utility functions (is_undef_bit and is_wildcard_bit) to detect undefined or wildcard bits.
     - A combine method, which computes the union of the fixed masks and fixed bits by performing bitwise OR operations. 
+    - A extend_and_shift_to_msb method, which allows a BitPattern instance to be extended to a larger bit length.
+
 
 - Added the module decoder_forge.pattern_algorithms which:
   - Provides compute_common_fixedmask to compute the bitwise AND (intersection) of fixedmask values across patterns.
-  - Introduces build_groups_by_fixed_bits to group bit patterns based on their fixed bits.
+  - Implements build_groups_by_fixed_bits to group bit patterns based on their fixed bits.
   - Implements build_decode_tree_by_fixed_bits to construct a hierarchical tree of BitPatterns by recursively grouping them.
   - Adds flattend_pattern_tree to convert a hierarchical DecodeTree into a flat list for easier traversal or debugging.
 

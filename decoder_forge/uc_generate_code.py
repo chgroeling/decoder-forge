@@ -13,7 +13,9 @@ from decoder_forge import bit_utils
 logger = logging.getLogger(__name__)
 
 
-def uc_generate_code(printer: IPrinter, tengine: ITemplateEngine, input_yaml: str):
+def uc_generate_code(
+    printer: IPrinter, tengine: ITemplateEngine, input_yaml: str, decoder_width: int
+):
     """
     Generate and output a decoder in an specified language based on bit-patterns
     provided in a YAML string.
@@ -51,12 +53,15 @@ def uc_generate_code(printer: IPrinter, tengine: ITemplateEngine, input_yaml: st
     if "struct_def" not in ins:
         ins["struct_def"] = dict()
 
+    if "operations" not in ins:
+        ins["operations"] = dict()
+
     # build pattern list
-    pats = [BitPattern.parse_pattern(pat) for pat, dct in ins["patterns"].items()]
+    pats = [BitPattern.parse_pattern(str(pat)) for pat, dct in ins["patterns"].items()]
 
     # build pattern repo
     pat_repo = {
-        BitPattern.parse_pattern(pat): dct for pat, dct in ins["patterns"].items()
+        BitPattern.parse_pattern(str(pat)): dct for pat, dct in ins["patterns"].items()
     }
 
     if "operations" not in ins:
@@ -69,7 +74,7 @@ def uc_generate_code(printer: IPrinter, tengine: ITemplateEngine, input_yaml: st
     aops_repo = AssociatedOpsRepo.build(ops_def=ins["operations"], pat_repo=pat_repo)
 
     # build decode tree
-    decode_tree = build_decode_tree_by_fixed_bits(pats)
+    decode_tree = build_decode_tree_by_fixed_bits(pats, decoder_width=decoder_width)
     flat_decode_tree = flatten_decode_tree(decode_tree)
 
     tengine.load("python")
@@ -79,7 +84,6 @@ def uc_generate_code(printer: IPrinter, tengine: ITemplateEngine, input_yaml: st
         "aops_repo": aops_repo,
         "decode_tree": decode_tree,
         "flat_decode_tree": flat_decode_tree,
-
         # Add some conviniece functions
         "bit_utils": {"create_bit_mask": bit_utils.create_bit_mask},
     }
