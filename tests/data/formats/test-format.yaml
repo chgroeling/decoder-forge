@@ -8,12 +8,21 @@ struct_def:
   StructD: {members: [rd0]}
 
 operations:
-  set_ra0_1 : {dest: ra0, op: set, args: [1]} # o=1
-  set_ra1_2 : {dest: ra1, op: set, args: [2]} # o=2
-  set_rc0_1 : {dest: rc0, op: set, args: [1]} # o=1
-  set_rc1_2 : {dest: rc1, op: set, args: [2]} # o=2
-  set_context_cafe: {dest: context.context1, op: set, args: ["0xCAFE"]} # o=2
-  extract_rd: {dest: rd0, op: extract_bits, args: [5, 3]} # o=i[MSB:LSB]
+  set_ra0_1 : {op: set, dest: ra0, args: [1]} # o=1
+  set_ra1_2 : {op: set, dest: ra1, args: [2]} # o=2
+  set_rc0_1 : {op: set, dest: rc0, args: [1]} # o=1
+  set_rc1_2 : {op: set, dest: rc1, args: [2]} # o=2
+  set_context_cafe: {op: set, dest: context.context1, args: ["0xCAFE"]} # o=2
+  extract_rd: {op: extract_bits, dest: rd0, args: [5, 3]} # o=i[MSB:LSB]
+  set_rcx  :  {op: combine, dest: tmp, args: ["set_rc0_1", "set_rc1_2"]}
+  custom_code:
+    dest: tmp
+    op: insert_code
+    args: [5, 3]
+    Python:
+      code: |
+         hello = "world"
+         hallo = "welt"
   
 patterns:
   00xxx00x: {name: instr_A0, to: StructA, ops: [set_ra0_1, set_ra1_2]}
