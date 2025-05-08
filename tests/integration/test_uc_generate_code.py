@@ -29,14 +29,16 @@ def test_uc_generate_code_generate_and_eval_python_code_empty_format_outputs_Non
     test_namespace = {}
     exec(generated_code, test_namespace)
 
+    context = test_namespace["Context"]()
+
     # call the decoder
-    decode_output = test_namespace["decode"](0xFF)
+    decode_output = test_namespace["decode"](0xFF, context)
 
     # returns undef class
     assert decode_output == test_namespace["Undef"](code=0xFF)
 
 
-def test_uc_generate_code_generate_and_eval_python_code_test_format_outputs_None():
+def test_uc_generate_code_generate_and_eval_python_code_test_format_returns_structD():
     printer_mock = Mock(spec=IPrinter)
     tengine = TemplateEngine()
 
@@ -50,6 +52,31 @@ def test_uc_generate_code_generate_and_eval_python_code_test_format_outputs_None
     test_namespace = {}
     exec(generated_code, test_namespace)
 
+    context = test_namespace["Context"]()
     # call the decoder
-    decode_output = test_namespace["decode"](0x1F)
+    decode_output = test_namespace["decode"](0x1F, context)
     assert decode_output == test_namespace["StructD"](rd0=0x3)
+
+
+def test_uc_generate_code_generate_and_eval_python_code_test_context_updated():
+    printer_mock = Mock(spec=IPrinter)
+    tengine = TemplateEngine()
+
+    # method under test
+    test_format = files("tests.data.formats").joinpath("test-format.yaml").read_text()
+    uc_generate_code(printer_mock, tengine, test_format, decoder_width=8)
+
+    generated_code = extract_generated_code(printer_mock)
+
+    # execute the code
+    test_namespace = {}
+    exec(generated_code, test_namespace)
+
+    context = test_namespace["Context"]()
+
+    assert context.context1 == 0x0
+
+    # call the decoder
+    _ = test_namespace["decode"](code=0x40, context=context)
+
+    assert context.context1 == 0xCAFE

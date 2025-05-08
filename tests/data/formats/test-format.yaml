@@ -1,3 +1,6 @@
+context:
+  members: [context0, context1]
+
 struct_def:
   StructA: {members: [ra0, ra1]}
   StructB: { }
@@ -9,12 +12,13 @@ operations:
   set_ra1_2 : {dest: ra1, op: set, args: [2]} # o=2
   set_rc0_1 : {dest: rc0, op: set, args: [1]} # o=1
   set_rc1_2 : {dest: rc1, op: set, args: [2]} # o=2
+  set_context_cafe: {dest: context.context1, op: set, args: ["0xCAFE"]} # o=2
   extract_rd: {dest: rd0, op: extract_bits, args: [5, 3]} # o=i[MSB:LSB]
   
 patterns:
   00xxx00x: {name: instr_A0, to: StructA, ops: [set_ra0_1, set_ra1_2]}
   00xxx01x: {name: instr_A1, to: StructA, ops: [set_ra0_1, set_ra1_2]}
-  010xxxxx: {name: instr_B0, to: StructB}
+  010xxxxx: {name: instr_B0, to: StructB, ops: [set_context_cafe]}
   011xxxxx: {name: instr_UNDEF0}
   10xxxxxx: {name: instr_UNDEF1}
   111xxxxx: {name: instr_C0, to: StructC, ops: [set_rc0_1, set_rc1_2]}

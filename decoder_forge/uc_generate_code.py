@@ -47,6 +47,9 @@ def uc_generate_code(
     if ins is None:
         ins = {}
 
+    if "context" not in ins:
+        ins["context"] = dict()
+
     if "patterns" not in ins:
         ins["patterns"] = dict()
 
@@ -64,14 +67,15 @@ def uc_generate_code(
         BitPattern.parse_pattern(str(pat)): dct for pat, dct in ins["patterns"].items()
     }
 
-    if "operations" not in ins:
-        ins["operations"] = dict()
-
+    # associated structs
     as_repo = AssociatedStructRepo.build(
         struct_def=ins["struct_def"], pat_repo=pat_repo
     )
 
+    # associated operations
     aops_repo = AssociatedOpsRepo.build(ops_def=ins["operations"], pat_repo=pat_repo)
+
+    context = ins["context"]
 
     # build decode tree
     decode_tree = build_decode_tree_by_fixed_bits(pats, decoder_width=decoder_width)
@@ -82,9 +86,10 @@ def uc_generate_code(
         "pat_repo": pat_repo,
         "as_repo": as_repo,
         "aops_repo": aops_repo,
+        "context": context,
         "decode_tree": decode_tree,
         "flat_decode_tree": flat_decode_tree,
-        # Add some conviniece functions
+        # Add some conveniece functions
         "bit_utils": {"create_bit_mask": bit_utils.create_bit_mask},
     }
     rendered_code = tengine.generate(context)
