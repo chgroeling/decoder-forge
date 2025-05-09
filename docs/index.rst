@@ -20,7 +20,11 @@ Decoder-forge is a *Python-powered toolkit* that generates source code for decod
 
 .. autoclass:: decoder_forge.bit_pattern.BitPattern
    :members:               
-               
+
+.. autofunction:: decoder_forge.transpiller.transpill
+.. autoclass:: decoder_forge.transpiller.VisitorPython
+   :members:               
+
 .. autoclass:: decoder_forge.pattern_algorithms.DecodeNode
 .. autoclass:: decoder_forge.pattern_algorithms.DecodeLeaf
 .. autoclass:: decoder_forge.pattern_algorithms.DecodeTree               

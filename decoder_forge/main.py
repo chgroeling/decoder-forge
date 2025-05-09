@@ -67,7 +67,7 @@ def open_output_stream(output_file: Optional[str]):
     type=int,
 )
 @click.option(
-    "--output_file",
+    "--out_file",
     help="Output file to write the generated code. Defaults to None, which outputs to "
     + "stdout.",
     default=None,
@@ -75,7 +75,7 @@ def open_output_stream(output_file: Optional[str]):
 )
 @click.pass_context
 def generate_code(
-    self, input_path: str, decoder_width: int, output_file: Optional[str]
+    self, input_path: str, decoder_width: int, out_file: Optional[str]
 ):
     """Generate decoder code from YAML instruction patterns.
 
@@ -103,7 +103,7 @@ def generate_code(
         yaml_buf = fp.read()
 
     tengine = TemplateEngine()
-    with open_output_stream(output_file) as f:
+    with open_output_stream(out_file) as f:
         printer = Printer(f)
         uc_generate_code(printer, tengine, yaml_buf, decoder_width)
 

@@ -7,29 +7,54 @@ struct_def:
   StructC: {members: [rc0, rc1]}
   StructD: {members: [rd0]}
 
-operations:
-  set_ra0_1 : {op: set, dest: ra0, args: [1]} # o=1
-  set_ra1_2 : {op: set, dest: ra1, args: [2]} # o=2
-  set_rc0_1 : {op: set, dest: rc0, args: [1]} # o=1
-  set_rc1_2 : {op: set, dest: rc1, args: [2]} # o=2
-  set_context_cafe: {op: set, dest: context.context1, args: ["0xCAFE"]} # o=2
-  extract_rd: {op: extract_bits, dest: rd0, args: [5, 3]} # o=i[MSB:LSB]
-  set_rcx  :  {op: combine, dest: tmp, args: ["set_rc0_1", "set_rc1_2"]}
-  custom_code:
-    dest: tmp
-    op: insert_code
-    args: [5, 3]
-    Python:
-      code: |
-         hello = "world"
-         hallo = "welt"
+deffun:
+  extract_bit:
+    type: binary
+    op: and
+    left: {type: unary, op: braces, expr: {type: binary, op: shiftright, left: code, right: lsb}}
+    right: {type: eval, expr: "hex((1 << (int(msb)-int(lsb)+1)) - 1)"}
+
+  extract_bit_and_assign:
+    type: assign
+    target: res
+    expr:
+      type: call
+      expr: "extract_bit(msb=msb, lsb=lsb)"
+
+  extract_rd0: {
+    type: call,
+    expr: "extract_bit_and_assign(res=rd0, msb=5, lsb=3)",
+    comment: "rd0 = code[5:3]"
+  }
+    
+  set_ra0_1 : {type: assign, target: ra0, expr: "1", comment: "ra_0"}
+  set_ra1_2 : {type: assign, target: ra1, expr: "2", comment: "ra_1"}
+  set_rc0_1 : {type: assign, target: rc0, expr: "1", comment: "rc_0"}
+  set_rc1_2 : {type: assign, target: rc1, expr: "2", comment: "rc_1"}
+  
+  set_context_cafe: {type: assign, target: context.context1, expr: "0xCAFE"}
+
+  if_bit0:
+    type: if
+    cond: 
+      type: binary
+      op: is_equal
+      left:
+        type: call
+        expr: "extract_bit(msb=5,lsb=3)"
+      right: "0x3"
+    then:
+      type: assign
+      comment: "call if 0x3"
+      target: temp
+      expr: "1"
   
 patterns:
-  00xxx00x: {name: instr_A0, to: StructA, ops: [set_ra0_1, set_ra1_2]}
-  00xxx01x: {name: instr_A1, to: StructA, ops: [set_ra0_1, set_ra1_2]}
-  010xxxxx: {name: instr_B0, to: StructB, ops: [set_context_cafe]}
+  00xxx00x: {name: instr_A0, to: StructA, call: [set_ra0_1(), set_ra1_2()]}
+  00xxx01x: {name: instr_A1, to: StructA, call: [set_ra0_1(), set_ra1_2()]}
+  010xxxxx: {name: instr_B0, to: StructB, call: [set_context_cafe()]}
   011xxxxx: {name: instr_UNDEF0}
   10xxxxxx: {name: instr_UNDEF1}
-  111xxxxx: {name: instr_C0, to: StructC, ops: [set_rc0_1, set_rc1_2]}
-  110xxxxx: {name: instr_C1, to: StructC, ops: [set_rc0_1, set_rc1_2]}
-  00xxx111: {name: instr_D0, to: StructD, ops: [extract_rd]}
+  111xxxxx: {name: instr_C0, to: StructC, call: [if_bit0(), set_rc0_1(), set_rc1_2()]}
+  110xxxxx: {name: instr_C1, to: StructC, call: [set_rc0_1(), set_rc1_2()]}
+  00xxx111: {name: instr_D0, to: StructD, call: [extract_rd0()]}

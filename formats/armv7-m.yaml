@@ -90,6 +90,72 @@ struct_def:
   Umull: {members: [flags]}
   Uxtb: {members: [flags]}
   Uxth: {members: [flags]}
+
+deffun:  
+  extract_bit:
+    type: binary
+    op: and
+    left: {type: unary, op: braces, expr: {type: binary, op: shiftright, left: code, right: lsb}}
+    right: {type: eval, expr: "hex((1 << (int(msb)-int(lsb)+1)) - 1)"}
+
+  extract_bit_and_assign:
+    type: assign
+    target: res
+    expr:
+      type: call
+      expr: "extract_bit(msb=msb, lsb=lsb)"
+
+  extract_t_26_24:
+    type: assign
+    target: t
+    expr:
+      type: call
+      expr: "extract_bit(msb=26, lsb=24)"
+    
+  extract_imm32_23_16_sl2:
+    type: assign
+    target: imm32
+    expr:
+      type: binary
+      op: shiftleft
+      left:
+        type: unary
+        op: braces
+        expr:
+          type: call
+          expr: "extract_bit(msb=23, lsb=16)"
+      right:
+        2
+      
+  extract_t_15_12:
+    type: assign
+    target: t
+    expr:
+      type: call
+      expr: "extract_bit(res=t, msb=15, lsb=12)"
+    
+  extract_imm32_11_0:
+    type: assign
+    target: imm32
+    expr:
+      type: call
+      expr: "extract_bit(res=imm32, msb=11, lsb=0)"
+  
+  assign_val:
+    type: assign
+    target: res
+    expr: val
+
+  set_flags_16bit : {type: assign, target: flags, expr: "0x0"}
+  set_flags_32bit : {type: assign, target: flags, expr: "0x1"}
+  append_flags_add: {type: assign, target: flags, expr: {
+      type: binary,
+      op: or,
+      left: flags,
+      right: "0x2" 
+    },
+    comment: "flags |= Add"
+  }
   
 operations:
   # set the flags field to 0x0 .. indicating a 16 bit instruction
@@ -106,430 +172,430 @@ patterns:
 
   # AddRegister
   # ---
-  0001100xxxxxxxxx: {name: add_register_t1, to: AddRegister, ops: [set_flags_16bit]}
-  01000100xxxxxxxx: {name: add_register_t2, to: AddRegister, ops: [set_flags_16bit]}
-  11101011000xxxxx0xxxxxxxxxxxxxxx: {name: add_register_t3, to: AddRegister, ops: [set_flags_32bit]}
+  0001100xxxxxxxxx: {name: add_register_t1, to: AddRegister, call: [set_flags_16bit()]}
+  01000100xxxxxxxx: {name: add_register_t2, to: AddRegister, call: [set_flags_16bit()]}
+  11101011000xxxxx0xxxxxxxxxxxxxxx: {name: add_register_t3, to: AddRegister, call: [set_flags_32bit()]}
 
   # AddImmediate
   # ---
-  0001110xxxxxxxxx: {name: add_immediate_t1, to: AddImmediate, ops: [set_flags_16bit]}
-  00110xxxxxxxxxxx: {name: add_immediate_t2, to: AddImmediate, ops: [set_flags_16bit]}
-  11110x01000xxxxx0xxxxxxxxxxxxxxx: {name: add_immediate_t3, to: AddImmediate, ops: [set_flags_32bit]}
-  11110x10000xxxxx0xxxxxxxxxxxxxxx: {name: add_immediate_t4, to: AddImmediate, ops: [set_flags_32bit]}
+  0001110xxxxxxxxx: {name: add_immediate_t1, to: AddImmediate, call: [set_flags_16bit()]}
+  00110xxxxxxxxxxx: {name: add_immediate_t2, to: AddImmediate, call: [set_flags_16bit()]}
+  11110x01000xxxxx0xxxxxxxxxxxxxxx: {name: add_immediate_t3, to: AddImmediate, call: [set_flags_32bit()]}
+  11110x10000xxxxx0xxxxxxxxxxxxxxx: {name: add_immediate_t4, to: AddImmediate, call: [set_flags_32bit()]}
 
   # SubRegister
   # ---
-  0001101xxxxxxxxx: {name: sub_register_t1, to: SubRegister, ops: [set_flags_16bit]}
-  11101011101xxxxx0xxxxxxxxxxxxxxx: {name: sub_register_t2, to: SubRegister, ops: [set_flags_32bit]}
+  0001101xxxxxxxxx: {name: sub_register_t1, to: SubRegister, call: [set_flags_16bit()]}
+  11101011101xxxxx0xxxxxxxxxxxxxxx: {name: sub_register_t2, to: SubRegister, call: [set_flags_32bit()]}
 
   # SubImmediate
   # ---
-  0001111xxxxxxxxx: {name: sub_immediate_t1, to: SubImmediate, ops: [set_flags_16bit]}
-  00111xxxxxxxxxxx: {name: sub_immediate_t2, to: SubImmediate, ops: [set_flags_16bit]}
-  11110x01101xxxxx0xxxxxxxxxxxxxxx: {name: sub_immediate_t3, to: SubImmediate, ops: [set_flags_32bit]}
-  11110x101010xxxx0xxxxxxxxxxxxxxx: {name: sub_immediate_t4, to: SubImmediate, ops: [set_flags_32bit]}
+  0001111xxxxxxxxx: {name: sub_immediate_t1, to: SubImmediate, call: [set_flags_16bit()]}
+  00111xxxxxxxxxxx: {name: sub_immediate_t2, to: SubImmediate, call: [set_flags_16bit()]}
+  11110x01101xxxxx0xxxxxxxxxxxxxxx: {name: sub_immediate_t3, to: SubImmediate, call: [set_flags_32bit()]}
+  11110x101010xxxx0xxxxxxxxxxxxxxx: {name: sub_immediate_t4, to: SubImmediate, call: [set_flags_32bit()]}
 
   # CmpRegister
   # ---
-  0100001010xxxxxx: {name: cmp_register_t1, to: CmpRegister, ops: [set_flags_16bit]}
-  01000101xxxxxxxx: {name: cmp_register_t2, to: CmpRegister, ops: [set_flags_16bit]}
-  111010111011xxxx0xxx1111xxxxxxxx: {name: cmp_register_t3, to: CmpRegister, ops: [set_flags_32bit]}  
+  0100001010xxxxxx: {name: cmp_register_t1, to: CmpRegister, call: [set_flags_16bit()]}
+  01000101xxxxxxxx: {name: cmp_register_t2, to: CmpRegister, call: [set_flags_16bit()]}
+  111010111011xxxx0xxx1111xxxxxxxx: {name: cmp_register_t3, to: CmpRegister, call: [set_flags_32bit()]}  
 
   # CmpImmediate
   # ---
-  00101xxxxxxxxxxx: {name: cmp_immediate_t1, to: CmpImmediate, ops: [set_flags_16bit]}
-  11110x011011xxxx0xxx1111xxxxxxxx: {name: cmp_immediate_t2, to: CmpImmediate, ops: [set_flags_32bit]}
+  00101xxxxxxxxxxx: {name: cmp_immediate_t1, to: CmpImmediate, call: [set_flags_16bit()]}
+  11110x011011xxxx0xxx1111xxxxxxxx: {name: cmp_immediate_t2, to: CmpImmediate, call: [set_flags_32bit()]}
 
   # MovRegister
   # ---
-  01000110xxxxxxxx: {name: mov_register_t1, to: MovRegister, ops: [set_flags_16bit]}
-  0000000000xxxxxx: {name: mov_register_t2, to: MovRegister, ops: [set_flags_16bit]}
-  11101010010x11110000xxxx0000xxxx: {name: mov_register_t3, to: MovRegister, ops: [set_flags_32bit]}
+  01000110xxxxxxxx: {name: mov_register_t1, to: MovRegister, call: [set_flags_16bit()]}
+  0000000000xxxxxx: {name: mov_register_t2, to: MovRegister, call: [set_flags_16bit()]}
+  11101010010x11110000xxxx0000xxxx: {name: mov_register_t3, to: MovRegister, call: [set_flags_32bit()]}
 
   # MovImmediate
   # ---
-  00100xxxxxxxxxxx: {name: mov_immediate_t1, to: MovImmediate, ops: [set_flags_16bit]}
-  11110x00010x11110xxxxxxxxxxxxxxx: {name: mov_immediate_t2, to: MovImmediate, ops: [set_flags_32bit]}
-  11110x100100xxxx0xxxxxxxxxxxxxxx: {name: mov_immediate_t3, to: MovImmediate, ops: [set_flags_32bit]}
+  00100xxxxxxxxxxx: {name: mov_immediate_t1, to: MovImmediate, call: [set_flags_16bit()]}
+  11110x00010x11110xxxxxxxxxxxxxxx: {name: mov_immediate_t2, to: MovImmediate, call: [set_flags_32bit()]}
+  11110x100100xxxx0xxxxxxxxxxxxxxx: {name: mov_immediate_t3, to: MovImmediate, call: [set_flags_32bit()]}
 
   # LdrLiteral
   # ---
-  01001xxxxxxxxxxx: {name: ldr_literal_t1, to: LdrLiteral, ops: [set_flags_16bit]}
-  11111000x1011111: {name: ldr_literal_t2, to: LdrLiteral, ops: [set_flags_16bit, extract_t_15_12, extract_imm32_11_0]}
+  01001xxxxxxxxxxx: {name: ldr_literal_t1, to: LdrLiteral, call: [set_flags_16bit(), extract_t_26_24(), extract_imm32_23_16_sl2() ]}
+  11111000x1011111xxxxxxxxxxxxxxxx: {name: ldr_literal_t2, to: LdrLiteral, call: [set_flags_32bit(), extract_t_15_12(), extract_imm32_11_0()]}
 
   # LdrImmediate
   # ---
-  01101xxxxxxxxxxx: {name: ldr_immediate_t1, to: LdrImmediate, ops: [set_flags_16bit]}
-  10011xxxxxxxxxxx: {name: ldr_immediate_t2, to: LdrImmediate, ops: [set_flags_16bit]}
-  111110001101xxxx: {name: ldr_immediate_t3, to: LdrImmediate, ops: [set_flags_16bit]}  
-  111110000101xxxxxxxx1xxxxxxxxxxx: {name: ldr_immediate_t4, to: LdrImmediate, ops: [set_flags_32bit]}
+  01101xxxxxxxxxxx: {name: ldr_immediate_t1, to: LdrImmediate, call: [set_flags_16bit()]}
+  10011xxxxxxxxxxx: {name: ldr_immediate_t2, to: LdrImmediate, call: [set_flags_16bit()]}
+  111110001101xxxx: {name: ldr_immediate_t3, to: LdrImmediate, call: [set_flags_16bit()]}  
+  111110000101xxxxxxxx1xxxxxxxxxxx: {name: ldr_immediate_t4, to: LdrImmediate, call: [set_flags_32bit()]}
 
   # StrImmediate
   # ---
-  01100xxxxxxxxxxx: {name: str_immediate_t1, to: StrImmediate, ops: [set_flags_16bit]}
-  10010xxxxxxxxxxx: {name: str_immediate_t2, to: StrImmediate, ops: [set_flags_16bit]}
-  111110001100xxxx: {name: str_immediate_t3, to: StrImmediate, ops: [set_flags_16bit]}
-  111110000100xxxxxxxx1xxxxxxxxxxx: {name: str_immediate_t4, to: StrImmediate, ops: [set_flags_32bit]}
+  01100xxxxxxxxxxx: {name: str_immediate_t1, to: StrImmediate, call: [set_flags_16bit()]}
+  10010xxxxxxxxxxx: {name: str_immediate_t2, to: StrImmediate, call: [set_flags_16bit()]}
+  111110001100xxxx: {name: str_immediate_t3, to: StrImmediate, call: [set_flags_16bit()]}
+  111110000100xxxxxxxx1xxxxxxxxxxx: {name: str_immediate_t4, to: StrImmediate, call: [set_flags_32bit()]}
 
   # LslImmediate
   # ---  
-  00000xxxxxxxxxxx: {name: lsl_immediate_t1, to: LslImmediate, ops: [set_flags_16bit]}
-  11101010010x11110xxxxxxxxx00xxxx: {name: lsl_immediate_t2, to: LslImmediate, ops: [set_flags_32bit]}
+  00000xxxxxxxxxxx: {name: lsl_immediate_t1, to: LslImmediate, call: [set_flags_16bit()]}
+  11101010010x11110xxxxxxxxx00xxxx: {name: lsl_immediate_t2, to: LslImmediate, call: [set_flags_32bit()]}
 
   # LsrImmediate
   # ---  
-  00001xxxxxxxxxxx: {name: lsr_immediate_t1, to: LsrImmediate, ops: [set_flags_16bit]}
-  11101010010x11110xxxxxxxxx01xxxx: {name: lsr_immediate_t2, to: LsrImmediate, ops: [set_flags_32bit]}
+  00001xxxxxxxxxxx: {name: lsr_immediate_t1, to: LsrImmediate, call: [set_flags_16bit()]}
+  11101010010x11110xxxxxxxxx01xxxx: {name: lsr_immediate_t2, to: LsrImmediate, call: [set_flags_32bit()]}
 
   # AsrImmediate
   # ---    
-  00010xxxxxxxxxxx: {name: asr_immediate_t1, to: AsrImmediate, ops: [set_flags_16bit]}
-  11101010010x11110xxxxxxxxx10xxxx: {name: asr_immediate_t2, to: AsrImmediate, ops: [set_flags_32bit]}
+  00010xxxxxxxxxxx: {name: asr_immediate_t1, to: AsrImmediate, call: [set_flags_16bit()]}
+  11101010010x11110xxxxxxxxx10xxxx: {name: asr_immediate_t2, to: AsrImmediate, call: [set_flags_32bit()]}
 
   # AndRegister
   # ---
-  0100000000xxxxxx: {name: and_register_t1, to: AndRegister, ops: [set_flags_16bit]}
-  11101010000xxxxx0xxxxxxxxxxxxxxx: {name: and_register_t2, to: AndRegister, ops: [set_flags_32bit]}
+  0100000000xxxxxx: {name: and_register_t1, to: AndRegister, call: [set_flags_16bit()]}
+  11101010000xxxxx0xxxxxxxxxxxxxxx: {name: and_register_t2, to: AndRegister, call: [set_flags_32bit()]}
 
   # EorRegister
   # ---  
-  0100000001xxxxxx: {name: eor_register_t1, to: EorRegister, ops: [set_flags_16bit]}
-  11101010100xxxxx0xxxxxxxxxxxxxxx: {name: eor_register_t2, to: EorRegister, ops: [set_flags_32bit]}
+  0100000001xxxxxx: {name: eor_register_t1, to: EorRegister, call: [set_flags_16bit()]}
+  11101010100xxxxx0xxxxxxxxxxxxxxx: {name: eor_register_t2, to: EorRegister, call: [set_flags_32bit()]}
 
   # LslRegister
   # ---  
-  0100000010xxxxxx: {name: lsl_register_t1, to: LslRegister, ops: [set_flags_16bit]}
-  11111010000xxxxx1111xxxx0000xxxx: {name: lsl_register_t2, to: LslRegister, ops: [set_flags_32bit]}
+  0100000010xxxxxx: {name: lsl_register_t1, to: LslRegister, call: [set_flags_16bit()]}
+  11111010000xxxxx1111xxxx0000xxxx: {name: lsl_register_t2, to: LslRegister, call: [set_flags_32bit()]}
 
   # LsrRegister
   # ---  
-  0100000011xxxxxx: {name: lsr_register_t1, to: LsrRegister, ops: [set_flags_16bit]}
-  11111010001xxxxx1111xxxx0000xxxx: {name: lsr_register_t2, to: LsrRegister, ops: [set_flags_32bit]}
+  0100000011xxxxxx: {name: lsr_register_t1, to: LsrRegister, call: [set_flags_16bit()]}
+  11111010001xxxxx1111xxxx0000xxxx: {name: lsr_register_t2, to: LsrRegister, call: [set_flags_32bit()]}
 
   # AsrRegister
   # ---
-  0100000100xxxxxx: {name: asr_register_t1, to: AsrRegister, ops: [set_flags_16bit]}
-  11111010010xxxxx1111xxxx0000xxxx: {name: asr_register_t2, to: AsrRegister, ops: [set_flags_32bit]}
+  0100000100xxxxxx: {name: asr_register_t1, to: AsrRegister, call: [set_flags_16bit()]}
+  11111010010xxxxx1111xxxx0000xxxx: {name: asr_register_t2, to: AsrRegister, call: [set_flags_32bit()]}
 
   # StrRegister
   # ---
-  0101000xxxxxxxxx: {name: str_register_t1, to: StrRegister, ops: [set_flags_16bit]}
-  111110000100xxxxxxxx000000xxxxxx: {name: str_register_t2, to: StrRegister, ops: [set_flags_32bit]}
+  0101000xxxxxxxxx: {name: str_register_t1, to: StrRegister, call: [set_flags_16bit()]}
+  111110000100xxxxxxxx000000xxxxxx: {name: str_register_t2, to: StrRegister, call: [set_flags_32bit()]}
 
   # AddSpPlusImmediate
   # ---
-  10101xxxxxxxxxxx: {name: add_sp_plus_immediate_t1, to: AddSpPlusImmediate, ops: [set_flags_16bit]}
-  101100000xxxxxxx: {name: add_sp_plus_immediate_t2, to: AddSpPlusImmediate, ops: [set_flags_16bit]}
-  11110x01000x11010xxxxxxxxxxxxxxx: {name: add_sp_plus_immediate_t3, to: AddSpPlusImmediate, ops: [set_flags_32bit]}
-  11110x10000011010xxxxxxxxxxxxxxx: {name: add_sp_plus_immediate_t4, to: AddSpPlusImmediate, ops: [set_flags_32bit]}
+  10101xxxxxxxxxxx: {name: add_sp_plus_immediate_t1, to: AddSpPlusImmediate, call: [set_flags_16bit()]}
+  101100000xxxxxxx: {name: add_sp_plus_immediate_t2, to: AddSpPlusImmediate, call: [set_flags_16bit()]}
+  11110x01000x11010xxxxxxxxxxxxxxx: {name: add_sp_plus_immediate_t3, to: AddSpPlusImmediate, call: [set_flags_32bit()]}
+  11110x10000011010xxxxxxxxxxxxxxx: {name: add_sp_plus_immediate_t4, to: AddSpPlusImmediate, call: [set_flags_32bit()]}
 
   # B
   # ---
-  1101xxxxxxxxxxxx: {name: b_t1, to: B, ops: [set_flags_16bit]}
-  11100xxxxxxxxxxx: {name: b_t2, to: B, ops: [set_flags_16bit]}
-  11110xxxxxxxxxxx10x0xxxxxxxxxxxx: {name: b_t3, to: B, ops: [set_flags_32bit]}
-  11110xxxxxxxxxxx10x1xxxxxxxxxxxx: {name: b_t4, to: B, ops: [set_flags_32bit]}
+  1101xxxxxxxxxxxx: {name: b_t1, to: B, call: [set_flags_16bit()]}
+  11100xxxxxxxxxxx: {name: b_t2, to: B, call: [set_flags_16bit()]}
+  11110xxxxxxxxxxx10x0xxxxxxxxxxxx: {name: b_t3, to: B, call: [set_flags_32bit()]}
+  11110xxxxxxxxxxx10x1xxxxxxxxxxxx: {name: b_t4, to: B, call: [set_flags_32bit()]}
 
   # Push
   # ---
-  1011010xxxxxxxxx: {name: push_t1, to: Push, ops: [set_flags_16bit]}
-  11101001001011010x0xxxxxxxxxxxxx: {name: push_t2, to: Push, ops: [set_flags_32bit]}
-  1111100001001101xxxx110100000100: {name: push_t3, to: Push, ops: [set_flags_32bit]}
+  1011010xxxxxxxxx: {name: push_t1, to: Push, call: [set_flags_16bit()]}
+  11101001001011010x0xxxxxxxxxxxxx: {name: push_t2, to: Push, call: [set_flags_32bit()]}
+  1111100001001101xxxx110100000100: {name: push_t3, to: Push, call: [set_flags_32bit()]}
 
   # Pop
   # ---
-  1011110xxxxxxxxx: {name: pop_t1, to: Pop, ops: [set_flags_16bit]}
-  1110100010111101xx0xxxxxxxxxxxxx: {name: pop_t2, to: Pop, ops: [set_flags_32bit]}
-  1111100001011101xxxx101100000100: {name: pop_t3, to: Pop, ops: [set_flags_32bit]}
+  1011110xxxxxxxxx: {name: pop_t1, to: Pop, call: [set_flags_16bit()]}
+  1110100010111101xx0xxxxxxxxxxxxx: {name: pop_t2, to: Pop, call: [set_flags_32bit()]}
+  1111100001011101xxxx101100000100: {name: pop_t3, to: Pop, call: [set_flags_32bit()]}
 
   # SubSpMinusImmediate
   # ---
-  101100001xxxxxxx: {name: sub_sp_minus_immediate_t1, to: SubSpMinusImmediate, ops: [set_flags_16bit]}
-  11110x01101x11010xxxxxxxxxxxxxxx: {name: sub_sp_minus_immediate_t2, to: SubSpMinusImmediate, ops: [set_flags_32bit]}
-  11110x10101011010xxxxxxxxxxxxxxx: {name: sub_sp_minus_immediate_t3, to: SubSpMinusImmediate, ops: [set_flags_32bit]}
+  101100001xxxxxxx: {name: sub_sp_minus_immediate_t1, to: SubSpMinusImmediate, call: [set_flags_16bit()]}
+  11110x01101x11010xxxxxxxxxxxxxxx: {name: sub_sp_minus_immediate_t2, to: SubSpMinusImmediate, call: [set_flags_32bit()]}
+  11110x10101011010xxxxxxxxxxxxxxx: {name: sub_sp_minus_immediate_t3, to: SubSpMinusImmediate, call: [set_flags_32bit()]}
 
   # StrbImmediate
   # ---
-  01110xxxxxxxxxxx: {name: strb_immediate_t1, to: StrbImmediate, ops: [set_flags_16bit]}
-  111110001000xxxx: {name: strb_immediate_t2, to: StrbImmediate, ops: [set_flags_16bit]}
-  111110000000xxxxxxxx1xxxxxxxxxxx: {name: strb_immediate_t3, to: StrbImmediate, ops: [set_flags_32bit]}
+  01110xxxxxxxxxxx: {name: strb_immediate_t1, to: StrbImmediate, call: [set_flags_16bit()]}
+  111110001000xxxx: {name: strb_immediate_t2, to: StrbImmediate, call: [set_flags_16bit()]}
+  111110000000xxxxxxxx1xxxxxxxxxxx: {name: strb_immediate_t3, to: StrbImmediate, call: [set_flags_32bit()]}
 
   # LdrbImmediate
   # ---
-  01111xxxxxxxxxxx: {name: ldrb_immediate_t1, to: LdrbImmediate, ops: [set_flags_16bit]}
-  111110001001xxxx: {name: ldrb_immediate_t2, to: LdrbImmediate, ops: [set_flags_16bit]}
-  111110000001xxxxxxxx1xxxxxxxxxxx: {name: ldrb_immediate_t3, to: LdrbImmediate, ops: [set_flags_32bit]}
+  01111xxxxxxxxxxx: {name: ldrb_immediate_t1, to: LdrbImmediate, call: [set_flags_16bit()]}
+  111110001001xxxx: {name: ldrb_immediate_t2, to: LdrbImmediate, call: [set_flags_16bit()]}
+  111110000001xxxxxxxx1xxxxxxxxxxx: {name: ldrb_immediate_t3, to: LdrbImmediate, call: [set_flags_32bit()]}
 
   # StrhImmediate
   # ---
-  10000xxxxxxxxxxx: {name: strh_immediate_t1, to: StrhImmediate, ops: [set_flags_16bit]}
-  111110001010xxxx: {name: strh_immediate_t2, to: StrhImmediate, ops: [set_flags_16bit]} 
-  111110000010xxxxxxxx1xxxxxxxxxxx: {name: strh_immediate_t3, to: StrhImmediate, ops: [set_flags_32bit]}
+  10000xxxxxxxxxxx: {name: strh_immediate_t1, to: StrhImmediate, call: [set_flags_16bit()]}
+  111110001010xxxx: {name: strh_immediate_t2, to: StrhImmediate, call: [set_flags_16bit()]} 
+  111110000010xxxxxxxx1xxxxxxxxxxx: {name: strh_immediate_t3, to: StrhImmediate, call: [set_flags_32bit()]}
 
   # LdrhImmediate
   # ---  
-  10001xxxxxxxxxxx: {name: ldrh_immediate_t1, to: LdrhImmediate, ops: [set_flags_16bit]}
-  111110001011xxxx: {name: ldrh_immediate_t2, to: LdrhImmediate, ops: [set_flags_16bit]}
-  111110000011xxxxxxxx1xxxxxxxxxxx: {name: ldrh_immediate_t3, to: LdrhImmediate, ops: [set_flags_32bit]}
+  10001xxxxxxxxxxx: {name: ldrh_immediate_t1, to: LdrhImmediate, call: [set_flags_16bit()]}
+  111110001011xxxx: {name: ldrh_immediate_t2, to: LdrhImmediate, call: [set_flags_16bit()]}
+  111110000011xxxxxxxx1xxxxxxxxxxx: {name: ldrh_immediate_t3, to: LdrhImmediate, call: [set_flags_32bit()]}
 
   # AdcRegister
   # ---  
-  0100000101xxxxxx: {name: adc_register_t1, to: AdcRegister, ops: [set_flags_16bit]}
-  11101011010xxxxx0xxxxxxxxxxxxxxx: {name: adc_register_t2, to: AdcRegister, ops: [set_flags_32bit]}
+  0100000101xxxxxx: {name: adc_register_t1, to: AdcRegister, call: [set_flags_16bit()]}
+  11101011010xxxxx0xxxxxxxxxxxxxxx: {name: adc_register_t2, to: AdcRegister, call: [set_flags_32bit()]}
 
   # TstRegister
   # ---  
-  0100001000xxxxxx: {name: tst_register_t1, to: TstRegister, ops: [set_flags_16bit]}
+  0100001000xxxxxx: {name: tst_register_t1, to: TstRegister, call: [set_flags_16bit()]}
 
   # RsbImmediate
   # ---  
-  0100001001xxxxxx: {name: rsb_immediate_t1, to: RsbImmediate, ops: [set_flags_16bit]}
-  11110x01110xxxxx0xxxxxxxxxxxxxxx: {name: rsb_immediate_t2, to: RsbImmediate, ops: [set_flags_32bit]}
+  0100001001xxxxxx: {name: rsb_immediate_t1, to: RsbImmediate, call: [set_flags_16bit()]}
+  11110x01110xxxxx0xxxxxxxxxxxxxxx: {name: rsb_immediate_t2, to: RsbImmediate, call: [set_flags_32bit()]}
 
   # OrrRegister
   # ---    
-  0100001100xxxxxx: {name: orr_register_t1, to: OrrRegister, ops: [set_flags_16bit]}
-  11101010010xxxxx0xxxxxxxxxxxxxxx: {name: orr_register_t2, to: OrrRegister, ops: [set_flags_32bit]}
+  0100001100xxxxxx: {name: orr_register_t1, to: OrrRegister, call: [set_flags_16bit()]}
+  11101010010xxxxx0xxxxxxxxxxxxxxx: {name: orr_register_t2, to: OrrRegister, call: [set_flags_32bit()]}
 
   # BicRegister
   # ---    
-  0100001110xxxxxx: {name: bic_register_t1, to: BicRegister, ops: [set_flags_16bit]}
-  11101010001xxxxx0xxxxxxxxxxxxxxx: {name: bic_register_t2, to: BicRegister, ops: [set_flags_32bit]}
+  0100001110xxxxxx: {name: bic_register_t1, to: BicRegister, call: [set_flags_16bit()]}
+  11101010001xxxxx0xxxxxxxxxxxxxxx: {name: bic_register_t2, to: BicRegister, call: [set_flags_32bit()]}
 
   # Bx
   # ---  
-  010001110xxxxxxx: {name: bx_t1, to: Bx, ops: [set_flags_16bit]}
+  010001110xxxxxxx: {name: bx_t1, to: Bx, call: [set_flags_16bit()]}
 
   # Blx
   # ---
-  010001111xxxxxxx: {name: blx_t1, to: Blx, ops: [set_flags_16bit]}
+  010001111xxxxxxx: {name: blx_t1, to: Blx, call: [set_flags_16bit()]}
 
   # StrbRegister
   # ---
-  0101010xxxxxxxxx: {name: strb_register_t1, to: StrbRegister, ops: [set_flags_16bit]}
-  111110000000xxxxxxxx000000xxxxxx: {name: strb_register_t2, to: StrbRegister, ops: [set_flags_32bit]}
+  0101010xxxxxxxxx: {name: strb_register_t1, to: StrbRegister, call: [set_flags_16bit()]}
+  111110000000xxxxxxxx000000xxxxxx: {name: strb_register_t2, to: StrbRegister, call: [set_flags_32bit()]}
 
   # LdrRegister
   # ---  
-  0101100xxxxxxxxx: {name: ldr_register_t1, to: LdrRegister, ops: [set_flags_16bit]}
-  111110000101xxxxxxxx000000xxxxxx: {name: ldr_register_t2, to: LdrRegister, ops: [set_flags_32bit]}
+  0101100xxxxxxxxx: {name: ldr_register_t1, to: LdrRegister, call: [set_flags_16bit()]}
+  111110000101xxxxxxxx000000xxxxxx: {name: ldr_register_t2, to: LdrRegister, call: [set_flags_32bit()]}
 
   # LdrbRegister
   # ---  
-  0101110xxxxxxxxx: {name: ldrb_register_t1, to: LdrbRegister, ops: [set_flags_16bit]}
+  0101110xxxxxxxxx: {name: ldrb_register_t1, to: LdrbRegister, call: [set_flags_16bit()]}
 
   # AddPcPlusImmediate
   # ---
-  10100xxxxxxxxxxx: {name: add_pc_plus_immediate_t1, to: AddPcPlusImmediate, ops: [set_flags_16bit]}
+  10100xxxxxxxxxxx: {name: add_pc_plus_immediate_t1, to: AddPcPlusImmediate, call: [set_flags_16bit()]}
 
   # StrhRegister
   # ---
-  111110000010xxxxxxxx000000xxxxxx: {name: strh_register_t2, to: StrhRegister, ops: [set_flags_32bit]}
+  111110000010xxxxxxxx000000xxxxxx: {name: strh_register_t2, to: StrhRegister, call: [set_flags_32bit()]}
 
   # SbcRegister
   # ---  
-  11101011011xxxxx0xxxxxxxxxxxxxxx: {name: sbc_register_t2, to: SbcRegister, ops: [set_flags_32bit]}
+  11101011011xxxxx0xxxxxxxxxxxxxxx: {name: sbc_register_t2, to: SbcRegister, call: [set_flags_32bit()]}
 
   # Stm
   # ---    
-  11000xxxxxxxxxxx: {name: stm_t1, to: Stm, ops: [set_flags_16bit]}
-  1110100010x0xxxx0x0xxxxxxxxxxxxx: {name: stm_t2, to: Stm, ops: [set_flags_32bit]}
+  11000xxxxxxxxxxx: {name: stm_t1, to: Stm, call: [set_flags_16bit()]}
+  1110100010x0xxxx0x0xxxxxxxxxxxxx: {name: stm_t2, to: Stm, call: [set_flags_32bit()]}
 
   # Ldm
   # ---
-  11001xxxxxxxxxxx: {name: ldm_t1, to: Ldm, ops: [set_flags_16bit]}
-  1110100010x1xxxxxx0xxxxxxxxxxxxx: {name: ldm_t2, to: Ldm, ops: [set_flags_32bit]}
+  11001xxxxxxxxxxx: {name: ldm_t1, to: Ldm, call: [set_flags_16bit()]}
+  1110100010x1xxxxxx0xxxxxxxxxxxxx: {name: ldm_t2, to: Ldm, call: [set_flags_32bit()]}
 
   # MvnRegister
   # ---
-  11101010011x11110xxxxxxxxxxxxxxx: {name: mvn_register_t2, to: MvnRegister, ops: [set_flags_32bit]}
+  11101010011x11110xxxxxxxxxxxxxxx: {name: mvn_register_t2, to: MvnRegister, call: [set_flags_32bit()]}
 
   # Sxth
   # ---
-  1011001000xxxxxx: {name: sxth_t1, to: Sxth, ops: [set_flags_16bit]}
-  11111010000011111111xxxx10xxxxxx: {name: sxth_t2, to: Sxth, ops: [set_flags_32bit]}
+  1011001000xxxxxx: {name: sxth_t1, to: Sxth, call: [set_flags_16bit()]}
+  11111010000011111111xxxx10xxxxxx: {name: sxth_t2, to: Sxth, call: [set_flags_32bit()]}
 
   # Sxtb
   # ---    
-  1011001001xxxxxx: {name: sxtb_t1, to: Sxtb, ops: [set_flags_16bit]}
-  11111010010011111111xxxx10xxxxxx: {name: sxtb_t2, to: Sxtb, ops: [set_flags_32bit]}
+  1011001001xxxxxx: {name: sxtb_t1, to: Sxtb, call: [set_flags_16bit()]}
+  11111010010011111111xxxx10xxxxxx: {name: sxtb_t2, to: Sxtb, call: [set_flags_32bit()]}
 
   # Uxth
   # ---  
-  1011001010xxxxxx: {name: uxth_t1, to: Uxth, ops: [set_flags_16bit]}
-  11111010000111111111xxxx10xxxxxx: {name: uxth_t2, to: Uxth, ops: [set_flags_32bit]}
+  1011001010xxxxxx: {name: uxth_t1, to: Uxth, call: [set_flags_16bit()]}
+  11111010000111111111xxxx10xxxxxx: {name: uxth_t2, to: Uxth, call: [set_flags_32bit()]}
 
   # Uxtb
   # ---  
-  1011001011xxxxxx: {name: uxtb_t1, to: Uxtb, ops: [set_flags_16bit]}
-  11111010010111111111xxxx10xxxxxx: {name: uxtb_t2, to: Uxtb, ops: [set_flags_32bit]}
+  1011001011xxxxxx: {name: uxtb_t1, to: Uxtb, call: [set_flags_16bit()]}
+  11111010010111111111xxxx10xxxxxx: {name: uxtb_t2, to: Uxtb, call: [set_flags_32bit()]}
 
   # LdrsbImmediate
   # ---
-  111110011001xxxx: {name: ldrsb_immediate_t1, to: LdrsbImmediate, ops: [set_flags_16bit]}
-  111110010001xxxxxxxx1xxxxxxxxxxx: {name: ldrsb_immediate_t2, to: LdrsbImmediate, ops: [set_flags_32bit]}
+  111110011001xxxx: {name: ldrsb_immediate_t1, to: LdrsbImmediate, call: [set_flags_16bit()]}
+  111110010001xxxxxxxx1xxxxxxxxxxx: {name: ldrsb_immediate_t2, to: LdrsbImmediate, call: [set_flags_32bit()]}
 
   # LdrshImmediate
   # ---
-  111110011011xxxx: {name: ldrsh_immediate_t1, to: LdrshImmediate, ops: [set_flags_16bit]}
-  111110010011xxxxxxxx1xxxxxxxxxxx: {name: ldrsh_immediate_t2, to: LdrshImmediate, ops: [set_flags_32bit]}
+  111110011011xxxx: {name: ldrsh_immediate_t1, to: LdrshImmediate, call: [set_flags_16bit()]}
+  111110010011xxxxxxxx1xxxxxxxxxxx: {name: ldrsh_immediate_t2, to: LdrshImmediate, call: [set_flags_32bit()]}
 
   # Bkpt
   # ---  
-  10111110xxxxxxxx: {name: bkpt_t1, to: Bkpt, ops: [set_flags_16bit]}
+  10111110xxxxxxxx: {name: bkpt_t1, to: Bkpt, call: [set_flags_16bit()]}
 
   # Nop
   # ---  
-  1011111100000000: {name: nop_t1, to: Nop, ops: [set_flags_16bit]}
+  1011111100000000: {name: nop_t1, to: Nop, call: [set_flags_16bit()]}
 
   # It
   # ---
-  10111111xxxxxxxx: {name: it_t1, to: It, ops: [set_flags_16bit]}
+  10111111xxxxxxxx: {name: it_t1, to: It, call: [set_flags_16bit()]}
 
   # CbNZ
   # ---
-  1011x0x1xxxxxxxx: {name: cb_n_z_t1, to: CbNZ, ops: [set_flags_16bit]}
+  1011x0x1xxxxxxxx: {name: cb_n_z_t1, to: CbNZ, call: [set_flags_16bit()]}
 
   # Svc
   # ---
-  11011111xxxxxxxx: {name: svc_t1, to: Svc, ops: [set_flags_16bit]}
+  11011111xxxxxxxx: {name: svc_t1, to: Svc, call: [set_flags_16bit()]}
 
   # Strex
   # ---
-  111010000100xxxx: {name: strex_t1, to: Strex, ops: [set_flags_16bit]}
+  111010000100xxxx: {name: strex_t1, to: Strex, call: [set_flags_16bit()]}
 
   # Ldrex
   # ---
-  111010000101xxxxxxxx1111xxxxxxxx: {name: ldrex_t1, to: Ldrex, ops: [set_flags_32bit]}
+  111010000101xxxxxxxx1111xxxxxxxx: {name: ldrex_t1, to: Ldrex, call: [set_flags_32bit()]}
 
   # TbbH
   # ---
-  111010001101xxxx11110000000xxxxx: {name: tbb_h_t1, to: TbbH, ops: [set_flags_32bit]}
+  111010001101xxxx11110000000xxxxx: {name: tbb_h_t1, to: TbbH, call: [set_flags_32bit()]}
 
   # Stmdb
   # ---
-  1110100100x0xxxx0x0xxxxxxxxxxxxx: {name: stmdb_t1, to: Stmdb, ops: [set_flags_32bit]}
+  1110100100x0xxxx0x0xxxxxxxxxxxxx: {name: stmdb_t1, to: Stmdb, call: [set_flags_32bit()]}
 
   # StrdImmediate
   # ---
-  1110100xx1x0xxxx: {name: strd_immediate_t1, to: StrdImmediate, ops: [set_flags_16bit]}
+  1110100xx1x0xxxx: {name: strd_immediate_t1, to: StrdImmediate, call: [set_flags_16bit()]}
 
   # LdrdImmediate
   # ---
-  1110100xx1x1xxxx: {name: ldrd_immediate_t1, to: LdrdImmediate, ops: [set_flags_16bit]}
+  1110100xx1x1xxxx: {name: ldrd_immediate_t1, to: LdrdImmediate, call: [set_flags_16bit()]}
 
   # Rrx
   # ---
-  11101010010x11110000xxxx0011xxxx: {name: rrx_t1, to: Rrx, ops: [set_flags_32bit]}
+  11101010010x11110000xxxx0011xxxx: {name: rrx_t1, to: Rrx, call: [set_flags_32bit()]}
 
   # TeqRegister
   # ---
-  111010101001xxxx0xxx1111xxxxxxxx: {name: teq_register_t1, to: TeqRegister, ops: [set_flags_32bit]}
+  111010101001xxxx0xxx1111xxxxxxxx: {name: teq_register_t1, to: TeqRegister, call: [set_flags_32bit()]}
 
   # RsbRegister
   # ---
-  11101011110xxxxx0xxxxxxxxxxxxxxx: {name: rsb_register_t1, to: RsbRegister, ops: [set_flags_32bit]}
+  11101011110xxxxx0xxxxxxxxxxxxxxx: {name: rsb_register_t1, to: RsbRegister, call: [set_flags_32bit()]}
 
   # Bfi
   # ---  
-  111100110110xxxx0xxxxxxxxx0xxxxx: {name: bfi_t1, to: Bfi, ops: [set_flags_32bit]}
+  111100110110xxxx0xxxxxxxxx0xxxxx: {name: bfi_t1, to: Bfi, call: [set_flags_32bit()]}
 
   # Msr
   # ---  
-  111100111000xxxx1000xx00xxxxxxxx: {name: msr_t1, to: Msr, ops: [set_flags_32bit]}
+  111100111000xxxx1000xx00xxxxxxxx: {name: msr_t1, to: Msr, call: [set_flags_32bit()]}
 
   # Dmb
   # ---  
-  1111001110111111100011110101xxxx: {name: dmb_t1, to: Dmb, ops: [set_flags_32bit]}
+  1111001110111111100011110101xxxx: {name: dmb_t1, to: Dmb, call: [set_flags_32bit()]}
 
   # Ubfx
   # ---  
-  111100111100xxxx0xxxxxxxxx0xxxxx: {name: ubfx_t1, to: Ubfx, ops: [set_flags_32bit]}
+  111100111100xxxx0xxxxxxxxx0xxxxx: {name: ubfx_t1, to: Ubfx, call: [set_flags_32bit()]}
 
   # Mrs
   # ---  
-  11110011111011111000xxxxxxxxxxxx: {name: mrs_t1, to: Mrs, ops: [set_flags_32bit]}
+  11110011111011111000xxxxxxxxxxxx: {name: mrs_t1, to: Mrs, call: [set_flags_32bit()]}
 
   # TstImmediate
   # ---  
-  11110x000001xxxx0xxx1111xxxxxxxx: {name: tst_immediate_t1, to: TstImmediate, ops: [set_flags_32bit]}
+  11110x000001xxxx0xxx1111xxxxxxxx: {name: tst_immediate_t1, to: TstImmediate, call: [set_flags_32bit()]}
 
   # AndImmediate
   # ---  
-  11110x00000xxxxx0xxxxxxxxxxxxxxx: {name: and_immediate_t1, to: AndImmediate, ops: [set_flags_32bit]}
+  11110x00000xxxxx0xxxxxxxxxxxxxxx: {name: and_immediate_t1, to: AndImmediate, call: [set_flags_32bit()]}
 
   # BicImmediate
   # ---  
-  11110x00001xxxxx0xxxxxxxxxxxxxxx: {name: bic_immediate_t1, to: BicImmediate, ops: [set_flags_32bit]}
+  11110x00001xxxxx0xxxxxxxxxxxxxxx: {name: bic_immediate_t1, to: BicImmediate, call: [set_flags_32bit()]}
 
   # OrrImmediate
   # ---  
-  11110x00010xxxxx0xxxxxxxxxxxxxxx: {name: orr_immediate_t1, to: OrrImmediate, ops: [set_flags_32bit]}
+  11110x00010xxxxx0xxxxxxxxxxxxxxx: {name: orr_immediate_t1, to: OrrImmediate, call: [set_flags_32bit()]}
 
   # MvnImmediate
   # ---  
-  11110x00011x11110xxxxxxxxxxxxxxx: {name: mvn_immediate_t1, to: MvnImmediate, ops: [set_flags_32bit]}
+  11110x00011x11110xxxxxxxxxxxxxxx: {name: mvn_immediate_t1, to: MvnImmediate, call: [set_flags_32bit()]}
 
   # TeqImmediate
   # ---  
-  11110x001001xxxx0xxx1111xxxxxxxx: {name: teq_immediate_t1, to: TeqImmediate, ops: [set_flags_32bit]}
+  11110x001001xxxx0xxx1111xxxxxxxx: {name: teq_immediate_t1, to: TeqImmediate, call: [set_flags_32bit()]}
 
   # EorImmediate
   # ---  
-  11110x00100xxxxx0xxxxxxxxxxxxxxx: {name: eor_immediate_t1, to: EorImmediate, ops: [set_flags_32bit]}
+  11110x00100xxxxx0xxxxxxxxxxxxxxx: {name: eor_immediate_t1, to: EorImmediate, call: [set_flags_32bit()]}
 
   # CmnImmediate
   # ---  
-  11110x010001xxxx0xxx1111xxxxxxxx: {name: cmn_immediate_t1, to: CmnImmediate, ops: [set_flags_32bit]}
+  11110x010001xxxx0xxx1111xxxxxxxx: {name: cmn_immediate_t1, to: CmnImmediate, call: [set_flags_32bit()]}
 
   # AdcImmediate
   # ---  
-  11110x01010xxxxx0xxxxxxxxxxxxxxx: {name: adc_immediate_t1, to: AdcImmediate, ops: [set_flags_32bit]}
+  11110x01010xxxxx0xxxxxxxxxxxxxxx: {name: adc_immediate_t1, to: AdcImmediate, call: [set_flags_32bit()]}
 
   # SbcImmediate
   # ---  
-  11110x01011xxxxx0xxxxxxxxxxxxxxx: {name: sbc_immediate_t1, to: SbcImmediate, ops: [set_flags_32bit]}
+  11110x01011xxxxx0xxxxxxxxxxxxxxx: {name: sbc_immediate_t1, to: SbcImmediate, call: [set_flags_32bit()]}
 
   # Bl
   # ---
-  11110xxxxxxxxxxx11x1xxxxxxxxxxxx: {name: bl_t1, to: Bl, ops: [set_flags_32bit]}
+  11110xxxxxxxxxxx11x1xxxxxxxxxxxx: {name: bl_t1, to: Bl, call: [set_flags_32bit()]}
 
   # LdrhRegister
   # ---
-  111110000011xxxxxxxx000000xxxxxx: {name: ldrh_register_t2, to: LdrhRegister, ops: [set_flags_32bit]}  
+  111110000011xxxxxxxx000000xxxxxx: {name: ldrh_register_t2, to: LdrhRegister, call: [set_flags_32bit()]}  
 
   # Clz
   # ---  
-  111110101011xxxx1111xxxx1000xxxx: {name: clz_t1, to: Clz, ops: [set_flags_32bit]}
+  111110101011xxxx1111xxxx1000xxxx: {name: clz_t1, to: Clz, call: [set_flags_32bit()]}
 
   # Mul
   # ---  
-  111110110000xxxx1111xxxx0000xxxx: {name: mul_t2, to: Mul, ops: [set_flags_32bit]}
+  111110110000xxxx1111xxxx0000xxxx: {name: mul_t2, to: Mul, call: [set_flags_32bit()]}
 
   # Mla
   # ---  
-  111110110000xxxxxxxxxxxx0000xxxx: {name: mla_t1, to: Mla, ops: [set_flags_32bit]}
+  111110110000xxxxxxxxxxxx0000xxxx: {name: mla_t1, to: Mla, call: [set_flags_32bit()]}
 
   # Mls
   # ---  
-  111110110000xxxxxxxxxxxx0001xxxx: {name: mls_t1, to: Mls, ops: [set_flags_32bit]}
+  111110110000xxxxxxxxxxxx0001xxxx: {name: mls_t1, to: Mls, call: [set_flags_32bit()]}
 
   # Smull
   # ---  
-  111110111000xxxxxxxxxxxx0000xxxx: {name: smull_t1, to: Smull, ops: [set_flags_32bit]}
+  111110111000xxxxxxxxxxxx0000xxxx: {name: smull_t1, to: Smull, call: [set_flags_32bit()]}
 
   # Sdiv
   # ---  
-  111110111001xxxx1111xxxx1111xxxx: {name: sdiv_t1, to: Sdiv, ops: [set_flags_32bit]}
+  111110111001xxxx1111xxxx1111xxxx: {name: sdiv_t1, to: Sdiv, call: [set_flags_32bit()]}
 
   # Umull
   # ---  
-  111110111010xxxxxxxxxxxx0000xxxx: {name: umull_t1, to: Umull, ops: [set_flags_32bit]}
+  111110111010xxxxxxxxxxxx0000xxxx: {name: umull_t1, to: Umull, call: [set_flags_32bit()]}
 
   # Udiv
   # ---  
-  111110111011xxxx1111xxxx1111xxxx: {name: udiv_t1, to: Udiv, ops: [set_flags_32bit]}
+  111110111011xxxx1111xxxx1111xxxx: {name: udiv_t1, to: Udiv, call: [set_flags_32bit()]}
 
   # Umlal
   # ---  
-  111110111110xxxxxxxxxxxx0000xxxx: {name: umlal_t1, to: Umlal, ops: [set_flags_32bit]}
+  111110111110xxxxxxxxxxxx0000xxxx: {name: umlal_t1, to: Umlal, call: [set_flags_32bit()]}

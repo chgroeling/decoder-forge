@@ -7,8 +7,9 @@ from decoder_forge.bit_pattern import BitPattern
 from decoder_forge.pattern_algorithms import build_decode_tree_by_fixed_bits
 from decoder_forge.pattern_algorithms import flatten_decode_tree
 from decoder_forge.associated_struct_repo import AssociatedStructRepo
-from decoder_forge.associated_ops_repo import AssociatedOpsRepo
 from decoder_forge import bit_utils
+from decoder_forge.transpiller import transpill
+from decoder_forge.transpiller import VisitorPython
 
 logger = logging.getLogger(__name__)
 
@@ -56,8 +57,8 @@ def uc_generate_code(
     if "struct_def" not in ins:
         ins["struct_def"] = dict()
 
-    if "operations" not in ins:
-        ins["operations"] = dict()
+    if "deffun" not in ins:
+        ins["deffun"] = dict()
 
     # build pattern list
     pats = [BitPattern.parse_pattern(str(pat)) for pat, dct in ins["patterns"].items()]
@@ -72,9 +73,6 @@ def uc_generate_code(
         struct_def=ins["struct_def"], pat_repo=pat_repo
     )
 
-    # associated operations
-    aops_repo = AssociatedOpsRepo.build(ops_def=ins["operations"], pat_repo=pat_repo)
-
     context = ins["context"]
 
     # build decode tree
@@ -82,11 +80,37 @@ def uc_generate_code(
     flat_decode_tree = flatten_decode_tree(decode_tree)
 
     tengine.load("python")
+
+    deffun = ins["deffun"]
+
+    def tcall(expr, placeholders=dict()):
+        funname, rest = expr.split("(")
+        rest = rest.strip(")")
+        args = rest.split(",")
+        arg_dict = dict()
+        for a in args:
+            if "=" not in a:
+                continue
+            dname, val = a.split("=")
+            dname = dname.strip()
+            val = val.strip()
+            if val in placeholders:
+                arg_dict[dname] = placeholders[val]
+            else:
+                arg_dict[dname] = val
+
+        # code = deffun[name]
+
+        func_ast = deffun[funname]
+        return transpill(
+            yaml_ast=yaml.dump(func_ast), placeholders=arg_dict, call=tcall
+        )
+
     context = {
         "pat_repo": pat_repo,
         "as_repo": as_repo,
-        "aops_repo": aops_repo,
         "context": context,
+        "tcall": tcall,
         "decode_tree": decode_tree,
         "flat_decode_tree": flat_decode_tree,
         # Add some conveniece functions

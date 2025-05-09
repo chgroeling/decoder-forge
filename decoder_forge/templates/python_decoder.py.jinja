@@ -3,8 +3,8 @@
 {%- endmacro -%}
 
 {% macro op_extract_bits(op) -%}
-    {%- set bit_mask = bit_utils.create_bit_mask(op.args[0]-op.args[1]+1) -%} 
-    {{op.dest}} = (code >> {{op.args[1]}}) & {{"0x%x"%bit_mask}} # code[{{op.args[0]}}:{{op.args[1]}}] 
+    {%- set bit_mask = bit_utils.create_bit_mask(op.args[0]-op.args[1]+1) -%}
+    {{op.dest}} = (code >> {{op.args[1]}}) & {{"0x%x"%bit_mask}} # code[{{op.args[0]}}:{{op.args[1]}}]
 {%- endmacro -%}
 
 {% set op_map = {
@@ -17,21 +17,21 @@
     {% if first_child -%}
         if{{" "}}
     {%- else -%}
-        elif{{" "}} 
+        elif{{" "}}
     {%- endif -%}
-    
+
     (code & {{-" 0x%x" % pat.fixedmask}}) == {{"0x%x" % pat.fixedbits-}}:  # {{pat}}
 {%- endmacro -%}
 
 {% macro gen_pat(pat, first_child, origin) -%}
-    {{ match_pat(pat, first_child) }}    
-    {%- for op in aops_repo.pat_to_ops[origin] %}
-        {%- if op.op in op_map %}
-        {{op_map[op.op](op)}}
-        {%- else %}
-        {{op.dest}} = 0 # op not found ...
-        {%- endif %}
-    {%- endfor -%}      
+    {{ match_pat(pat, first_child) }}
+    {%- if "call" in pat_repo[origin] %}
+        {%- for j in pat_repo[origin]['call'] %}
+          {%- for line in tcall(j).split("\n") %}
+        {{line }}
+           {%- endfor -%}
+        {%- endfor -%}
+    {%- endif %}
     {%- if origin == None %}
     {%- else %}
         {%- if as_repo.pat_to_struct[origin].members|length == 0 %}
@@ -65,7 +65,6 @@ class Context:
     {%- endif %}
     {{""}}
 
-
 {%- for struct in as_repo.structs %}
 @dataclass(frozen=True, eq=True)
 class {{struct.name}}:
@@ -82,16 +81,16 @@ class {{struct.name}}:
 {{""}}
 def decode(code: int, context: Context):
 {%- for pat, origin, depth, first_child, last_child in flat_decode_tree %}
-    {{gen_pat(pat, first_child, origin) | indent(depth*4, first=True) }}
+    {{ gen_pat(pat, first_child, origin) | indent(depth*4, first=True) }}
     {%- if loop.nextitem is defined %}
         {%- set backtrack = depth-loop.nextitem[2] %}
-        {%- if backtrack>0 %}
+        {%- if backtrack > 0 %}
             {%- for bs in range(0, backtrack) %}
         {{no_match() | indent((depth-bs-1)*4, first=True)}}
             {%- endfor %}
         {%- endif %}
     {%- else %}
-        {{no_match() | indent((depth-1)*4, first=True)}}  
+        {{no_match() | indent((depth-1)*4, first=True)}}
     {%- endif %}
 {%- endfor %}
     return Undef(code) # no match
