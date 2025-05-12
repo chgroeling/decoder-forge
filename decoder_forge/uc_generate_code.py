@@ -4,12 +4,13 @@ import yaml
 from decoder_forge.i_printer import IPrinter
 from decoder_forge.i_template_engine import ITemplateEngine
 from decoder_forge.bit_pattern import BitPattern
-from decoder_forge.pattern_algorithms import build_decode_tree_by_fixed_bits
-from decoder_forge.pattern_algorithms import flatten_decode_tree
 from decoder_forge.associated_struct_repo import AssociatedStructRepo
-from decoder_forge import bit_utils
 from decoder_forge.transpiller import transpill
-from decoder_forge.transpiller import VisitorPython
+from decoder_forge.pattern_algorithms import (
+    build_decode_tree_by_fixed_bits,
+    flatten_decode_tree,
+)
+from decoder_forge.bit_utils import create_bit_mask
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +115,7 @@ def uc_generate_code(
         "decode_tree": decode_tree,
         "flat_decode_tree": flat_decode_tree,
         # Add some conveniece functions
-        "bit_utils": {"create_bit_mask": bit_utils.create_bit_mask},
+        "bit_utils": {"create_bit_mask": create_bit_mask},
     }
     rendered_code = tengine.generate(context)
 
