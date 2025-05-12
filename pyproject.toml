@@ -14,7 +14,7 @@ license = "MIT"
 readme = "README.md"            
 
 [project.scripts]
-decoder-forge = "decoder_forge:main"
+decoder-forge = "decoder_forge.main:main"
 
 
 [tool.poetry.group.dev.dependencies]
