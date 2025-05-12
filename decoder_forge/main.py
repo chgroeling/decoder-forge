@@ -142,3 +142,6 @@ def show_tree(ctx, input_path: str, decoder_width: int):
 
 def main():
     cli()
+
+if __name__ == "__main__":
+    main()

@@ -20,7 +20,7 @@ def test_generate_code_armv7m(project_path):
     format_file = project_path / "formats" / "armv7-m.yaml"
     decoder_file = project_path / "build" / "armv7-m-decoder.py"
     subprocess.run(
-        ["decoder-forge", "generate-code", "--out_file", decoder_file, format_file],
+        ["python", "-m", "decoder_forge.main", "generate-code", "--out_file", decoder_file, format_file],
         check=True,
         capture_output=True,
     )
