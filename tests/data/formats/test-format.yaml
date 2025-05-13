@@ -6,7 +6,8 @@ struct_def:
   StructB: { }
   StructC: {members: [rc0, rc1]}
   StructD: {members: [rd0]}
-
+  Unpred: {members: [code]}
+  
 deffun:
   extract_bit:
     type: binary
@@ -44,10 +45,9 @@ deffun:
         expr: "extract_bit(msb=5,lsb=3)"
       right: "0x3"
     then:
-      type: assign
+      type: return
       comment: "call if 0x3"
-      target: temp
-      expr: "1"
+      expr: "Unpred(code)"
   
 patterns:
   00xxx00x: {name: instr_A0, to: StructA, call: [set_ra0_1(), set_ra1_2()]}

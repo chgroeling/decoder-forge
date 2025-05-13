@@ -15,7 +15,7 @@ def extract_generated_code(printer_mock: Mock):
     return generated_code_str
 
 
-def test_uc_generate_code_generate_and_eval_python_code_empty_format_outputs_None():
+def test_uc_generate_code_generate_and_eval__code_empty_format_outputs_None():
     yaml_buf = ""
     printer_mock = Mock(spec=IPrinter)
     tengine = TemplateEngine()
@@ -38,7 +38,7 @@ def test_uc_generate_code_generate_and_eval_python_code_empty_format_outputs_Non
     assert decode_output == test_namespace["Undef"](code=0xFF)
 
 
-def test_uc_generate_code_generate_and_eval_python_code_test_format_returns_structD():
+def test_uc_generate_code_generate_and_eval_0x1F_test_format_returns_structD():
     printer_mock = Mock(spec=IPrinter)
     tengine = TemplateEngine()
 
@@ -58,7 +58,7 @@ def test_uc_generate_code_generate_and_eval_python_code_test_format_returns_stru
     assert decode_output == test_namespace["StructD"](rd0=0x3)
 
 
-def test_uc_generate_code_generate_and_eval_python_code_test_context_updated():
+def test_uc_generate_code_generate_and_eval_0x40_test_context_updated():
     printer_mock = Mock(spec=IPrinter)
     tengine = TemplateEngine()
 
@@ -80,3 +80,26 @@ def test_uc_generate_code_generate_and_eval_python_code_test_context_updated():
     _ = test_namespace["decode"](code=0x40, context=context)
 
     assert context.context1 == 0xCAFE
+
+
+def test_uc_generate_code_generate_and_eval_code_0xEF_code_return_structC():
+    printer_mock = Mock(spec=IPrinter)
+    tengine = TemplateEngine()
+
+    # method under test
+    test_format = files("tests.data.formats").joinpath("test-format.yaml").read_text()
+    uc_generate_code(printer_mock, tengine, test_format, decoder_width=8)
+
+    generated_code = extract_generated_code(printer_mock)
+
+    # execute the code
+    test_namespace = {}
+    exec(generated_code, test_namespace)
+
+    context = test_namespace["Context"]()
+
+    # call the decoder
+    decode_output = test_namespace["decode"](0xEF, context)
+
+    # returns undef class
+    assert decode_output == test_namespace["StructC"](rc0=1, rc1=2)

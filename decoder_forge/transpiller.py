@@ -67,6 +67,15 @@ class VisitorPython:
         else:
             return f"{target} = {expr} # {comment}"
 
+    def do_return(self, expr, comment):
+        """Generates a string representing an return operation, optionally with a
+        comment.
+        """
+        if comment is None:
+            return f"return {expr}"
+        else:
+            return f"return {expr} # {comment}"
+
     def do_call(self, expr, placeholders, comment):
         """Generates a string representing a function call, optionally with a comment.
         """
@@ -158,9 +167,7 @@ def transpill_recurse(visitor: VisitorPython, node, placeholders: dict[str, str]
 
         elif node["op"] == "assert":
             code += visitor.do_assert(arg_expr)
-
     elif node["type"] == "assign":
-        print("assign")
         arg_expr = transpill_or_eval(node["expr"])
 
         target = node["target"]
@@ -169,16 +176,19 @@ def transpill_recurse(visitor: VisitorPython, node, placeholders: dict[str, str]
         comment = None if "comment" not in node else node["comment"]
         code += visitor.do_assign(ret_target, arg_expr, comment)
 
+    elif node["type"] == "return":
+        arg_expr = transpill_or_eval(node["expr"])
+        comment = None if "comment" not in node else node["comment"]
+        code += visitor.do_return(arg_expr, comment)
+
     elif node["type"] == "eval":
         code += visitor.do_eval(node["expr"], placeholders)
 
     elif node["type"] == "call":
-        print("call")
         comment = None if "comment" not in node else node["comment"]
         code += visitor.do_call(node["expr"], placeholders, comment)
 
     elif node["type"] == "if":
-
         cond = transpill_or_eval(node["cond"])
         then = transpill_or_eval(node["then"])
         el = None
