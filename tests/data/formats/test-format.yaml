@@ -11,15 +11,15 @@ deffun:
   extract_bit:
     type: binary
     op: and
-    left: {type: unary, op: braces, expr: {type: binary, op: shiftright, left: code, right: lsb}}
-    right: {type: eval, expr: "hex((1 << (int(msb)-int(lsb)+1)) - 1)"}
+    left: {type: unary, op: braces, expr: {type: binary, op: shiftright, left: code, right: $lsb}}
+    right: {type: eval, expr: "hex((1 << (int($msb)-int($lsb)+1)) - 1)"}
 
   extract_bit_and_assign:
     type: assign
-    target: res
+    target: $res
     expr:
       type: call
-      expr: "extract_bit(msb=msb, lsb=lsb)"
+      expr: "extract_bit(msb=$msb, lsb=$lsb)"
 
   extract_rd0: {
     type: call,

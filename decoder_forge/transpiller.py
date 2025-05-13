@@ -68,8 +68,7 @@ class VisitorPython:
             return f"{target} = {expr} # {comment}"
 
     def do_call(self, expr, placeholders, comment):
-        """Generates a string representing a function call, optionally with a comment.
-        """
+        """Generates a string representing a function call, optionally with a comment."""
         if comment is None:
             return f"{self._call(expr, placeholders)}"
         else:
@@ -77,7 +76,8 @@ class VisitorPython:
 
     def do_eval(self, expr, placeholders):
         """Evaluates an expression using the provided placeholders."""
-        return str(eval(expr, placeholders))
+        py_expr = expr.replace("$", "_ph_")
+        return str(eval(py_expr, {"_ph_" + k: v for k, v in placeholders.items()}))
 
     def do_if(self, cond, then, el):
         """Generates a string representing an if-else statement."""
@@ -124,13 +124,20 @@ def transpill_recurse(visitor: VisitorPython, node, placeholders: dict[str, str]
     if "type" not in node:
         return code
 
+    def replace_placeholders(expr):
+        if str(expr).startswith("$"):
+            ph = expr.strip("$")
+            return expr if ph not in placeholders else placeholders[ph]
+        else:
+            return expr
+
     def transpill_or_eval(node):
         arg = None
         if isinstance(node, dict):
             arg = transpill_recurse(visitor, node, placeholders)
         else:
             expr = node
-            arg = expr if expr not in placeholders else placeholders[expr]
+            arg = replace_placeholders(expr)
         return arg
 
     if node["type"] == "binary":
@@ -155,7 +162,6 @@ def transpill_recurse(visitor: VisitorPython, node, placeholders: dict[str, str]
 
         if node["op"] == "braces":
             code += visitor.do_braces(arg_expr)
-
         elif node["op"] == "assert":
             code += visitor.do_assert(arg_expr)
 
@@ -164,7 +170,7 @@ def transpill_recurse(visitor: VisitorPython, node, placeholders: dict[str, str]
         arg_expr = transpill_or_eval(node["expr"])
 
         target = node["target"]
-        ret_target = target if target not in placeholders else placeholders[target]
+        ret_target = replace_placeholders(target)
 
         comment = None if "comment" not in node else node["comment"]
         code += visitor.do_assign(ret_target, arg_expr, comment)

@@ -172,7 +172,7 @@ expr:
 
 def test_transpil_extract_bits_with_placeholders_returns_exectuable_python_code():
     ast_yaml = """type: assign
-target: result
+target: $result
 expr:
   type: binary
   op: and
@@ -183,8 +183,8 @@ expr:
       type: binary
       op: shiftright
       left: code
-      right: arg_0
-  right: arg_1"""
+      right: $arg_0
+  right: $arg_1"""
 
     tcode = transpill(ast_yaml, {"result": "rd", "arg_0": "1U", "arg_1": "0x3ff"})
 
@@ -193,7 +193,7 @@ expr:
 
 def test_transpil_extract_bits_with_placeholders_and_eval_returns_exectuable_python_code():
     ast_yaml = """type: assign
-target: result
+target: $result
 expr:
   type: binary
   op: and
@@ -204,10 +204,10 @@ expr:
       type: binary
       op: shiftright
       left: code
-      right: lsb
+      right: $lsb
   right:
     type: eval
-    expr:  \"hex((1 << (int(msb)-int(lsb)+1)) - 1)\""""
+    expr:  \"hex((1 << (int($msb)-int($lsb)+1)) - 1)\""""
 
     tcode = transpill(ast_yaml, {"result": "rd", "msb": "5", "lsb": "2"})
 

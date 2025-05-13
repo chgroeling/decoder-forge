@@ -95,8 +95,10 @@ def uc_generate_code(
             dname, val = a.split("=")
             dname = dname.strip()
             val = val.strip()
-            if val in placeholders:
-                arg_dict[dname] = placeholders[val]
+            if val.startswith("$"):
+                ph = val.strip("$")
+                if ph in placeholders:
+                    arg_dict[dname] = placeholders[ph]
             else:
                 arg_dict[dname] = val
 
