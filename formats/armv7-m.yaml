@@ -95,15 +95,15 @@ deffun:
   extract_bit:
     type: binary
     op: and
-    left: {type: unary, op: braces, expr: {type: binary, op: shiftright, left: code, right: lsb}}
-    right: {type: eval, expr: "hex((1 << (int(msb)-int(lsb)+1)) - 1)"}
+    left: {type: unary, op: braces, expr: {type: binary, op: shiftright, left: code, right: $lsb}}
+    right: {type: eval, expr: "hex((1 << (int($msb)-int($lsb)+1)) - 1)"}
 
   extract_bit_and_assign:
     type: assign
-    target: res
+    target: $res
     expr:
       type: call
-      expr: "extract_bit(msb=msb, lsb=lsb)"
+      expr: "extract_bit(msb=$msb, lsb=$lsb)"
 
   extract_t_26_24:
     type: assign
@@ -111,7 +111,15 @@ deffun:
     expr:
       type: call
       expr: "extract_bit(msb=26, lsb=24)"
-    
+
+          
+  extract_imm32_11_0:
+    type: assign
+    target: imm32
+    expr:
+      type: call
+      expr: "extract_bit(res=imm32, msb=11, lsb=0)"
+
   extract_imm32_23_16_sl2:
     type: assign
     target: imm32
@@ -133,13 +141,6 @@ deffun:
     expr:
       type: call
       expr: "extract_bit(res=t, msb=15, lsb=12)"
-    
-  extract_imm32_11_0:
-    type: assign
-    target: imm32
-    expr:
-      type: call
-      expr: "extract_bit(res=imm32, msb=11, lsb=0)"
   
   assign_val:
     type: assign
@@ -157,17 +158,6 @@ deffun:
     comment: "flags |= Add"
   }
   
-operations:
-  # set the flags field to 0x0 .. indicating a 16 bit instruction
-  set_flags_16bit: {dest: flags, op: set, args: ["0x0"], comment="16bit"}
-
-  # set the flags field to 0x1 .. indicating a 32 bit instruction
-  set_flags_32bit: {dest: flags, op: set, args: ["0x1"], comment="32bit"}
-
-  # extract the t register 
-  extract_t_15_12: {dest: t, op: extract_bits, args: [15, 12]} # o=i[MSB:LSB]
-  extract_imm32_11_0: {dest: imm32, op: extract_bits, args: [11, 0]} # o=i[MSB:LSB]
-
 patterns:
 
   # AddRegister

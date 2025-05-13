@@ -34,8 +34,8 @@ class DecodeTree(DecodeNode):
     """Internal tree node representing a group of BitPatterns sharing fixed bits.
 
     Attributes:
-        pat (BitPattern): A BitPattern representing the common fixed bits for this group.
-            Can be None for the root node.
+        pat (BitPattern): A BitPattern representing the common fixed bits for this
+            group.  Can be None for the root node.
         children (list[DecodeNode]): A list of child nodes (either DecodeLeaf or
             DecodeTree) representing further subdivisions of patterns.
     """
@@ -45,16 +45,15 @@ class DecodeTree(DecodeNode):
 
 
 def compute_common_fixedmask(pats: list[BitPattern]) -> int:
-    """
-    Compute the common fixed mask for a list of BitPattern objects.
+    """Compute the common fixed mask for a list of BitPattern objects.
 
-    This function calculates the bitwise AND (intersection) of the fixedmask
-    attributes from all BitPattern objects in the provided list. The result is an integer
-    that represents the bits that are fixed (common) across every pattern.
+    This function calculates the bitwise AND (intersection) of the fixedmask attributes
+    from all BitPattern objects in the provided list. The result is an integer that
+    represents the bits that are fixed (common) across every pattern.
 
     Args:
-        pats (list[BitPattern]): A list of BitPattern objects whose fixedmask values will be
-            combined.
+        pats (list[BitPattern]): A list of BitPattern objects whose fixedmask values
+            will be combined.
 
     Returns:
         int: The bitwise AND of all fixedmask attributes of the BitPattern objects.
@@ -64,6 +63,7 @@ def compute_common_fixedmask(pats: list[BitPattern]) -> int:
         >>> p2 = BitPattern(0b101, 0b001, 3)
         >>> compute_common_fixedmask([p1, p2])
         5
+
     """
 
     def logic_and(fma: int, fmb: int) -> int:
@@ -152,7 +152,8 @@ def build_decode_tree_by_fixed_bits(
        ValueError: If any BitPattern cannot be split by the computed common fixed mask.
 
     Example:
-       >>> tree = build_decode_tree_by_fixed_bits([pattern1, pattern2, pattern3], decoder_width=8)
+       >>> tree = build_decode_tree_by_fixed_bits([pattern1, pattern2, pattern3],
+       >>> decoder_width=8)
        >>> print(tree)
     """
 
@@ -205,7 +206,9 @@ def build_decode_tree_by_fixed_bits(
     return root
 
 
-def flatten_decode_tree(tree: DecodeTree):
+def flatten_decode_tree(
+    tree: DecodeTree,
+) -> list[tuple[BitPattern, Optional[BitPattern], int, bool, bool]]:
     """
     Flatten a hierarchical DecodeTree into a list of tuples.
 
@@ -223,8 +226,8 @@ def flatten_decode_tree(tree: DecodeTree):
         tree (DecodeTree): The root node of the DecodeTree to be flattened.
 
     Returns:
-        list: A list of tuples, each containing:
-            (BitPattern, origin BitPattern or None, depth integer, last_child flag boolean).
+        list: A list of tuples, each containing: (BitPattern, origin BitPattern or None,
+            depth integer, last_child flag boolean).
 
     Example:
         >>> flat_list = build_flat_tree(tree)
