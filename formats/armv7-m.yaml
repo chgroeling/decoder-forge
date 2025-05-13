@@ -157,17 +157,6 @@ deffun:
     comment: "flags |= Add"
   }
   
-operations:
-  # set the flags field to 0x0 .. indicating a 16 bit instruction
-  set_flags_16bit: {dest: flags, op: set, args: ["0x0"], comment="16bit"}
-
-  # set the flags field to 0x1 .. indicating a 32 bit instruction
-  set_flags_32bit: {dest: flags, op: set, args: ["0x1"], comment="32bit"}
-
-  # extract the t register 
-  extract_t_15_12: {dest: t, op: extract_bits, args: [15, 12]} # o=i[MSB:LSB]
-  extract_imm32_11_0: {dest: imm32, op: extract_bits, args: [11, 0]} # o=i[MSB:LSB]
-
 patterns:
 
   # AddRegister
