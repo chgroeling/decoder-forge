@@ -77,7 +77,8 @@ class VisitorPython:
             return f"return {expr} # {comment}"
 
     def do_call(self, expr, placeholders, comment):
-        """Generates a string representing a function call, optionally with a comment."""
+        """Generates a string representing a function call, optionally with a
+        comment."""
         if comment is None:
             return f"{self._call(expr, placeholders)}"
         else:
@@ -93,11 +94,15 @@ class VisitorPython:
         out = f"if {cond}:\n"
 
         if el is not None:
-            out += f"    {then}\n"
+            then_lines = then.split("\n")
+            for line in then_lines:
+                out += f"    {line}\n"
             out += "else:\n"
             out += f"    {el}"
         else:
-            out += f"    {then}"
+            then_lines = then.split("\n")
+            for line in then_lines:
+                out += f"    {line}\n"
         return out
 
 
@@ -173,6 +178,7 @@ def transpill_recurse(visitor: VisitorPython, node, placeholders: dict[str, str]
             code += visitor.do_braces(arg_expr)
         elif node["op"] == "assert":
             code += visitor.do_assert(arg_expr)
+
     elif node["type"] == "assign":
         arg_expr = transpill_or_eval(node["expr"])
 
@@ -193,6 +199,14 @@ def transpill_recurse(visitor: VisitorPython, node, placeholders: dict[str, str]
     elif node["type"] == "call":
         comment = None if "comment" not in node else node["comment"]
         code += visitor.do_call(node["expr"], placeholders, comment)
+
+    elif node["type"] == "seq":
+        for idx, expr in enumerate(node["exprs"]):
+            arg_expr = transpill_or_eval(expr)
+            code += f"{arg_expr}"
+
+            if idx != len(node["exprs"]) - 1:
+                code += "\n"
 
     elif node["type"] == "if":
         cond = transpill_or_eval(node["cond"])
