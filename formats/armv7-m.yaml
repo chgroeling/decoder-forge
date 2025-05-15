@@ -14,7 +14,7 @@ struct_def:
   BicImmediate: {members: [flags]}
   BicRegister: {members: [flags]}
   Bkpt: {members: [flags]}
-  Bl: {members: [flags]}
+  Bl: {members: [flags, imm32]}
   Blx: {members: [flags]}
   Bx: {members: [flags]}
   CbNZ: {members: [flags]}
@@ -95,9 +95,71 @@ deffun:
   extract_bit:
     type: binary
     op: and
-    left: {type: unary, op: braces, expr: {type: binary, op: shiftright, left: code, right: $lsb}}
-    right: {type: eval, expr: "hex((1 << (int($msb)-int($lsb)+1)) - 1)"}
+    left:
+      type: unary
+      op: braces
+      expr:
+        type: binary
+        op: shiftright
+        left: code
+        right: 
+          type: eval
+          expr: "int($lsb.split('.')[-1]) + (16 if $lsb.startswith('l.') else 0)"
+    right: {type: eval, expr: "hex((1 << (int($msb.split('.')[-1]) + (16 if $msb.startswith('l.') else 0)-int(int($lsb.split('.')[-1]) + (16 if $lsb.startswith('l.') else 0))+1)) - 1)"}
 
+  lsb_equal:
+    type: assign
+    target: $res
+    expr:
+      type: binary
+      op: and
+      right: "0x1"
+      left:
+        type: unary
+        op: braces
+        expr:
+          type: unary
+          op: not
+          expr:
+            type: unary
+            op: braces
+            expr:
+              type: binary
+              op: xor
+              left: $j
+              right: s
+
+  sign_extend:
+    type: assign
+    target: $res
+    expr:
+      type: binary
+      op: sub
+      left:
+        type: unary
+        op: braces
+        expr:
+          type: binary
+          op: xor
+          left: $value
+          right:
+            type: unary
+            op: braces
+            expr:
+              type: binary
+              op: shiftleft
+              left: 1
+              right: $sign_bit
+      right:
+        type: unary
+        op: braces
+        expr:
+          type: binary
+          op: shiftleft
+          left: 1
+          right: $sign_bit
+
+    
   extract_bit_and_assign:
     type: assign
     target: $res
@@ -112,6 +174,73 @@ deffun:
       type: call
       expr: "extract_bit(msb=26, lsb=24)"
 
+
+  extract_imm32_special:
+    type: seq
+    exprs:
+    - {type: call, expr: "extract_bit_and_assign(res=s, msb=l.10, lsb=l.10)"}
+    - {type: call, expr: "extract_bit_and_assign(res=imm10, msb=l.9, lsb=l.0)"}
+    - {type: call, expr: "extract_bit_and_assign(res=j1, msb=h.13, lsb=h.13)"}
+    - {type: call, expr: "extract_bit_and_assign(res=j2, msb=h.11, lsb=h.11)"}
+    - {type: call, expr: "extract_bit_and_assign(res=imm11, msb=h.10, lsb=h.0)"}
+    - {type: call, expr: "lsb_equal(res=i1, j=j1)"}
+    - {type: call, expr: "lsb_equal(res=i2, j=j2)"}
+    - type: assign
+      target: imm32_us
+      expr:
+        type: binary
+        op: or
+        left:
+          type: unary
+          op: braces
+          expr:
+            type: binary
+            op: shiftleft
+            left: s
+            right: 24
+        right:
+          type: binary
+          op: or
+          left:
+            type: unary
+            op: braces
+            expr:
+              type: binary
+              op: shiftleft
+              left: i1
+              right: 23
+          right:
+            type: binary
+            op: or
+            left:
+              type: unary
+              op: braces
+              expr:
+                type: binary
+                op: shiftleft
+                left: i2
+                right: 22
+            right:
+              type: binary
+              op: or
+              left:
+                type: unary
+                op: braces
+                expr:
+                  type: binary
+                  op: shiftleft
+                  left: imm10
+                  right: 12
+              right:
+                type: unary
+                op: braces
+                expr:
+                  type: binary
+                  op: shiftleft
+                  left: imm11
+                  right: 1
+    - {type: call, expr: "sign_extend(res=imm32, value=imm32_us, sign_bit=24)"}   
+
           
   extract_imm32_11_0:
     type: assign
@@ -120,6 +249,7 @@ deffun:
       type: call
       expr: "extract_bit(res=imm32, msb=11, lsb=0)"
 
+  
   extract_imm32_23_16_sl2:
     type: assign
     target: imm32
@@ -548,7 +678,7 @@ patterns:
 
   # Bl
   # ---
-  11110xxxxxxxxxxx11x1xxxxxxxxxxxx: {name: bl_t1, to: Bl, call: [set_flags_32bit()]}
+  11110xxxxxxxxxxx11x1xxxxxxxxxxxx: {name: bl_t1, to: Bl, call: [set_flags_32bit(), extract_imm32_special()]}
 
   # LdrhRegister
   # ---

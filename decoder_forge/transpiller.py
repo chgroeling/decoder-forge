@@ -26,6 +26,10 @@ class VisitorPython:
         """Generates a string representing the addition of two operands."""
         return f"{left} + {right}"
 
+    def do_sub(self, left, right):
+        """Generates a string representing the subtraction of two operands."""
+        return f"{left} - {right}"
+
     def do_is_equal(self, left, right):
         """Generates a string representing the equality check between two operands."""
         return f"{left} == {right}"
@@ -42,6 +46,10 @@ class VisitorPython:
         """Generates a string representing the bitwise AND operation."""
         return f"{left} & {right}"
 
+    def do_xor(self, left, right):
+        """Generates a string representing the bitwise XOR operation."""
+        return f"{left} ^ {right}"
+
     def do_or(self, left, right):
         """Generates a string representing the bitwise OR operation."""
         return f"{left} | {right}"
@@ -51,6 +59,9 @@ class VisitorPython:
     def do_braces(self, expr):
         """Wraps an expression in parentheses."""
         return f"({expr})"
+
+    def do_not(self, expr):
+        return f"~{expr}"
 
     def do_assert(self, expr):
         """Generates a string representing an assert statement."""
@@ -160,12 +171,16 @@ def transpill_recurse(visitor: VisitorPython, node, placeholders: dict[str, str]
 
         if node["op"] == "add":
             code += visitor.do_add(arg_left, arg_right)
+        elif node["op"] == "sub":
+            code += visitor.do_sub(arg_left, arg_right)
         elif node["op"] == "shiftright":
             code += visitor.do_shiftright(arg_left, arg_right)
         elif node["op"] == "shiftleft":
             code += visitor.do_shiftleft(arg_left, arg_right)
         elif node["op"] == "and":
             code += visitor.do_and(arg_left, arg_right)
+        elif node["op"] == "xor":
+            code += visitor.do_xor(arg_left, arg_right)
         elif node["op"] == "or":
             code += visitor.do_or(arg_left, arg_right)
         elif node["op"] == "is_equal":
@@ -176,6 +191,9 @@ def transpill_recurse(visitor: VisitorPython, node, placeholders: dict[str, str]
 
         if node["op"] == "braces":
             code += visitor.do_braces(arg_expr)
+        if node["op"] == "not":
+            code += visitor.do_not(arg_expr)
+
         elif node["op"] == "assert":
             code += visitor.do_assert(arg_expr)
 
