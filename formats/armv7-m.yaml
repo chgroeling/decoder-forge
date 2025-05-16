@@ -1,3 +1,6 @@
+context:
+  members: [istate]
+
 struct_def:
   AdcImmediate: {members: [flags]}
   AdcRegister: {members: [flags]}
@@ -90,7 +93,8 @@ struct_def:
   Umull: {members: [flags]}
   Uxtb: {members: [flags]}
   Uxth: {members: [flags]}
-
+  Unpredictable: {members: [code]}
+  
 deffun:
   extract_bit:
     op: and
@@ -104,6 +108,41 @@ deffun:
           expr: "int($lsb.split('.')[-1]) + (16 if $lsb.startswith('l.') else 0)"
     - {op: eval, expr: "hex((1 << (int($msb.split('.')[-1]) + (16 if $msb.startswith('l.') else 0)-int(int($lsb.split('.')[-1]) + (16 if $lsb.startswith('l.') else 0))+1)) - 1)"}
 
+  extract_istate_b3_0:
+    op: and
+    args:
+    - context.istate
+    - "0b1111"
+
+  in_it_block:
+    op: is_not_equal
+    left: {op: call, expr: "extract_istate_b3_0()"}
+    right: "0b0000"
+
+  last_in_it_block:
+    op: is_equal
+    left: {op: call, expr: "extract_istate_b3_0()"}
+    right: "0b1000"
+
+  unpred_if_in_it_block_and_not_last_in_it_block:
+    op: if
+    cond:
+      op: logical_and
+      args:
+      - op: braces
+        expr:
+          op: call
+          expr: "in_it_block()"
+      - op: logical_not
+        expr:
+          op: braces
+          expr:
+            op: call
+            expr: "last_in_it_block()"
+    then:
+      op: return
+      expr: "Unpredictable(code)"
+      
   # bit_mask 1<< $bit
   bit_mask:
     op: braces
@@ -601,7 +640,7 @@ patterns:
 
   # Bl
   # ---
-  11110xxxxxxxxxxx11x1xxxxxxxxxxxx: {name: bl_t1, to: Bl, call: [set_flags_32bit(), extract_imm32_long_branch()]}
+  11110xxxxxxxxxxx11x1xxxxxxxxxxxx: {name: bl_t1, to: Bl, call: [set_flags_32bit(), extract_imm32_long_branch(),  unpred_if_in_it_block_and_not_last_in_it_block()]}
 
   # LdrhRegister
   # ---

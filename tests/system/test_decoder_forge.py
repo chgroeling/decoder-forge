@@ -20,7 +20,15 @@ def test_generate_code_armv7m(project_path):
     format_file = project_path / "formats" / "armv7-m.yaml"
     decoder_file = project_path / "build" / "armv7-m-decoder.py"
     subprocess.run(
-        ["python", "-m", "decoder_forge.main", "generate-code", "--out_file", decoder_file, format_file],
+        [
+            "python",
+            "-m",
+            "decoder_forge.main",
+            "generate-code",
+            "--out_file",
+            decoder_file,
+            format_file,
+        ],
         check=True,
         capture_output=True,
     )
@@ -37,7 +45,6 @@ def test_generate_code_armv7m(project_path):
     decode = decoder_ns["decode"]
 
     tests = [
-
         # bl 40
         (b"\xf0\x00\xf8\x14", decoder_ns["Bl"](flags=0x1, imm32=40)),
         # bl 33928
@@ -46,7 +53,6 @@ def test_generate_code_armv7m(project_path):
         (b"\xf7\xff\xfe\xae", decoder_ns["Bl"](flags=0x1, imm32=-676)),
         # bl -32
         (b"\xf7\xff\xff\xf0", decoder_ns["Bl"](flags=0x1, imm32=-32)),
-
         # movs r0, #22
         (b"\x20\x16", decoder_ns["MovImmediate"](flags=0x0)),
         # add r1, pc, #196
@@ -69,6 +75,7 @@ def test_generate_code_armv7m(project_path):
 
     adr = 0
     i = 0
+    context.istate = 0b1000
     while i < len(tests):
         code = int.from_bytes(data[adr : adr + 4])
         out = decode(code, context=context)

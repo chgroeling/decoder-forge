@@ -34,6 +34,10 @@ class VisitorPython:
         """Generates a string representing the bitwise AND operation."""
         return " & ".join(args)
 
+    def do_logical_and(self, *args):
+        """Generates a string representing the bitwise AND operation."""
+        return " and ".join(args)
+
     def do_xor(self, *args):
         """Generates a string representing the bitwise XOR operation."""
         return " ^ ".join(args)
@@ -48,6 +52,10 @@ class VisitorPython:
     def do_is_equal(self, left, right):
         """Generates a string representing the equality check between two operands."""
         return f"{left} == {right}"
+
+    def do_is_not_equal(self, left, right):
+        """Generates a string representing the not equality check between two operands."""
+        return f"{left} != {right}"
 
     def do_shiftright(self, left, right):
         """Generates a string representing the right bit-shift operation."""
@@ -65,6 +73,9 @@ class VisitorPython:
 
     def do_not(self, expr):
         return f"~{expr}"
+
+    def do_logical_not(self, expr):
+        return f"not {expr}"
 
     def do_assert(self, expr):
         """Generates a string representing an assert statement."""
@@ -192,6 +203,13 @@ def transpill_recurse(visitor: VisitorPython, node, placeholders: dict[str, str]
 
         code += visitor.do_and(*args)
 
+    elif node["op"] == "logical_and":
+        args = list()
+        for arg_expr in node["args"]:
+            args.append(transpill_or_eval(arg_expr))
+
+        code += visitor.do_logical_and(*args)
+
     elif node["op"] == "xor":
         args = list()
         for arg_expr in node["args"]:
@@ -214,6 +232,12 @@ def transpill_recurse(visitor: VisitorPython, node, placeholders: dict[str, str]
 
         code += visitor.do_is_equal(arg_left, arg_right)
 
+    elif node["op"] == "is_not_equal":
+        arg_right = transpill_or_eval(node["right"])
+        arg_left = transpill_or_eval(node["left"])
+
+        code += visitor.do_is_not_equal(arg_left, arg_right)
+
     elif node["op"] == "shiftright":
         arg_right = transpill_or_eval(node["right"])
         arg_left = transpill_or_eval(node["left"])
@@ -234,6 +258,10 @@ def transpill_recurse(visitor: VisitorPython, node, placeholders: dict[str, str]
     elif node["op"] == "not":
         arg_expr = transpill_or_eval(node["expr"])
         code += visitor.do_not(arg_expr)
+    elif node["op"] == "logical_not":
+        arg_expr = transpill_or_eval(node["expr"])
+        code += visitor.do_logical_not(arg_expr)
+
     elif node["op"] == "assert":
         arg_expr = transpill_or_eval(node["expr"])
         code += visitor.do_assert(arg_expr)
