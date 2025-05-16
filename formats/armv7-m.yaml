@@ -91,203 +91,126 @@ struct_def:
   Uxtb: {members: [flags]}
   Uxth: {members: [flags]}
 
-deffun:  
+deffun:
   extract_bit:
-    type: binary
     op: and
-    left:
-      type: unary
-      op: braces
+    args:
+    - op: braces
       expr:
-        type: binary
         op: shiftright
         left: code
-        right: 
-          type: eval
+        right:
+          op: eval
           expr: "int($lsb.split('.')[-1]) + (16 if $lsb.startswith('l.') else 0)"
-    right: {type: eval, expr: "hex((1 << (int($msb.split('.')[-1]) + (16 if $msb.startswith('l.') else 0)-int(int($lsb.split('.')[-1]) + (16 if $lsb.startswith('l.') else 0))+1)) - 1)"}
+    - {op: eval, expr: "hex((1 << (int($msb.split('.')[-1]) + (16 if $msb.startswith('l.') else 0)-int(int($lsb.split('.')[-1]) + (16 if $lsb.startswith('l.') else 0))+1)) - 1)"}
 
-  lsb_equal:
-    type: assign
+  # bit_mask 1<< $bit
+  bit_mask:
+    op: braces
+    expr:
+      op: shiftleft
+      left: 1
+      right: $bit
+
+
+  # $res = 1 if lsb(a) == lsb(b) else 0
+  lsb_equal_and_assign:
+    op: assign
     target: $res
     expr:
-      type: binary
       op: and
-      right: "0x1"
-      left:
-        type: unary
-        op: braces
+      args:
+      - "0x1"
+      - op: braces
         expr:
-          type: unary
           op: not
           expr:
-            type: unary
             op: braces
             expr:
-              type: binary
               op: xor
-              left: $j
-              right: s
+              args: [$a, $b]
 
-  sign_extend:
-    type: assign
+  sign_extend_and_assign:
+    op: assign
     target: $res
     expr:
-      type: binary
       op: sub
-      left:
-        type: unary
-        op: braces
-        expr:
-          type: binary
-          op: xor
-          left: $value
-          right:
-            type: unary
-            op: braces
-            expr:
-              type: binary
-              op: shiftleft
-              left: 1
-              right: $sign_bit
-      right:
-        type: unary
-        op: braces
-        expr:
-          type: binary
-          op: shiftleft
-          left: 1
-          right: $sign_bit
+      args:
+      - op: braces
+        expr: {op: xor, args: [$value, {op: call, expr: "bit_mask(bit=$sign_bit)"}]}
+      - op: call
+        expr: "bit_mask(bit=$sign_bit)"
 
-    
+
   extract_bit_and_assign:
-    type: assign
+    op: assign
     target: $res
-    expr:
-      type: call
-      expr: "extract_bit(msb=$msb, lsb=$lsb)"
+    expr: {op: call, expr: "extract_bit(msb=$msb, lsb=$lsb)"}
 
   extract_t_26_24:
-    type: assign
+    op: assign
     target: t
-    expr:
-      type: call
-      expr: "extract_bit(msb=26, lsb=24)"
+    expr: {op: call, expr: "extract_bit(msb=26, lsb=24)"}
 
-
-  extract_imm32_special:
-    type: seq
+  extract_imm32_long_branch:
+    op: seq
     exprs:
-    - {type: call, expr: "extract_bit_and_assign(res=s, msb=l.10, lsb=l.10)"}
-    - {type: call, expr: "extract_bit_and_assign(res=imm10, msb=l.9, lsb=l.0)"}
-    - {type: call, expr: "extract_bit_and_assign(res=j1, msb=h.13, lsb=h.13)"}
-    - {type: call, expr: "extract_bit_and_assign(res=j2, msb=h.11, lsb=h.11)"}
-    - {type: call, expr: "extract_bit_and_assign(res=imm11, msb=h.10, lsb=h.0)"}
-    - {type: call, expr: "lsb_equal(res=i1, j=j1)"}
-    - {type: call, expr: "lsb_equal(res=i2, j=j2)"}
-    - type: assign
+    - {op: call, expr: "extract_bit_and_assign(res=s, msb=l.10, lsb=l.10)"}
+    - {op: call, expr: "extract_bit_and_assign(res=imm10, msb=l.9, lsb=l.0)"}
+    - {op: call, expr: "extract_bit_and_assign(res=j1, msb=h.13, lsb=h.13)"}
+    - {op: call, expr: "extract_bit_and_assign(res=j2, msb=h.11, lsb=h.11)"}
+    - {op: call, expr: "extract_bit_and_assign(res=imm11, msb=h.10, lsb=h.0)"}
+    - {op: call, expr: "lsb_equal_and_assign(res=i1, a=j1, b=s)"}
+    - {op: call, expr: "lsb_equal_and_assign(res=i2, a=j2, b=s)"}
+    - op: assign
       target: imm32_us
       expr:
-        type: binary
         op: or
-        left:
-          type: unary
-          op: braces
-          expr:
-            type: binary
-            op: shiftleft
-            left: s
-            right: 24
-        right:
-          type: binary
-          op: or
-          left:
-            type: unary
-            op: braces
-            expr:
-              type: binary
-              op: shiftleft
-              left: i1
-              right: 23
-          right:
-            type: binary
-            op: or
-            left:
-              type: unary
-              op: braces
-              expr:
-                type: binary
-                op: shiftleft
-                left: i2
-                right: 22
-            right:
-              type: binary
-              op: or
-              left:
-                type: unary
-                op: braces
-                expr:
-                  type: binary
-                  op: shiftleft
-                  left: imm10
-                  right: 12
-              right:
-                type: unary
-                op: braces
-                expr:
-                  type: binary
-                  op: shiftleft
-                  left: imm11
-                  right: 1
-    - {type: call, expr: "sign_extend(res=imm32, value=imm32_us, sign_bit=24)"}   
+        args:
+        - {op: braces, expr: {op: shiftleft, left: s, right: 24}}
+        - {op: braces, expr: {op: shiftleft, left: i1, right: 23}}
+        - {op: braces, expr: {op: shiftleft, left: i2, right: 22}}
+        - {op: braces, expr: {op: shiftleft, left: imm10, right: 12}}
+        - {op: braces, expr: {op: shiftleft, left: imm11, right: 1}}
+    - {op: call, expr: "sign_extend_and_assign(res=imm32, value=imm32_us, sign_bit=24)"}
 
-          
   extract_imm32_11_0:
-    type: assign
+    op: assign
     target: imm32
-    expr:
-      type: call
-      expr: "extract_bit(res=imm32, msb=11, lsb=0)"
+    expr: {op: call, expr: "extract_bit(res=imm32, msb=11, lsb=0)"}
 
-  
+
   extract_imm32_23_16_sl2:
-    type: assign
+    op: assign
     target: imm32
     expr:
-      type: binary
       op: shiftleft
       left:
-        type: unary
         op: braces
-        expr:
-          type: call
-          expr: "extract_bit(msb=23, lsb=16)"
-      right:
-        2
-      
+        expr: {op: call, expr: "extract_bit(msb=23, lsb=16)"}
+      right: 2
+
   extract_t_15_12:
-    type: assign
+    op: assign
     target: t
-    expr:
-      type: call
-      expr: "extract_bit(res=t, msb=15, lsb=12)"
-  
+    expr: {op: call, expr: "extract_bit(res=t, msb=15, lsb=12)"}
+
   assign_val:
-    type: assign
+    op: assign
     target: res
     expr: val
 
-  set_flags_16bit : {type: assign, target: flags, expr: "0x0"}
-  set_flags_32bit : {type: assign, target: flags, expr: "0x1"}
-  append_flags_add: {type: assign, target: flags, expr: {
-      type: binary,
-      op: or,
-      left: flags,
-      right: "0x2" 
-    },
+  set_flags_16bit : {op: assign, target: flags, expr: "0x0"}
+  set_flags_32bit : {op: assign, target: flags, expr: "0x1"}
+
+  append_flags_add:
+    op: assign
+    target: flags
+    expr:
+      op: or
+      args: [flags, { op: call, expr: "bit_mask(bit=1)"}]
     comment: "flags |= Add"
-  }
-  
+
 patterns:
 
   # AddRegister
@@ -319,7 +242,7 @@ patterns:
   # ---
   0100001010xxxxxx: {name: cmp_register_t1, to: CmpRegister, call: [set_flags_16bit()]}
   01000101xxxxxxxx: {name: cmp_register_t2, to: CmpRegister, call: [set_flags_16bit()]}
-  111010111011xxxx0xxx1111xxxxxxxx: {name: cmp_register_t3, to: CmpRegister, call: [set_flags_32bit()]}  
+  111010111011xxxx0xxx1111xxxxxxxx: {name: cmp_register_t3, to: CmpRegister, call: [set_flags_32bit()]}
 
   # CmpImmediate
   # ---
@@ -347,7 +270,7 @@ patterns:
   # ---
   01101xxxxxxxxxxx: {name: ldr_immediate_t1, to: LdrImmediate, call: [set_flags_16bit()]}
   10011xxxxxxxxxxx: {name: ldr_immediate_t2, to: LdrImmediate, call: [set_flags_16bit()]}
-  111110001101xxxx: {name: ldr_immediate_t3, to: LdrImmediate, call: [set_flags_16bit()]}  
+  111110001101xxxx: {name: ldr_immediate_t3, to: LdrImmediate, call: [set_flags_16bit()]}
   111110000101xxxxxxxx1xxxxxxxxxxx: {name: ldr_immediate_t4, to: LdrImmediate, call: [set_flags_32bit()]}
 
   # StrImmediate
@@ -358,17 +281,17 @@ patterns:
   111110000100xxxxxxxx1xxxxxxxxxxx: {name: str_immediate_t4, to: StrImmediate, call: [set_flags_32bit()]}
 
   # LslImmediate
-  # ---  
+  # ---
   00000xxxxxxxxxxx: {name: lsl_immediate_t1, to: LslImmediate, call: [set_flags_16bit()]}
   11101010010x11110xxxxxxxxx00xxxx: {name: lsl_immediate_t2, to: LslImmediate, call: [set_flags_32bit()]}
 
   # LsrImmediate
-  # ---  
+  # ---
   00001xxxxxxxxxxx: {name: lsr_immediate_t1, to: LsrImmediate, call: [set_flags_16bit()]}
   11101010010x11110xxxxxxxxx01xxxx: {name: lsr_immediate_t2, to: LsrImmediate, call: [set_flags_32bit()]}
 
   # AsrImmediate
-  # ---    
+  # ---
   00010xxxxxxxxxxx: {name: asr_immediate_t1, to: AsrImmediate, call: [set_flags_16bit()]}
   11101010010x11110xxxxxxxxx10xxxx: {name: asr_immediate_t2, to: AsrImmediate, call: [set_flags_32bit()]}
 
@@ -378,17 +301,17 @@ patterns:
   11101010000xxxxx0xxxxxxxxxxxxxxx: {name: and_register_t2, to: AndRegister, call: [set_flags_32bit()]}
 
   # EorRegister
-  # ---  
+  # ---
   0100000001xxxxxx: {name: eor_register_t1, to: EorRegister, call: [set_flags_16bit()]}
   11101010100xxxxx0xxxxxxxxxxxxxxx: {name: eor_register_t2, to: EorRegister, call: [set_flags_32bit()]}
 
   # LslRegister
-  # ---  
+  # ---
   0100000010xxxxxx: {name: lsl_register_t1, to: LslRegister, call: [set_flags_16bit()]}
   11111010000xxxxx1111xxxx0000xxxx: {name: lsl_register_t2, to: LslRegister, call: [set_flags_32bit()]}
 
   # LsrRegister
-  # ---  
+  # ---
   0100000011xxxxxx: {name: lsr_register_t1, to: LsrRegister, call: [set_flags_16bit()]}
   11111010001xxxxx1111xxxx0000xxxx: {name: lsr_register_t2, to: LsrRegister, call: [set_flags_32bit()]}
 
@@ -449,41 +372,41 @@ patterns:
   # StrhImmediate
   # ---
   10000xxxxxxxxxxx: {name: strh_immediate_t1, to: StrhImmediate, call: [set_flags_16bit()]}
-  111110001010xxxx: {name: strh_immediate_t2, to: StrhImmediate, call: [set_flags_16bit()]} 
+  111110001010xxxx: {name: strh_immediate_t2, to: StrhImmediate, call: [set_flags_16bit()]}
   111110000010xxxxxxxx1xxxxxxxxxxx: {name: strh_immediate_t3, to: StrhImmediate, call: [set_flags_32bit()]}
 
   # LdrhImmediate
-  # ---  
+  # ---
   10001xxxxxxxxxxx: {name: ldrh_immediate_t1, to: LdrhImmediate, call: [set_flags_16bit()]}
   111110001011xxxx: {name: ldrh_immediate_t2, to: LdrhImmediate, call: [set_flags_16bit()]}
   111110000011xxxxxxxx1xxxxxxxxxxx: {name: ldrh_immediate_t3, to: LdrhImmediate, call: [set_flags_32bit()]}
 
   # AdcRegister
-  # ---  
+  # ---
   0100000101xxxxxx: {name: adc_register_t1, to: AdcRegister, call: [set_flags_16bit()]}
   11101011010xxxxx0xxxxxxxxxxxxxxx: {name: adc_register_t2, to: AdcRegister, call: [set_flags_32bit()]}
 
   # TstRegister
-  # ---  
+  # ---
   0100001000xxxxxx: {name: tst_register_t1, to: TstRegister, call: [set_flags_16bit()]}
 
   # RsbImmediate
-  # ---  
+  # ---
   0100001001xxxxxx: {name: rsb_immediate_t1, to: RsbImmediate, call: [set_flags_16bit()]}
   11110x01110xxxxx0xxxxxxxxxxxxxxx: {name: rsb_immediate_t2, to: RsbImmediate, call: [set_flags_32bit()]}
 
   # OrrRegister
-  # ---    
+  # ---
   0100001100xxxxxx: {name: orr_register_t1, to: OrrRegister, call: [set_flags_16bit()]}
   11101010010xxxxx0xxxxxxxxxxxxxxx: {name: orr_register_t2, to: OrrRegister, call: [set_flags_32bit()]}
 
   # BicRegister
-  # ---    
+  # ---
   0100001110xxxxxx: {name: bic_register_t1, to: BicRegister, call: [set_flags_16bit()]}
   11101010001xxxxx0xxxxxxxxxxxxxxx: {name: bic_register_t2, to: BicRegister, call: [set_flags_32bit()]}
 
   # Bx
-  # ---  
+  # ---
   010001110xxxxxxx: {name: bx_t1, to: Bx, call: [set_flags_16bit()]}
 
   # Blx
@@ -496,12 +419,12 @@ patterns:
   111110000000xxxxxxxx000000xxxxxx: {name: strb_register_t2, to: StrbRegister, call: [set_flags_32bit()]}
 
   # LdrRegister
-  # ---  
+  # ---
   0101100xxxxxxxxx: {name: ldr_register_t1, to: LdrRegister, call: [set_flags_16bit()]}
   111110000101xxxxxxxx000000xxxxxx: {name: ldr_register_t2, to: LdrRegister, call: [set_flags_32bit()]}
 
   # LdrbRegister
-  # ---  
+  # ---
   0101110xxxxxxxxx: {name: ldrb_register_t1, to: LdrbRegister, call: [set_flags_16bit()]}
 
   # AddPcPlusImmediate
@@ -513,11 +436,11 @@ patterns:
   111110000010xxxxxxxx000000xxxxxx: {name: strh_register_t2, to: StrhRegister, call: [set_flags_32bit()]}
 
   # SbcRegister
-  # ---  
+  # ---
   11101011011xxxxx0xxxxxxxxxxxxxxx: {name: sbc_register_t2, to: SbcRegister, call: [set_flags_32bit()]}
 
   # Stm
-  # ---    
+  # ---
   11000xxxxxxxxxxx: {name: stm_t1, to: Stm, call: [set_flags_16bit()]}
   1110100010x0xxxx0x0xxxxxxxxxxxxx: {name: stm_t2, to: Stm, call: [set_flags_32bit()]}
 
@@ -536,17 +459,17 @@ patterns:
   11111010000011111111xxxx10xxxxxx: {name: sxth_t2, to: Sxth, call: [set_flags_32bit()]}
 
   # Sxtb
-  # ---    
+  # ---
   1011001001xxxxxx: {name: sxtb_t1, to: Sxtb, call: [set_flags_16bit()]}
   11111010010011111111xxxx10xxxxxx: {name: sxtb_t2, to: Sxtb, call: [set_flags_32bit()]}
 
   # Uxth
-  # ---  
+  # ---
   1011001010xxxxxx: {name: uxth_t1, to: Uxth, call: [set_flags_16bit()]}
   11111010000111111111xxxx10xxxxxx: {name: uxth_t2, to: Uxth, call: [set_flags_32bit()]}
 
   # Uxtb
-  # ---  
+  # ---
   1011001011xxxxxx: {name: uxtb_t1, to: Uxtb, call: [set_flags_16bit()]}
   11111010010111111111xxxx10xxxxxx: {name: uxtb_t2, to: Uxtb, call: [set_flags_32bit()]}
 
@@ -561,11 +484,11 @@ patterns:
   111110010011xxxxxxxx1xxxxxxxxxxx: {name: ldrsh_immediate_t2, to: LdrshImmediate, call: [set_flags_32bit()]}
 
   # Bkpt
-  # ---  
+  # ---
   10111110xxxxxxxx: {name: bkpt_t1, to: Bkpt, call: [set_flags_16bit()]}
 
   # Nop
-  # ---  
+  # ---
   1011111100000000: {name: nop_t1, to: Nop, call: [set_flags_16bit()]}
 
   # It
@@ -617,105 +540,105 @@ patterns:
   11101011110xxxxx0xxxxxxxxxxxxxxx: {name: rsb_register_t1, to: RsbRegister, call: [set_flags_32bit()]}
 
   # Bfi
-  # ---  
+  # ---
   111100110110xxxx0xxxxxxxxx0xxxxx: {name: bfi_t1, to: Bfi, call: [set_flags_32bit()]}
 
   # Msr
-  # ---  
+  # ---
   111100111000xxxx1000xx00xxxxxxxx: {name: msr_t1, to: Msr, call: [set_flags_32bit()]}
 
   # Dmb
-  # ---  
+  # ---
   1111001110111111100011110101xxxx: {name: dmb_t1, to: Dmb, call: [set_flags_32bit()]}
 
   # Ubfx
-  # ---  
+  # ---
   111100111100xxxx0xxxxxxxxx0xxxxx: {name: ubfx_t1, to: Ubfx, call: [set_flags_32bit()]}
 
   # Mrs
-  # ---  
+  # ---
   11110011111011111000xxxxxxxxxxxx: {name: mrs_t1, to: Mrs, call: [set_flags_32bit()]}
 
   # TstImmediate
-  # ---  
+  # ---
   11110x000001xxxx0xxx1111xxxxxxxx: {name: tst_immediate_t1, to: TstImmediate, call: [set_flags_32bit()]}
 
   # AndImmediate
-  # ---  
+  # ---
   11110x00000xxxxx0xxxxxxxxxxxxxxx: {name: and_immediate_t1, to: AndImmediate, call: [set_flags_32bit()]}
 
   # BicImmediate
-  # ---  
+  # ---
   11110x00001xxxxx0xxxxxxxxxxxxxxx: {name: bic_immediate_t1, to: BicImmediate, call: [set_flags_32bit()]}
 
   # OrrImmediate
-  # ---  
+  # ---
   11110x00010xxxxx0xxxxxxxxxxxxxxx: {name: orr_immediate_t1, to: OrrImmediate, call: [set_flags_32bit()]}
 
   # MvnImmediate
-  # ---  
+  # ---
   11110x00011x11110xxxxxxxxxxxxxxx: {name: mvn_immediate_t1, to: MvnImmediate, call: [set_flags_32bit()]}
 
   # TeqImmediate
-  # ---  
+  # ---
   11110x001001xxxx0xxx1111xxxxxxxx: {name: teq_immediate_t1, to: TeqImmediate, call: [set_flags_32bit()]}
 
   # EorImmediate
-  # ---  
+  # ---
   11110x00100xxxxx0xxxxxxxxxxxxxxx: {name: eor_immediate_t1, to: EorImmediate, call: [set_flags_32bit()]}
 
   # CmnImmediate
-  # ---  
+  # ---
   11110x010001xxxx0xxx1111xxxxxxxx: {name: cmn_immediate_t1, to: CmnImmediate, call: [set_flags_32bit()]}
 
   # AdcImmediate
-  # ---  
+  # ---
   11110x01010xxxxx0xxxxxxxxxxxxxxx: {name: adc_immediate_t1, to: AdcImmediate, call: [set_flags_32bit()]}
 
   # SbcImmediate
-  # ---  
+  # ---
   11110x01011xxxxx0xxxxxxxxxxxxxxx: {name: sbc_immediate_t1, to: SbcImmediate, call: [set_flags_32bit()]}
 
   # Bl
   # ---
-  11110xxxxxxxxxxx11x1xxxxxxxxxxxx: {name: bl_t1, to: Bl, call: [set_flags_32bit(), extract_imm32_special()]}
+  11110xxxxxxxxxxx11x1xxxxxxxxxxxx: {name: bl_t1, to: Bl, call: [set_flags_32bit(), extract_imm32_long_branch()]}
 
   # LdrhRegister
   # ---
-  111110000011xxxxxxxx000000xxxxxx: {name: ldrh_register_t2, to: LdrhRegister, call: [set_flags_32bit()]}  
+  111110000011xxxxxxxx000000xxxxxx: {name: ldrh_register_t2, to: LdrhRegister, call: [set_flags_32bit()]}
 
   # Clz
-  # ---  
+  # ---
   111110101011xxxx1111xxxx1000xxxx: {name: clz_t1, to: Clz, call: [set_flags_32bit()]}
 
   # Mul
-  # ---  
+  # ---
   111110110000xxxx1111xxxx0000xxxx: {name: mul_t2, to: Mul, call: [set_flags_32bit()]}
 
   # Mla
-  # ---  
+  # ---
   111110110000xxxxxxxxxxxx0000xxxx: {name: mla_t1, to: Mla, call: [set_flags_32bit()]}
 
   # Mls
-  # ---  
+  # ---
   111110110000xxxxxxxxxxxx0001xxxx: {name: mls_t1, to: Mls, call: [set_flags_32bit()]}
 
   # Smull
-  # ---  
+  # ---
   111110111000xxxxxxxxxxxx0000xxxx: {name: smull_t1, to: Smull, call: [set_flags_32bit()]}
 
   # Sdiv
-  # ---  
+  # ---
   111110111001xxxx1111xxxx1111xxxx: {name: sdiv_t1, to: Sdiv, call: [set_flags_32bit()]}
 
   # Umull
-  # ---  
+  # ---
   111110111010xxxxxxxxxxxx0000xxxx: {name: umull_t1, to: Umull, call: [set_flags_32bit()]}
 
   # Udiv
-  # ---  
+  # ---
   111110111011xxxx1111xxxx1111xxxx: {name: udiv_t1, to: Udiv, call: [set_flags_32bit()]}
 
   # Umlal
-  # ---  
+  # ---
   111110111110xxxxxxxxxxxx0000xxxx: {name: umlal_t1, to: Umlal, call: [set_flags_32bit()]}

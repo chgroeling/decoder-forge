@@ -10,8 +10,7 @@ def test_transpil_empty_str():
 
 
 def test_transpil_braces_returns_exectuable_python_code():
-    ast_yaml = """type: unary
-op: braces
+    ast_yaml = """op: braces
 expr: 10"""
 
     tcode = transpill(ast_yaml)
@@ -20,10 +19,8 @@ expr: 10"""
 
 
 def test_transpil_assert_equal_returns_exectuable_python_code():
-    ast_yaml = """type: unary
-op: assert
+    ast_yaml = """op: assert
 expr:
-  type: binary
   op: is_equal
   left: a
   right: b"""
@@ -34,10 +31,10 @@ expr:
 
 
 def test_transpil_add_returns_exectuable_python_code():
-    ast_yaml = """type: binary
-op: add
-left: 10
-right: 20"""
+    ast_yaml = """op: add
+args:
+- \"10\"
+- \"20\""""
 
     tcode = transpill(ast_yaml)
 
@@ -45,8 +42,7 @@ right: 20"""
 
 
 def test_transpil_shift_right_returns_exectuable_python_code():
-    ast_yaml = """type: binary
-op: shiftright
+    ast_yaml = """op: shiftright
 left: 10
 right: 1"""
 
@@ -56,10 +52,10 @@ right: 1"""
 
 
 def test_transpil_and_returns_exectuable_python_code():
-    ast_yaml = """type: binary
-op: and
-left: 10
-right: \"0x2\""""
+    ast_yaml = """op: and
+args:
+- "10"
+- \"0x2\""""
 
     tcode = transpill(ast_yaml)
 
@@ -67,7 +63,7 @@ right: \"0x2\""""
 
 
 def test_transpil_assign_returns_exectuable_python_code():
-    ast_yaml = """type: assign
+    ast_yaml = """op: assign
 target: var
 expr: 20"""
 
@@ -75,35 +71,38 @@ expr: 20"""
 
     assert tcode == "var = 20"
 
+
 def test_transpil_if_returns_exectuable_python_code():
-    ast_yaml = """type: if
+    ast_yaml = """op: if
 cond: var
 then:
-  type: assign
+  op: assign
   target: a
   expr: 10
 else:
-  type: assign
+  op: assign
   target: a
   expr: 20"""
 
     tcode = transpill(ast_yaml)
 
-    assert tcode == """if var:
+    assert (
+        tcode
+        == """if var:
     a = 10
 else:
     a = 20"""
+    )
 
 
 def test_transpil_2adds_returns_exectuable_python_code():
-    ast_yaml = """type: binary
-op: add
-left: 10
-right:
-  type: binary
-  op: add
-  left: 20
-  right: 30"""
+    ast_yaml = """op: add
+args:
+- \"10\"
+- op: add
+  args:
+  - \"20\"
+  - \"30\""""
 
     tcode = transpill(ast_yaml)
 
@@ -111,17 +110,16 @@ right:
 
 
 def test_transpil_assign_and_2adds_returns_exectuable_python_code():
-    ast_yaml = """type: assign
+    ast_yaml = """op: assign
 target: var
 expr:
-  type: binary
   op: add
-  left: 10
-  right:
-    type: binary
-    op: add
-    left: 20
-    right: 30"""
+  args:
+  - \"10\"
+  - op: add
+    args:
+    - \"20\"
+    - \"30\""""
 
     tcode = transpill(ast_yaml)
 
@@ -129,20 +127,18 @@ expr:
 
 
 def test_transpil_assign_and_2adds_with_braces_returns_exectuable_python_code():
-    ast_yaml = """type: assign
+    ast_yaml = """op: assign
 target: var
 expr:
-  type: binary
   op: add
-  left: 10
-  right:
-    type: unary
-    op: braces
+  args:
+  - \"10\"
+  - op: braces
     expr:
-      type: binary
       op: add
-      left: 20
-      right: 30"""
+      args:
+      - \"20\"
+      - \"30\""""
 
     tcode = transpill(ast_yaml)
 
@@ -150,20 +146,17 @@ expr:
 
 
 def test_transpil_extract_bits_returns_exectuable_python_code():
-    ast_yaml = """type: assign
+    ast_yaml = """op: assign
 target: result
 expr:
-  type: binary
   op: and
-  left:
-    type: unary
-    op: braces
+  args:
+  - op: braces
     expr:
-      type: binary
       op: shiftright
       left: val
       right: arg_0
-  right: arg_1"""
+  - arg_1"""
 
     tcode = transpill(ast_yaml)
 
@@ -171,20 +164,17 @@ expr:
 
 
 def test_transpil_extract_bits_with_placeholders_returns_exectuable_python_code():
-    ast_yaml = """type: assign
+    ast_yaml = """op: assign
 target: $result
 expr:
-  type: binary
   op: and
-  left:
-    type: unary
-    op: braces
+  args:
+  - op: braces
     expr:
-      type: binary
       op: shiftright
       left: code
       right: $arg_0
-  right: $arg_1"""
+  - $arg_1"""
 
     tcode = transpill(ast_yaml, {"result": "rd", "arg_0": "1U", "arg_1": "0x3ff"})
 
@@ -192,21 +182,17 @@ expr:
 
 
 def test_transpil_extract_bits_with_placeholders_and_eval_returns_exectuable_python_code():
-    ast_yaml = """type: assign
+    ast_yaml = """op: assign
 target: $result
 expr:
-  type: binary
   op: and
-  left:
-    type: unary
-    op: braces
+  args:
+  - op: braces
     expr:
-      type: binary
       op: shiftright
       left: code
       right: $lsb
-  right:
-    type: eval
+  - op: eval
     expr:  \"hex((1 << (int($msb)-int($lsb)+1)) - 1)\""""
 
     tcode = transpill(ast_yaml, {"result": "rd", "msb": "5", "lsb": "2"})

@@ -10,57 +10,55 @@ struct_def:
   
 deffun:
   extract_bit:
-    type: binary
     op: and
-    left: {type: unary, op: braces, expr: {type: binary, op: shiftright, left: code, right: $lsb}}
-    right: {type: eval, expr: "hex((1 << (int($msb)-int($lsb)+1)) - 1)"}
+    args:
+    - {op: braces, expr: {op: shiftright, left: code, right: $lsb}}
+    - {op: eval, expr: "hex((1 << (int($msb)-int($lsb)+1)) - 1)"}
 
   extract_bit_and_assign:
-    type: assign
+    op: assign
     target: $res
     expr:
-      type: call
+      op: call
       expr: "extract_bit(msb=$msb, lsb=$lsb)"
 
-  extract_rd0: {
-    type: call,
-    expr: "extract_bit_and_assign(res=rd0, msb=5, lsb=3)",
+  extract_rd0: 
+    op: call
+    expr: "extract_bit_and_assign(res=rd0, msb=5, lsb=3)"
     comment: "rd0 = code[5:3]"
-  }
     
-  set_ra0_1 : {type: assign, target: ra0, expr: "1", comment: "ra_0"}
-  set_ra1_2 : {type: assign, target: ra1, expr: "2", comment: "ra_1"}
+  set_ra0_1 : {op: assign, target: ra0, expr: "1", comment: "ra_0"}
+  set_ra1_2 : {op: assign, target: ra1, expr: "2", comment: "ra_1"}
   set_rc01 :
-    type: seq
+    op: seq
     exprs:
-    - type: assign
+    - op: assign
       target: rc0
       expr: "1"
       comment: "rc_0"
-    - type: assign
+    - op: assign
       target: rc1
       expr: "2"
       comment: "rc_1"
   
-  set_context_cafe: {type: assign, target: context.context1, expr: "0xCAFE"}
+  set_context_cafe: {op: assign, target: context.context1, expr: "0xCAFE"}
 
   if_bit0:
-    type: if
+    op: if
     cond: 
-      type: binary
       op: is_equal
       left:
-        type: call
+        op: call
         expr: "extract_bit(msb=5,lsb=3)"
       right: "0x3"
     then:
-      type: seq
+      op: seq
       exprs:
-      - type: assign
+      - op: assign
         target: context.context0
         expr: "0xFF"
         comment: "set context0"
-      - type: return
+      - op: return
         comment: "call if 0x3"
         expr: "Unpred(code)"
   

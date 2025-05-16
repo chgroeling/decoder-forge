@@ -20,15 +20,30 @@ class VisitorPython:
         """
         self._call = call
 
+    # VARIADIC
+    # ----------------
+    def do_add(self, *args):
+        """Generates a string representing the addition of two operands."""
+        return " + ".join(args)
+
+    def do_sub(self, *args):
+        """Generates a string representing the subtraction of two operands."""
+        return " - ".join(args)
+
+    def do_and(self, *args):
+        """Generates a string representing the bitwise AND operation."""
+        return " & ".join(args)
+
+    def do_xor(self, *args):
+        """Generates a string representing the bitwise XOR operation."""
+        return " ^ ".join(args)
+
+    def do_or(self, *args):
+        """Generates a string representing the bitwise OR operation."""
+        return " | ".join(args)
+
     # BINARY
     # ----------------
-    def do_add(self, left, right):
-        """Generates a string representing the addition of two operands."""
-        return f"{left} + {right}"
-
-    def do_sub(self, left, right):
-        """Generates a string representing the subtraction of two operands."""
-        return f"{left} - {right}"
 
     def do_is_equal(self, left, right):
         """Generates a string representing the equality check between two operands."""
@@ -41,18 +56,6 @@ class VisitorPython:
     def do_shiftleft(self, left, right):
         """Generates a string representing the left bit-shift operation."""
         return f"{left} << {right}"
-
-    def do_and(self, left, right):
-        """Generates a string representing the bitwise AND operation."""
-        return f"{left} & {right}"
-
-    def do_xor(self, left, right):
-        """Generates a string representing the bitwise XOR operation."""
-        return f"{left} ^ {right}"
-
-    def do_or(self, left, right):
-        """Generates a string representing the bitwise OR operation."""
-        return f"{left} | {right}"
 
     # UNARY
     # ----------------
@@ -136,17 +139,17 @@ def transpill_recurse(visitor: VisitorPython, node, placeholders: dict[str, str]
 
     Example:
         >>> ast_node = {
-        ...   "type": "binary",
         ...   "op": "add",
-        ...   "left": "a",
-        ...   "right": "b"
-        ... }
+        ...   "args": [
+        ...     "a",
+        ...     "b"
+        ... ]}
         >>> transpill_recurse(visitor, ast_node, {})
         "a + b"
     """
     code = ""
 
-    if "type" not in node:
+    if "op" not in node:
         return code
 
     def replace_placeholders(expr):
@@ -165,39 +168,80 @@ def transpill_recurse(visitor: VisitorPython, node, placeholders: dict[str, str]
             arg = replace_placeholders(expr)
         return arg
 
-    if node["type"] == "binary":
+    # VARIADIC
+    # ----------------
+
+    if node["op"] == "add":
+        args = list()
+        for arg_expr in node["args"]:
+            args.append(transpill_or_eval(arg_expr))
+
+        code += visitor.do_add(*args)
+
+    elif node["op"] == "sub":
+        args = list()
+        for arg_expr in node["args"]:
+            args.append(transpill_or_eval(arg_expr))
+
+        code += visitor.do_sub(*args)
+
+    elif node["op"] == "and":
+        args = list()
+        for arg_expr in node["args"]:
+            args.append(transpill_or_eval(arg_expr))
+
+        code += visitor.do_and(*args)
+
+    elif node["op"] == "xor":
+        args = list()
+        for arg_expr in node["args"]:
+            args.append(transpill_or_eval(arg_expr))
+
+        code += visitor.do_xor(*args)
+    elif node["op"] == "or":
+        args = list()
+        for arg_expr in node["args"]:
+            args.append(transpill_or_eval(arg_expr))
+
+        code += visitor.do_or(*args)
+
+    # BINARY
+    # ----------------
+
+    elif node["op"] == "is_equal":
         arg_right = transpill_or_eval(node["right"])
         arg_left = transpill_or_eval(node["left"])
 
-        if node["op"] == "add":
-            code += visitor.do_add(arg_left, arg_right)
-        elif node["op"] == "sub":
-            code += visitor.do_sub(arg_left, arg_right)
-        elif node["op"] == "shiftright":
-            code += visitor.do_shiftright(arg_left, arg_right)
-        elif node["op"] == "shiftleft":
-            code += visitor.do_shiftleft(arg_left, arg_right)
-        elif node["op"] == "and":
-            code += visitor.do_and(arg_left, arg_right)
-        elif node["op"] == "xor":
-            code += visitor.do_xor(arg_left, arg_right)
-        elif node["op"] == "or":
-            code += visitor.do_or(arg_left, arg_right)
-        elif node["op"] == "is_equal":
-            code += visitor.do_is_equal(arg_left, arg_right)
+        code += visitor.do_is_equal(arg_left, arg_right)
 
-    elif node["type"] == "unary":
+    elif node["op"] == "shiftright":
+        arg_right = transpill_or_eval(node["right"])
+        arg_left = transpill_or_eval(node["left"])
+
+        code += visitor.do_shiftright(arg_left, arg_right)
+    elif node["op"] == "shiftleft":
+        arg_right = transpill_or_eval(node["right"])
+        arg_left = transpill_or_eval(node["left"])
+
+        code += visitor.do_shiftleft(arg_left, arg_right)
+
+    # UNARY
+    # ----------------
+
+    elif node["op"] == "braces":
         arg_expr = transpill_or_eval(node["expr"])
+        code += visitor.do_braces(arg_expr)
+    elif node["op"] == "not":
+        arg_expr = transpill_or_eval(node["expr"])
+        code += visitor.do_not(arg_expr)
+    elif node["op"] == "assert":
+        arg_expr = transpill_or_eval(node["expr"])
+        code += visitor.do_assert(arg_expr)
 
-        if node["op"] == "braces":
-            code += visitor.do_braces(arg_expr)
-        if node["op"] == "not":
-            code += visitor.do_not(arg_expr)
+    # SPECIAL
+    # ----------------
 
-        elif node["op"] == "assert":
-            code += visitor.do_assert(arg_expr)
-
-    elif node["type"] == "assign":
+    elif node["op"] == "assign":
         arg_expr = transpill_or_eval(node["expr"])
 
         target = node["target"]
@@ -206,19 +250,19 @@ def transpill_recurse(visitor: VisitorPython, node, placeholders: dict[str, str]
         comment = None if "comment" not in node else node["comment"]
         code += visitor.do_assign(ret_target, arg_expr, comment)
 
-    elif node["type"] == "return":
+    elif node["op"] == "return":
         arg_expr = transpill_or_eval(node["expr"])
         comment = None if "comment" not in node else node["comment"]
         code += visitor.do_return(arg_expr, comment)
 
-    elif node["type"] == "eval":
+    elif node["op"] == "eval":
         code += visitor.do_eval(node["expr"], placeholders)
 
-    elif node["type"] == "call":
+    elif node["op"] == "call":
         comment = None if "comment" not in node else node["comment"]
         code += visitor.do_call(node["expr"], placeholders, comment)
 
-    elif node["type"] == "seq":
+    elif node["op"] == "seq":
         for idx, expr in enumerate(node["exprs"]):
             arg_expr = transpill_or_eval(expr)
             code += f"{arg_expr}"
@@ -226,7 +270,7 @@ def transpill_recurse(visitor: VisitorPython, node, placeholders: dict[str, str]
             if idx != len(node["exprs"]) - 1:
                 code += "\n"
 
-    elif node["type"] == "if":
+    elif node["op"] == "if":
         cond = transpill_or_eval(node["cond"])
         then = transpill_or_eval(node["then"])
         el = None
