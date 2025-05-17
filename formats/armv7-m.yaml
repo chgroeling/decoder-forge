@@ -172,16 +172,12 @@ deffun:
         target: _n
         expr:
           op: mod
-          args:
-            - "$shift"
-            - "32"
+          args: ["$shift", "32"]
       - op: assign
         target: _m
         expr:
           op: sub
-          args:
-            - "32"
-            - "n"
+          args: ["32", "_n"]
 
       - op: assign
         target: $res
@@ -203,6 +199,7 @@ deffun:
         expr:
           op: call
           expr: "extract_bit(val=$res, msb=31, lsb=31)"
+          
   # Istate
   # ===
 
@@ -270,10 +267,6 @@ deffun:
       op: return
       expr: "Unpredictable(code)"
       
-  extract_t_26_24:
-    op: assign
-    target: t
-    expr: {op: call, expr: "extract_bit(val=code, msb=26, lsb=24)"}
 
   # imm32
   # =========================
@@ -374,38 +367,6 @@ deffun:
         - op: call
           expr: "ror_c(val=_unrotated_value, res=$res, carry_out=$carry_out, shift=_shift)"
           
-  extract_imm32_long_branch:
-    op: seq
-    exprs:
-    - {op: call, expr: "extract_bit_and_assign(res=s, msb=l.10, lsb=l.10)"}
-    - {op: call, expr: "extract_bit_and_assign(res=imm10, msb=l.9, lsb=l.0)"}
-    - {op: call, expr: "extract_bit_and_assign(res=j1, msb=h.13, lsb=h.13)"}
-    - {op: call, expr: "extract_bit_and_assign(res=j2, msb=h.11, lsb=h.11)"}
-    - {op: call, expr: "extract_bit_and_assign(res=imm11, msb=h.10, lsb=h.0)"}
-    - {op: call, expr: "lsb_equal_and_assign(res=i1, a=j1, b=s)"}
-    - {op: call, expr: "lsb_equal_and_assign(res=i2, a=j2, b=s)"}
-    - op: assign
-      target: imm32_us
-      expr:
-        op: or
-        args:
-        - {op: braces, expr: {op: shiftleft, left: s, right: 24}}
-        - {op: braces, expr: {op: shiftleft, left: i1, right: 23}}
-        - {op: braces, expr: {op: shiftleft, left: i2, right: 22}}
-        - {op: braces, expr: {op: shiftleft, left: imm10, right: 12}}
-        - {op: braces, expr: {op: shiftleft, left: imm11, right: 1}}
-    - {op: call, expr: "sign_extend_and_assign(res=imm32, value=imm32_us, sign_bit=24)"}
-
-  extract_16bit_imm32_7_0:
-    op: assign
-    target: imm32
-    expr: {op: call, expr: "extract_bit(val=code, res=imm32, msb=l.7, lsb=l.0)"}
-
-  extract_imm32_11_0:
-    op: assign
-    target: imm32
-    expr: {op: call, expr: "extract_bit(val=code, res=imm32, msb=11, lsb=0)"}
-
   extract_imm32_thumb_expand:
     op: seq
     exprs:
@@ -424,20 +385,53 @@ deffun:
       - {op: call, expr: "ThumbExpandImm_C(res=imm32, carry_out=_carry_out, carry_in=_carry_in,  imm12=_imm12)"}
       - {op: if, cond: _carry_out, then: {op: call, expr: "append_flags_carry()"}}
 
+  extract_imm32_long_branch:
+    op: seq
+    exprs:
+    - {op: call, expr: "extract_bit_and_assign(res=_s, msb=l.10, lsb=l.10)"}
+    - {op: call, expr: "extract_bit_and_assign(res=_imm10, msb=l.9, lsb=l.0)"}
+    - {op: call, expr: "extract_bit_and_assign(res=_j1, msb=h.13, lsb=h.13)"}
+    - {op: call, expr: "extract_bit_and_assign(res=_j2, msb=h.11, lsb=h.11)"}
+    - {op: call, expr: "extract_bit_and_assign(res=_imm11, msb=h.10, lsb=h.0)"}
+    - {op: call, expr: "lsb_equal_and_assign(res=_i1, a=_j1, b=_s)"}
+    - {op: call, expr: "lsb_equal_and_assign(res=_i2, a=_j2, b=_s)"}
+    - op: assign
+      target: _imm32_us
+      expr:
+        op: or
+        args:
+        - {op: braces, expr: {op: shiftleft, left: _s, right: 24}}
+        - {op: braces, expr: {op: shiftleft, left: _i1, right: 23}}
+        - {op: braces, expr: {op: shiftleft, left: _i2, right: 22}}
+        - {op: braces, expr: {op: shiftleft, left: _imm10, right: 12}}
+        - {op: braces, expr: {op: shiftleft, left: _imm11, right: 1}}
+    - {op: call, expr: "sign_extend_and_assign(res=imm32, value=_imm32_us, sign_bit=24)"}
 
-  extract_imm32_23_16_sl2:
+  extract_imm32_16bit_7_0:
+    op: assign
+    target: imm32
+    expr: {op: call, expr: "extract_bit(val=code, res=imm32, msb=l.7, lsb=l.0)"}
+
+  extract_imm32_16bit_7_0_sl2:
     op: assign
     target: imm32
     expr:
       op: shiftleft
       left:
         op: braces
-        expr: {op: call, expr: "extract_bit(val=code, msb=23, lsb=16)"}
+        expr: {op: call, expr: "extract_bit(val=code, msb=l.7, lsb=l.0)"}
       right: 2
+
+    
+  extract_imm32_11_0:
+    op: assign
+    target: imm32
+    expr: {op: call, expr: "extract_bit(val=code, res=imm32, msb=11, lsb=0)"}
+
 
   # Register d
   # ===
-  extract_16bit_d_10_8:
+  extract_d_16bit_10_8:
     op: assign
     target: d
     expr: {op: call, expr: "extract_bit(val=code, res=d, msb=l.10, lsb=l.8)"}
@@ -456,14 +450,19 @@ deffun:
       - {op: is_equal, left: d, right: 15}
     then:
       op: return
-      expr: "Unpreditcable(code)"
+      expr: Unpredictable(code)
 
   # Register t
   # ===
+  extract_t_16bit_10_8:
+    op: assign
+    target: t
+    expr: {op: call, expr: "extract_bit(val=code, msb=l.10, lsb=l.8)"}
+
   extract_t_15_12:
     op: assign
     target: t
-    expr: {op: call, expr: "extract_bit(val=code, res=t, msb=15, lsb=12)"}
+    expr: {op: call, expr: "extract_bit(val=code, res=t, msb=h.15, lsb=h.12)"}
 
 
 patterns:
@@ -512,13 +511,13 @@ patterns:
 
   # MovImmediate
   # ---
-  00100xxxxxxxxxxx: {name: mov_immediate_t1, to: MovImmediate, call: [set_flags_16bit(), append_flags_set_not_it_block(), append_flags_carry_if_apsr_c(), extract_16bit_d_10_8(), extract_16bit_imm32_7_0()]}
+  00100xxxxxxxxxxx: {name: mov_immediate_t1, to: MovImmediate, call: [set_flags_16bit(), append_flags_set_not_it_block(), append_flags_carry_if_apsr_c(), extract_d_16bit_10_8(), extract_imm32_16bit_7_0()]}
   11110x00010x11110xxxxxxxxxxxxxxx: {name: mov_immediate_t2, to: MovImmediate, call: [set_flags_32bit(), extract_d_11_8(),  extract_imm32_thumb_expand(), unpred_d_13_15()]}
   11110x100100xxxx0xxxxxxxxxxxxxxx: {name: mov_immediate_t3, to: MovImmediateTemp, call: [set_flags_32bit()]}
 
   # LdrLiteral
   # ---
-  01001xxxxxxxxxxx: {name: ldr_literal_t1, to: LdrLiteral, call: [set_flags_16bit(), extract_t_26_24(), extract_imm32_23_16_sl2() ]}
+  01001xxxxxxxxxxx: {name: ldr_literal_t1, to: LdrLiteral, call: [set_flags_16bit(), extract_t_16bit_10_8(), extract_imm32_16bit_7_0_sl2() ]}
   11111000x1011111xxxxxxxxxxxxxxxx: {name: ldr_literal_t2, to: LdrLiteral, call: [set_flags_32bit(), extract_t_15_12(), extract_imm32_11_0()]}
 
   # LdrImmediate

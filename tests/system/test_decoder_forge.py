@@ -41,32 +41,38 @@ def test_generate_code_armv7m(project_path):
 
     compiled_code = compile(code, decoder_file, "exec")
 
-    df_ns = {}
-    exec(compiled_code, df_ns)
+    ns = {}
+    exec(compiled_code, ns)
 
-    Context = df_ns["Context"]
-    decode = df_ns["decode"]
+    Context = ns["Context"]
+    decode = ns["decode"]
     ISF = InstrFlags
 
     tests = [
         # bl 40
-        (b"\xf0\x00\xf8\x14", df_ns["Bl"](flags=ISF.I32BIT, imm32=40)),
+        (b"\xf0\x00\xf8\x14", ns["Bl"](flags=ISF.I32BIT, imm32=40)),
         # bl 33928
-        (b"\xf0\x08\xfa\x44", df_ns["Bl"](flags=ISF.I32BIT, imm32=33928)),
+        (b"\xf0\x08\xfa\x44", ns["Bl"](flags=ISF.I32BIT, imm32=33928)),
         # bl -676
-        (b"\xf7\xff\xfe\xae", df_ns["Bl"](flags=ISF.I32BIT, imm32=-676)),
+        (b"\xf7\xff\xfe\xae", ns["Bl"](flags=ISF.I32BIT, imm32=-676)),
         # bl -32
-        (b"\xf7\xff\xff\xf0", df_ns["Bl"](flags=ISF.I32BIT, imm32=-32)),
+        (b"\xf7\xff\xff\xf0", ns["Bl"](flags=ISF.I32BIT, imm32=-32)),
         # movs r0, #22
-        (b"\x20\x16", df_ns["MovImmediate"](flags=ISF.SET, d=0, imm32=22)),
+        (b"\x20\x16", ns["MovImmediate"](flags=ISF.SET, d=0, imm32=22)),
         # mov r9, #1
-        (b"\xf0\x4f\x09\x01", df_ns["MovImmediate"](flags=ISF.I32BIT, d=9, imm32=1)),
+        (b"\xf0\x4f\x09\x01", ns["MovImmediate"](flags=ISF.I32BIT, d=9, imm32=1)),
+        # mov.w   r3, #1073741824 ; 0x40000000
+        (b"\xf0\x4f\x43\x80", ns["MovImmediate"](flags=ISF.I32BIT, d=3, imm32=1 << 30)),
+        # mov.w   r3, #32768      ; 0x8000
+        (b"\xf4\x4f\x43\x00", ns["MovImmediate"](flags=ISF.I32BIT, d=3, imm32=0x8000)),
+        # movw    r3, #1234       ; 0x4d2
+        #(b"\xf2\x40\x43\xd2", ns["MovImmediate"](flags=ISF.I32BIT, d=3, imm32=0x8000)),
         # add r1, pc, #196
-        (b"\xa1\x31", df_ns["AddPcPlusImmediate"](flags=0x0)),
+        (b"\xa1\x31", ns["AddPcPlusImmediate"](flags=0x0)),
         # bkpt 0x00ab
-        (b"\xbe\xab", df_ns["Bkpt"](flags=0x0)),
+        (b"\xbe\xab", ns["Bkpt"](flags=0x0)),
         # ldr r0, [pc, #192]
-        (b"\x48\x30", df_ns["LdrLiteral"](flags=0x0, t=0, imm32=192)),
+        (b"\x48\x30", ns["LdrLiteral"](flags=0x0, t=0, imm32=192)),
     ]
 
     data = bytes()
