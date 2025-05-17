@@ -30,6 +30,10 @@ class VisitorPython:
         """Generates a string representing the subtraction of two operands."""
         return " - ".join(args)
 
+    def do_mod(self, *args):
+        """Generates a string representing the modulo of multiple operands."""
+        return " % ".join(args)
+
     def do_and(self, *args):
         """Generates a string representing the bitwise AND operation."""
         return " & ".join(args)
@@ -37,6 +41,10 @@ class VisitorPython:
     def do_logical_and(self, *args):
         """Generates a string representing the bitwise AND operation."""
         return " and ".join(args)
+
+    def do_logical_or(self, *args):
+        """Generates a string representing the bitwise AND operation."""
+        return " or ".join(args)
 
     def do_xor(self, *args):
         """Generates a string representing the bitwise XOR operation."""
@@ -114,6 +122,21 @@ class VisitorPython:
         py_expr = expr.replace("$", "_ph_")
         return str(eval(py_expr, {"_ph_" + k: v for k, v in placeholders.items()}))
 
+    def do_switch(self, var, *cond_then):
+        out = ""
+        first=True
+        for cond, then in cond_then:
+            if first:
+                out += f"if {var}=={cond}:\n"
+            else:
+                out += f"elif {var}=={cond}:\n"
+
+            first=False
+            then_lines = then.split("\n")
+            for line in then_lines:
+                out += f"    {line}\n"
+        return out
+
     def do_if(self, cond, then, el):
         """Generates a string representing an if-else statement."""
         out = f"if {cond}:\n"
@@ -123,7 +146,10 @@ class VisitorPython:
             for line in then_lines:
                 out += f"    {line}\n"
             out += "else:\n"
-            out += f"    {el}"
+            else_lines = el.split("\n")
+            for line in else_lines:
+                out += f"    {line}\n"
+
         else:
             then_lines = then.split("\n")
             for line in then_lines:
@@ -196,6 +222,13 @@ def transpill_recurse(visitor: VisitorPython, node, placeholders: dict[str, str]
 
         code += visitor.do_sub(*args)
 
+    elif node["op"] == "mod":
+        args = list()
+        for arg_expr in node["args"]:
+            args.append(transpill_or_eval(arg_expr))
+
+        code += visitor.do_mod(*args)
+
     elif node["op"] == "and":
         args = list()
         for arg_expr in node["args"]:
@@ -209,6 +242,13 @@ def transpill_recurse(visitor: VisitorPython, node, placeholders: dict[str, str]
             args.append(transpill_or_eval(arg_expr))
 
         code += visitor.do_logical_and(*args)
+
+    elif node["op"] == "logical_or":
+        args = list()
+        for arg_expr in node["args"]:
+            args.append(transpill_or_eval(arg_expr))
+
+        code += visitor.do_logical_or(*args)
 
     elif node["op"] == "xor":
         args = list()
@@ -305,6 +345,16 @@ def transpill_recurse(visitor: VisitorPython, node, placeholders: dict[str, str]
         if "else" in node:
             el = transpill_or_eval(node["else"])
         code += visitor.do_if(cond, then, el)
+
+    elif node["op"] == "switch":
+        var = transpill_or_eval(node["var"])
+        args = []
+        for i in node["case"]:
+            when = transpill_or_eval(i["when"])
+            then = transpill_or_eval(i["then"])
+            args.append((when, then))
+
+        code += visitor.do_switch(var, *args)
 
     return code
 
