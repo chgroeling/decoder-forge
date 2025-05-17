@@ -1,5 +1,5 @@
 context:
-  members: [istate]
+  members: [istate, apsr]
 
 struct_def:
   AdcImmediate: {members: [flags]}
@@ -47,7 +47,8 @@ struct_def:
   LsrRegister: {members: [flags]}
   Mla: {members: [flags]}
   Mls: {members: [flags]}
-  MovImmediate: {members: [flags]}
+  MovImmediate: {members: [flags, d, imm32]}
+  MovImmediateTemp: {members: [flags]}
   MovRegister: {members: [flags]}
   Mrs: {members: [flags]}
   Msr: {members: [flags]}
@@ -96,53 +97,36 @@ struct_def:
   Unpredictable: {members: [code]}
   
 deffun:
+
+  # Generic functions
+  # ===
+  assign_val:
+    op: assign
+    target: res
+    expr: val
+
   extract_bit:
     op: and
     args:
     - op: braces
       expr:
         op: shiftright
-        left: code
+        left: $val
         right:
           op: eval
           expr: "int($lsb.split('.')[-1]) + (16 if $lsb.startswith('l.') else 0)"
     - {op: eval, expr: "hex((1 << (int($msb.split('.')[-1]) + (16 if $msb.startswith('l.') else 0)-int(int($lsb.split('.')[-1]) + (16 if $lsb.startswith('l.') else 0))+1)) - 1)"}
 
-  extract_istate_b3_0:
-    op: and
-    args:
-    - context.istate
-    - "0b1111"
+  extract_bit_and_assign:
+    op: assign
+    target: $res
+    expr: {op: call, expr: "extract_bit(val=code, msb=$msb, lsb=$lsb)"}
 
-  in_it_block:
-    op: is_not_equal
-    left: {op: call, expr: "extract_istate_b3_0()"}
-    right: "0b0000"
+  append_bit:
+    op: assign
+    target: $val
+    expr: {op: or, args: [flags, { op: call, expr: "bit_mask(bit=$bit)"}]}
 
-  last_in_it_block:
-    op: is_equal
-    left: {op: call, expr: "extract_istate_b3_0()"}
-    right: "0b1000"
-
-  unpred_if_in_it_block_and_not_last_in_it_block:
-    op: if
-    cond:
-      op: logical_and
-      args:
-      - op: braces
-        expr:
-          op: call
-          expr: "in_it_block()"
-      - op: logical_not
-        expr:
-          op: braces
-          expr:
-            op: call
-            expr: "last_in_it_block()"
-    then:
-      op: return
-      expr: "Unpredictable(code)"
-      
   # bit_mask 1<< $bit
   bit_mask:
     op: braces
@@ -180,17 +164,81 @@ deffun:
       - op: call
         expr: "bit_mask(bit=$sign_bit)"
 
+  # Istate
+  # ===
 
-  extract_bit_and_assign:
-    op: assign
-    target: $res
-    expr: {op: call, expr: "extract_bit(msb=$msb, lsb=$lsb)"}
+  extract_istate_b3_0:
+    op: and
+    args:
+    - context.istate
+    - "0b1111"
 
+  in_it_block:
+    op: is_not_equal
+    left: {op: call, expr: "extract_istate_b3_0()"}
+    right: "0b0000"
+
+  last_in_it_block:
+    op: is_equal
+    left: {op: call, expr: "extract_istate_b3_0()"}
+    right: "0b1000"
+
+
+  # APSR
+  # ===
+  
+  # get carry condition flag
+  get_apsr_carry: {op: call, expr: "extract_bit(val=context.apsr, msb=29, lsb=29)"}
+
+  # Flags
+  # ===
+  
+  set_flags_16bit : {op: assign, target: flags, expr: "0x0", comment: "16Bit instruction"}
+  set_flags_32bit : {op: assign, target: flags, expr: "0x1", comment: "32Bit instruction"}
+
+
+  # Definition of different flags
+  append_flags_set: {op: call, expr: "append_bit(val=flags, bit=1)", comment: "flags |= Set"}
+  append_flags_add: {op: call, expr: "append_bit(val=flags, bit=2)", comment: "flags |= Add"}
+  append_flags_carry: {op: call, expr: "append_bit(val=flags, bit=3)", comment: "flags |= Carry"}
+  
+  append_flags_set_not_it_block:
+    op: if
+    cond: {op: logical_not, expr: {op: call, expr: "in_it_block()"}}
+    then: {op: call, expr: "append_flags_set()"}
+
+  append_flags_carry_if_apsr_c:
+    op: if
+    cond: {op: is_not_equal, left: {op: call, expr: "get_apsr_carry()"}, right: "0"}
+    then: {op: call, expr: "append_flags_carry()"}
+      
+  unpred_if_in_it_block_and_not_last_in_it_block:
+    op: if
+    cond:
+      op: logical_and
+      args:
+      - op: braces
+        expr:
+          op: call
+          expr: "in_it_block()"
+      - op: logical_not
+        expr:
+          op: braces
+          expr:
+            op: call
+            expr: "last_in_it_block()"
+    then:
+      op: return
+      expr: "Unpredictable(code)"
+      
   extract_t_26_24:
     op: assign
     target: t
-    expr: {op: call, expr: "extract_bit(msb=26, lsb=24)"}
+    expr: {op: call, expr: "extract_bit(val=code, msb=26, lsb=24)"}
 
+  # imm32
+  # ===
+  
   extract_imm32_long_branch:
     op: seq
     exprs:
@@ -213,10 +261,15 @@ deffun:
         - {op: braces, expr: {op: shiftleft, left: imm11, right: 1}}
     - {op: call, expr: "sign_extend_and_assign(res=imm32, value=imm32_us, sign_bit=24)"}
 
+  extract_16bit_imm32_7_0:
+    op: assign
+    target: imm32
+    expr: {op: call, expr: "extract_bit(val=code, res=imm32, msb=l.7, lsb=l.0)"}
+
   extract_imm32_11_0:
     op: assign
     target: imm32
-    expr: {op: call, expr: "extract_bit(res=imm32, msb=11, lsb=0)"}
+    expr: {op: call, expr: "extract_bit(val=code, res=imm32, msb=11, lsb=0)"}
 
 
   extract_imm32_23_16_sl2:
@@ -226,29 +279,28 @@ deffun:
       op: shiftleft
       left:
         op: braces
-        expr: {op: call, expr: "extract_bit(msb=23, lsb=16)"}
+        expr: {op: call, expr: "extract_bit(val=code, msb=23, lsb=16)"}
       right: 2
 
+  # Register d
+  # ===
+  extract_16bit_d_10_8:
+    op: assign
+    target: d
+    expr: {op: call, expr: "extract_bit(val=code, res=d, msb=l.10, lsb=l.8)"}
+
+  extract_d_11_8:
+    op: assign
+    target: d
+    expr: {op: call, expr: "extract_bit(val=code, res=d, msb=h.11, lsb=h.8)"}
+
+  # Register t
+  # ===
   extract_t_15_12:
     op: assign
     target: t
-    expr: {op: call, expr: "extract_bit(res=t, msb=15, lsb=12)"}
+    expr: {op: call, expr: "extract_bit(val=code, res=t, msb=15, lsb=12)"}
 
-  assign_val:
-    op: assign
-    target: res
-    expr: val
-
-  set_flags_16bit : {op: assign, target: flags, expr: "0x0"}
-  set_flags_32bit : {op: assign, target: flags, expr: "0x1"}
-
-  append_flags_add:
-    op: assign
-    target: flags
-    expr:
-      op: or
-      args: [flags, { op: call, expr: "bit_mask(bit=1)"}]
-    comment: "flags |= Add"
 
 patterns:
 
@@ -296,9 +348,9 @@ patterns:
 
   # MovImmediate
   # ---
-  00100xxxxxxxxxxx: {name: mov_immediate_t1, to: MovImmediate, call: [set_flags_16bit()]}
-  11110x00010x11110xxxxxxxxxxxxxxx: {name: mov_immediate_t2, to: MovImmediate, call: [set_flags_32bit()]}
-  11110x100100xxxx0xxxxxxxxxxxxxxx: {name: mov_immediate_t3, to: MovImmediate, call: [set_flags_32bit()]}
+  00100xxxxxxxxxxx: {name: mov_immediate_t1, to: MovImmediate, call: [set_flags_16bit(), append_flags_set_not_it_block(), append_flags_carry_if_apsr_c(), extract_16bit_d_10_8(), extract_16bit_imm32_7_0()]}
+  11110x00010x11110xxxxxxxxxxxxxxx: {name: mov_immediate_t2, to: MovImmediate, call: [set_flags_32bit(), append_flags_carry_if_apsr_c(), extract_d_11_8(), extract_16bit_imm32_7_0()]}
+  11110x100100xxxx0xxxxxxxxxxxxxxx: {name: mov_immediate_t3, to: MovImmediateTemp, call: [set_flags_32bit()]}
 
   # LdrLiteral
   # ---

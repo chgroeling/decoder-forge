@@ -6,6 +6,9 @@ from enum import IntFlag
 
 class InstrFlags(IntFlag):
     I32BIT = 0b0001  # 1
+    SET = 0b0010  # 2
+    ADD = 0b0100  # 4
+    CARRY = 0b1000  # 8
 
 
 @pytest.fixture
@@ -38,29 +41,32 @@ def test_generate_code_armv7m(project_path):
 
     compiled_code = compile(code, decoder_file, "exec")
 
-    decoder_ns = {}
-    exec(compiled_code, decoder_ns)
+    df_ns = {}
+    exec(compiled_code, df_ns)
 
-    Context = decoder_ns["Context"]
-    decode = decoder_ns["decode"]
+    Context = df_ns["Context"]
+    decode = df_ns["decode"]
+    ISF = InstrFlags
 
     tests = [
         # bl 40
-        (b"\xf0\x00\xf8\x14", decoder_ns["Bl"](flags=0x1, imm32=40)),
+        (b"\xf0\x00\xf8\x14", df_ns["Bl"](flags=ISF.I32BIT, imm32=40)),
         # bl 33928
-        (b"\xf0\x08\xfa\x44", decoder_ns["Bl"](flags=0x1, imm32=33928)),
+        (b"\xf0\x08\xfa\x44", df_ns["Bl"](flags=ISF.I32BIT, imm32=33928)),
         # bl -676
-        (b"\xf7\xff\xfe\xae", decoder_ns["Bl"](flags=0x1, imm32=-676)),
+        (b"\xf7\xff\xfe\xae", df_ns["Bl"](flags=ISF.I32BIT, imm32=-676)),
         # bl -32
-        (b"\xf7\xff\xff\xf0", decoder_ns["Bl"](flags=0x1, imm32=-32)),
+        (b"\xf7\xff\xff\xf0", df_ns["Bl"](flags=ISF.I32BIT, imm32=-32)),
         # movs r0, #22
-        (b"\x20\x16", decoder_ns["MovImmediate"](flags=0x0)),
+        (b"\x20\x16", df_ns["MovImmediate"](flags=ISF.SET, d=0, imm32=22)),
+        # mov r9, #1
+        #(b"\xf0\x4f\x09\x01", df_ns["MovImmediate"](flags=ISF.I32BIT, d=9, imm32=1)),
         # add r1, pc, #196
-        (b"\xa1\x31", decoder_ns["AddPcPlusImmediate"](flags=0x0)),
+        (b"\xa1\x31", df_ns["AddPcPlusImmediate"](flags=0x0)),
         # bkpt 0x00ab
-        (b"\xbe\xab", decoder_ns["Bkpt"](flags=0x0)),
+        (b"\xbe\xab", df_ns["Bkpt"](flags=0x0)),
         # ldr r0, [pc, #192]
-        (b"\x48\x30", decoder_ns["LdrLiteral"](flags=0x0, t=0, imm32=192)),
+        (b"\x48\x30", df_ns["LdrLiteral"](flags=0x0, t=0, imm32=192)),
     ]
 
     data = bytes()
@@ -71,17 +77,17 @@ def test_generate_code_armv7m(project_path):
     context = Context()
 
     def translate_flags(flags):
-        return InstrFlags(flags)
+        return ISF(flags)
 
     adr = 0
     i = 0
-    context.istate = 0b1000
+
     while i < len(tests):
         code = int.from_bytes(data[adr : adr + 4])
         out = decode(code, context=context)
 
         assert out == tests[i][1]
-        if translate_flags(out.flags) == InstrFlags.I32BIT:
+        if translate_flags(out.flags) == ISF.I32BIT:
             adr += 4
         else:
             adr += 2
