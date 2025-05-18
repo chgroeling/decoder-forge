@@ -63,10 +63,10 @@ def test_generate_code_armv7m(project_path):
         (b"\xf0\x4f\x09\x01", ns["MovImmediate"](flags=ISF.I32BIT, d=9, imm32=1)),
         # mov.w   r3, #1073741824 ; 0x40000000
         (b"\xf0\x4f\x43\x80", ns["MovImmediate"](flags=ISF.I32BIT, d=3, imm32=1 << 30)),
-        # mov.w   r3, #32768      ; 0x8000
+        # mov.w   r3, #32768 ; 0x8000
         (b"\xf4\x4f\x43\x00", ns["MovImmediate"](flags=ISF.I32BIT, d=3, imm32=0x8000)),
-        # movw    r3, #1234       ; 0x4d2
-        #(b"\xf2\x40\x43\xd2", ns["MovImmediate"](flags=ISF.I32BIT, d=3, imm32=0x8000)),
+        # movw    r3, #1234 ; 0x4d2
+        (b"\xf2\x40\x43\xd2", ns["MovImmediate"](flags=ISF.I32BIT, d=3, imm32=1234)),
         # add r1, pc, #196
         (b"\xa1\x31", ns["AddPcPlusImmediate"](flags=0x0)),
         # bkpt 0x00ab

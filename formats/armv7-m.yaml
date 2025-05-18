@@ -407,6 +407,23 @@ deffun:
         - {op: braces, expr: {op: shiftleft, left: _imm11, right: 1}}
     - {op: call, expr: "sign_extend_and_assign(res=imm32, value=_imm32_us, sign_bit=24)"}
 
+  extract_imm32_16bit_parts:
+    op: seq
+    exprs:
+    - {op: call, expr: "extract_bit_and_assign(res=_imm8, msb=h.7, lsb=h.0)"}
+    - {op: call, expr: "extract_bit_and_assign(res=_imm3, msb=h.14, lsb=h.12)"}
+    - {op: call, expr: "extract_bit_and_assign(res=_imm4, msb=l.3, lsb=l.0)"}
+    - {op: call, expr: "extract_bit_and_assign(res=_i, msb=l.10, lsb=l.10)"}
+    - op: assign
+      target: imm32
+      expr:
+        op: or
+        args:
+        - {op: braces, expr: {op: shiftleft, left: _imm4, right: 12}}
+        - {op: braces, expr: {op: shiftleft, left: _i, right: 11}}
+        - {op: braces, expr: {op: shiftleft, left: _imm3, right: 8}}
+        - {op: braces, expr: {op: shiftleft, left: _imm8, right: 0}}
+
   extract_imm32_16bit_7_0:
     op: assign
     target: imm32
@@ -512,8 +529,8 @@ patterns:
   # MovImmediate
   # ---
   00100xxxxxxxxxxx: {name: mov_immediate_t1, to: MovImmediate, call: [set_flags_16bit(), append_flags_set_not_it_block(), append_flags_carry_if_apsr_c(), extract_d_16bit_10_8(), extract_imm32_16bit_7_0()]}
-  11110x00010x11110xxxxxxxxxxxxxxx: {name: mov_immediate_t2, to: MovImmediate, call: [set_flags_32bit(), extract_d_11_8(),  extract_imm32_thumb_expand(), unpred_d_13_15()]}
-  11110x100100xxxx0xxxxxxxxxxxxxxx: {name: mov_immediate_t3, to: MovImmediateTemp, call: [set_flags_32bit()]}
+  11110x00010x11110xxxxxxxxxxxxxxx: {name: mov_immediate_t2, to: MovImmediate, call: [set_flags_32bit(), extract_d_11_8(), extract_imm32_thumb_expand(), unpred_d_13_15()]}
+  11110x100100xxxx0xxxxxxxxxxxxxxx: {name: mov_immediate_t3, to: MovImmediate, call: [set_flags_32bit(), extract_d_11_8(), extract_imm32_16bit_parts(), unpred_d_13_15()]}
 
   # LdrLiteral
   # ---
