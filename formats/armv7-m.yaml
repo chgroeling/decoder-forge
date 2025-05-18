@@ -47,7 +47,7 @@ struct_def:
   LsrRegister: {members: [flags]}
   Mla: {members: [flags]}
   Mls: {members: [flags]}
-  MovImmediate: {members: [flags, d, imm32]}
+  MovImmediate: {members: [flags, d, carry, imm32]}
   MovImmediateTemp: {members: [flags]}
   MovRegister: {members: [flags]}
   Mrs: {members: [flags]}
@@ -382,8 +382,8 @@ deffun:
           - {op: braces, expr: {op: shiftleft, left: _imm3, right: 8}}
           - {op: braces, expr: {op: shiftleft, left: _imm8, right: 0}}
       - {op: assign, target: _carry_in, expr: {op: call, expr: "get_apsr_carry()"}}
-      - {op: call, expr: "ThumbExpandImm_C(res=imm32, carry_out=_carry_out, carry_in=_carry_in,  imm12=_imm12)"}
-      - {op: if, cond: _carry_out, then: {op: call, expr: "append_flags_carry()"}}
+      - {op: call, expr: "ThumbExpandImm_C(res=imm32, carry_out=carry, carry_in=_carry_in,  imm12=_imm12)"}
+      - {op: if, cond: carry, then: {op: call, expr: "append_flags_carry()"}}
 
   extract_imm32_long_branch:
     op: seq
@@ -481,6 +481,12 @@ deffun:
     target: t
     expr: {op: call, expr: "extract_bit(val=code, res=t, msb=h.15, lsb=h.12)"}
 
+  # Carry
+  set_carry_false:
+    op: assign
+    target: carry
+    expr: "0x0"
+  
 
 patterns:
 
@@ -528,9 +534,9 @@ patterns:
 
   # MovImmediate
   # ---
-  00100xxxxxxxxxxx: {name: mov_immediate_t1, to: MovImmediate, call: [set_flags_16bit(), append_flags_set_not_it_block(), append_flags_carry_if_apsr_c(), extract_d_16bit_10_8(), extract_imm32_16bit_7_0()]}
+  00100xxxxxxxxxxx: {name: mov_immediate_t1, to: MovImmediate, call: [set_flags_16bit(), append_flags_set_not_it_block(), append_flags_carry_if_apsr_c(), extract_d_16bit_10_8(), extract_imm32_16bit_7_0(), set_carry_false()]}
   11110x00010x11110xxxxxxxxxxxxxxx: {name: mov_immediate_t2, to: MovImmediate, call: [set_flags_32bit(), extract_d_11_8(), extract_imm32_thumb_expand(), unpred_d_13_15()]}
-  11110x100100xxxx0xxxxxxxxxxxxxxx: {name: mov_immediate_t3, to: MovImmediate, call: [set_flags_32bit(), extract_d_11_8(), extract_imm32_16bit_parts(), unpred_d_13_15()]}
+  11110x100100xxxx0xxxxxxxxxxxxxxx: {name: mov_immediate_t3, to: MovImmediate, call: [set_flags_32bit(), extract_d_11_8(), extract_imm32_16bit_parts(), unpred_d_13_15(), set_carry_false()]}
 
   # LdrLiteral
   # ---
