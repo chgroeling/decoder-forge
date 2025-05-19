@@ -80,11 +80,18 @@ def test_generate_code_armv7m(project_path):
             ns["MovImmediate"](flags=ISF.I32BIT, d=3, carry=0, imm32=1234),
         ),
         # add r1, pc, #196
-        (b"\xa1\x31", ns["AddPcPlusImmediate"](flags=0x0)),
+        (b"\xa1\x31", ns["AddPcPlusImmediate"](flags=ISF.ADD, d=1, imm32=196)),
         # bkpt 0x00ab
-        (b"\xbe\xab", ns["Bkpt"](flags=0x0)),
+        (b"\xbe\xab", ns["Bkpt"](flags=0x0, imm32=0x00AB)),
         # ldr r0, [pc, #192]
-        (b"\x48\x30", ns["LdrLiteral"](flags=0x0, t=0, imm32=192)),
+        (b"\x48\x30", ns["LdrLiteral"](flags=ISF.ADD, t=0, imm32=192)),
+        # ldr.w	r8, [pc, #228]
+        (
+            b"\xf8\xdf\x80\xe4",
+            ns["LdrLiteral"](flags=ISF.I32BIT + ISF.ADD, t=8, imm32=228),
+        ),
+        # mov r3, r5
+        (b"\x46\x2b", ns["MovRegister"](flags=0x0, d=3, m=5)),
     ]
 
     data = bytes()
@@ -105,7 +112,7 @@ def test_generate_code_armv7m(project_path):
         out = decode(code, context=context)
 
         assert out == tests[i][1]
-        if translate_flags(out.flags) == ISF.I32BIT:
+        if translate_flags(out.flags) & ISF.I32BIT:
             adr += 4
         else:
             adr += 2
