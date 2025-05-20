@@ -6,8 +6,6 @@ from decoder_forge.pattern_algorithms import (
     DecodeLeaf,
 )
 from decoder_forge.bit_pattern import BitPattern
-import pytest
-from pprint import pprint
 
 
 def test_compute_common_fixedmask_with_2_equal_pats_returns_common_fixedmask():
@@ -151,12 +149,11 @@ def test_build_decode_tree_by_fixed_bits_two_patterns_one_longer_returns_correct
         pat=None,
         children=[
             DecodeLeaf(
-                    pat=BitPattern(
+                pat=BitPattern(
                     fixedmask=0x3, fixedbits=0x3, bit_length=2
-                ),  # pat = "11"
+                ),  # pat = "11" - longest pattern (no of ones and zeros) first
                 origin=BitPattern(fixedmask=0x3, fixedbits=0x3, bit_length=2),
             ),
-
             DecodeLeaf(
                 pat=BitPattern(
                     fixedmask=0x2, fixedbits=0x0, bit_length=2
@@ -210,14 +207,15 @@ def test_build_decode_tree_by_fixed_bits_three_patterns_two_with_exclusive_bits_
         ],
     )
 
-def test_build_decode_tree_by_fixed_bits_three_patterns_two_with_exclusive_bits_returns_correct_tree():
+
+def test_build_decode_tree_by_fixed_bits_three_patterns_two_with_exclusive_bits_one_longer_returns_correct_tree():
     # pat_a = "11xxxxx0"
     pat_a = BitPattern(fixedmask=0xC1, fixedbits=0xC0, bit_length=8)
 
     # pat_b = "11xxxx01"
     pat_b = BitPattern(fixedmask=0xC3, fixedbits=0xC1, bit_length=8)
 
-    # pat_c= "11xxx101"
+    # pat_c= "11xxx111"
     pat_c = BitPattern(fixedmask=0xC7, fixedbits=0xC7, bit_length=8)
 
     tree = build_decode_tree_by_fixed_bits([pat_a, pat_b, pat_c], decoder_width=8)
@@ -239,10 +237,9 @@ def test_build_decode_tree_by_fixed_bits_three_patterns_two_with_exclusive_bits_
                     DecodeLeaf(
                         pat=BitPattern(
                             fixedmask=0x6, fixedbits=0x6, bit_length=8
-                        ),  # pat: "xxxxx11x"
+                        ),  # pat: "xxxxx11x" - longest pattern (no of ones and zeros) first
                         origin=BitPattern(fixedmask=0xC7, fixedbits=0xC7, bit_length=8),
                     ),
-
                     DecodeLeaf(
                         pat=BitPattern(
                             fixedmask=0x2, fixedbits=0x0, bit_length=8
