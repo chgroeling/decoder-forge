@@ -35,8 +35,10 @@
     {%- if origin == None %}
     {%- else %}
         {%- if as_repo.pat_to_struct[origin].members|length == 0 %}
+        # Pattern: "{{pat_repo[origin]["name"]}}" / "{{origin}}"     
         return {{as_repo.pat_to_struct[origin].name}}()
         {%- else %}
+        # Pattern: "{{pat_repo[origin]["name"]}}" / "{{origin}}"
         return {{as_repo.pat_to_struct[origin].name}}(
             {%- for member in as_repo.pat_to_struct[origin].members -%}
             {{ member }}

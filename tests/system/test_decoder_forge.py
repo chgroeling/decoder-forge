@@ -92,6 +92,10 @@ def test_generate_code_armv7m(project_path):
         ),
         # mov r3, r5
         (b"\x46\x2b", ns["MovRegister"](flags=0x0, d=3, m=5)),
+        # nop
+        (b"\xbf\00", ns["Nop"](flags=0x0)),
+        # nop.w
+        (b"\xf3\xaf\x80\x00", ns["Nop"](flags=ISF.I32BIT)),
     ]
 
     data = bytes()

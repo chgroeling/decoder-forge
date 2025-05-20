@@ -7,6 +7,7 @@ from decoder_forge.pattern_algorithms import (
 )
 from decoder_forge.bit_pattern import BitPattern
 import pytest
+from pprint import pprint
 
 
 def test_compute_common_fixedmask_with_2_equal_pats_returns_common_fixedmask():
@@ -150,16 +151,17 @@ def test_build_decode_tree_by_fixed_bits_two_patterns_one_longer_returns_correct
         pat=None,
         children=[
             DecodeLeaf(
+                    pat=BitPattern(
+                    fixedmask=0x3, fixedbits=0x3, bit_length=2
+                ),  # pat = "11"
+                origin=BitPattern(fixedmask=0x3, fixedbits=0x3, bit_length=2),
+            ),
+
+            DecodeLeaf(
                 pat=BitPattern(
                     fixedmask=0x2, fixedbits=0x0, bit_length=2
                 ),  # pat = "0x"
                 origin=BitPattern(fixedmask=0x2, fixedbits=0x0, bit_length=2),
-            ),
-            DecodeLeaf(
-                pat=BitPattern(
-                    fixedmask=0x3, fixedbits=0x3, bit_length=2
-                ),  # pat = "11"
-                origin=BitPattern(fixedmask=0x3, fixedbits=0x3, bit_length=2),
             ),
         ],
     )
@@ -202,6 +204,50 @@ def test_build_decode_tree_by_fixed_bits_three_patterns_two_with_exclusive_bits_
                             fixedmask=0x2, fixedbits=0x2, bit_length=8
                         ),  # pat: "xxxxxx1x"
                         origin=BitPattern(fixedmask=0xC3, fixedbits=0xC3, bit_length=8),
+                    ),
+                ],
+            ),
+        ],
+    )
+
+def test_build_decode_tree_by_fixed_bits_three_patterns_two_with_exclusive_bits_returns_correct_tree():
+    # pat_a = "11xxxxx0"
+    pat_a = BitPattern(fixedmask=0xC1, fixedbits=0xC0, bit_length=8)
+
+    # pat_b = "11xxxx01"
+    pat_b = BitPattern(fixedmask=0xC3, fixedbits=0xC1, bit_length=8)
+
+    # pat_c= "11xxx101"
+    pat_c = BitPattern(fixedmask=0xC7, fixedbits=0xC7, bit_length=8)
+
+    tree = build_decode_tree_by_fixed_bits([pat_a, pat_b, pat_c], decoder_width=8)
+
+    assert tree == DecodeTree(
+        pat=None,
+        children=[
+            DecodeLeaf(
+                pat=BitPattern(
+                    fixedmask=0xC1, fixedbits=0xC0, bit_length=8
+                ),  # pat: "11xxxxx0"
+                origin=BitPattern(fixedmask=0xC1, fixedbits=0xC0, bit_length=8),
+            ),
+            DecodeTree(
+                pat=BitPattern(
+                    fixedmask=0xC1, fixedbits=0xC1, bit_length=8
+                ),  # pat: "11xxxxx1"
+                children=[
+                    DecodeLeaf(
+                        pat=BitPattern(
+                            fixedmask=0x6, fixedbits=0x6, bit_length=8
+                        ),  # pat: "xxxxx11x"
+                        origin=BitPattern(fixedmask=0xC7, fixedbits=0xC7, bit_length=8),
+                    ),
+
+                    DecodeLeaf(
+                        pat=BitPattern(
+                            fixedmask=0x2, fixedbits=0x0, bit_length=8
+                        ),  # pat: "xxxxxx0x"
+                        origin=BitPattern(fixedmask=0xC3, fixedbits=0xC1, bit_length=8),
                     ),
                 ],
             ),

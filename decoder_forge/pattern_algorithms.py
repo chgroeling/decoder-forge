@@ -114,47 +114,35 @@ def build_groups_by_fixed_bits(
 def build_decode_tree_by_fixed_bits(
     pats: list[BitPattern], decoder_width: int
 ) -> DecodeTree:
-    """
-    Construct a hierarchical decode tree of BitPattern objects grouped by shared fixed
+    """Construct a hierarchical decode tree by grouping BitPatterns with shared fixed
     bits.
 
-    This function organizes the provided list of BitPattern objects into a tree
-    structure. Each BitPattern is first extended to the desired decoder width by
-    calling the extend_and_shift_to_msb() method, and then it is wrapped as a
-    DecodeLeaf node and attached as a child of the root DecodeTree node. The tree is
-    built iteratively by:
+    First, each BitPattern is extended to the specified decoder_width using the
+    extend_and_shift_to_msb() method and wrapped into a DecodeLeaf node. These leaves
+    are grouped into a DecodeTree hierarchy. The grouping is done by computing a common
+    fixed mask for the current set of patterns and splitting them via split_by_mask.
+    Subtrees are created for groups with more than one member and non-zero fixed
+    portion, while single-member groups are combined using the combine() method.
 
-    1. Clearing the children of the current tree node.
-    2. Grouping its BitPattern nodes by computing a common fixed mask and splitting them
-       using split_by_mask.
-    3. For each group:
-
-       - If the group contains a single member, the fixed bits (outer portion) are
-         combined with the remainder (inner portion) using combine(), and a DecodeLeaf
-         is created.
-       - If the group’s fixed portion has a non-zero fixedmask, a new DecodeTree is
-         created with the corresponding DecodeLeaf children, and this subtree is
-         scheduled for further processing.
-       - Otherwise, the corresponding DecodeLeaf nodes are directly appended to the
-         current node.
+    Note:
+        At various points during tree construction, the children of a node are kept
+        sorted in descending order based on the total count of fixed bits. This ensures
+        the nodes with the longest fixed matches are processed first.
 
     Args:
-       pats (list[BitPattern]): A list of BitPattern objects to be organized into the
-         decode tree.
-       decoder_width (int): The target bit width to which each BitPattern is extended
-         before grouping.
+        pats (list[BitPattern]): List of BitPattern objects to be organized.
+        decoder_width (int): The target bit width for extending each BitPattern.
 
     Returns:
-       DecodeTree: The root node of the constructed decode tree representing the
-       hierarchical grouping.
+        DecodeTree: The root node of the constructed hierarchical decode tree.
 
     Raises:
-       ValueError: If any BitPattern cannot be split by the computed common fixed mask.
+        ValueError: If any BitPattern cannot be split using the computed common fixed mask.
 
     Example:
-       >>> tree = build_decode_tree_by_fixed_bits([pattern1, pattern2, pattern3],
-       >>> decoder_width=8)
-       >>> print(tree)
+        >>> tree = build_decode_tree_by_fixed_bits([pattern1, pattern2, pattern3], 8)
+        >>> print(tree)
+
     """
 
     pats_unfolded: list[DecodeNode] = [
@@ -164,6 +152,12 @@ def build_decode_tree_by_fixed_bits(
 
     stack: list[DecodeTree] = []
     stack.append(root)
+
+    def longest_match(i):
+        pat_str = str(i.pat)
+        no_zeros = pat_str.count("0")
+        no_ones = pat_str.count("1")
+        return no_zeros + no_ones
 
     while len(stack) != 0:
         current_tree = stack.pop()
@@ -186,6 +180,9 @@ def build_decode_tree_by_fixed_bits(
                 src_pat = inner_pats[0][1]
                 dleaf = DecodeLeaf(pat=combined_pat, origin=pats_to_origins[src_pat])
                 current_tree.children.append(dleaf)
+
+                # keep children list sorted
+                current_tree.children.sort(key=longest_match, reverse=True)
             else:
                 if outer_pat.fixedmask != 0x0:  # catch all
                     children: list[DecodeNode] = [
@@ -195,6 +192,9 @@ def build_decode_tree_by_fixed_bits(
 
                     dtree = DecodeTree(pat=outer_pat, children=children)
                     current_tree.children.append(dtree)
+
+                    # keep children list sorted
+                    current_tree.children.sort(key=longest_match, reverse=True)
                     stack.append(dtree)  # process during next cycles
                 else:
                     children = [
@@ -203,6 +203,8 @@ def build_decode_tree_by_fixed_bits(
                     ]
                     current_tree.children.extend(children)
 
+                    # keep children list sorted
+                    current_tree.children.sort(key=longest_match, reverse=True)
     return root
 
 
@@ -243,6 +245,7 @@ def flatten_decode_tree(
             for idx, i in enumerate(reversed(tree.children))
         )
     )
+
     flattend_tree: list[tuple[BitPattern, Optional[BitPattern], int, bool, bool]] = []
     while len(stack) != 0:
         item, depth, first_child, last_child = stack.pop()
@@ -254,6 +257,7 @@ def flatten_decode_tree(
             dtree = cast(DecodeTree, item)
             assert dtree.pat is not None
             flattend_tree.append((dtree.pat, None, depth, first_child, last_child))
+
             stack.extend(
                 (
                     (i, depth + 1, idx == len(item.children) - 1, idx == 0)

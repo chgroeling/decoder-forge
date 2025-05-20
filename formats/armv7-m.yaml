@@ -791,6 +791,7 @@ patterns:
   # Nop
   # ---
   1011111100000000: {name: nop_t1, to: Nop, call: [set_flags_16bit()]}
+  11110011101011111000000000000000: {name: nop_t2, to: Nop, call: [set_flags_32bit()]}
 
   # It
   # ---
