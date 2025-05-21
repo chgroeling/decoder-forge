@@ -92,11 +92,18 @@ def test_generate_code_armv7m(project_path):
         ),
         # mov r3, r5
         (b"\x46\x2b", ns["MovRegister"](flags=0x0, d=3, m=5)),
-        # mov.w	r3, r1, lsr #9 / LSR{S} r3,r1,#9
+        # mov.w	r3, r1, lsr #9 / LSR r3,r1,#9
         (
             b"\xea\x4f\x23\x51",
             ns["LsrImmediate"](flags=ISF.I32BIT, d=3, m=1, shift_n=9),
         ),
+        # movs.w r3, r1, lsr #9 / LSRS r3,r1,#9
+        (
+            b"\xea\x5f\x23\x51",
+            ns["LsrImmediate"](flags=ISF.I32BIT + ISF.SET, d=3, m=1, shift_n=9),
+        ),
+        # lsrs	r3, r5, #6
+        (b"\x09\xab", ns["LsrImmediate"](flags=ISF.SET, d=3, m=5, shift_n=6)),
         # nop
         (b"\xbf\00", ns["Nop"](flags=0x0)),
         # nop.w

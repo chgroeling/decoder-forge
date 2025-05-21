@@ -130,11 +130,7 @@ deffun:
   # bit_mask 1 << $bit
   bit_mask:
     op: braces
-    expr:
-      op: shiftleft
-      left: 1
-      right: $bit
-
+    expr: {op: shiftleft, left: 1, right: $bit}
 
   # $res = 1 if lsb(a) == lsb(b) else 0
   lsb_equal_and_assign:
@@ -257,8 +253,7 @@ deffun:
             - {op: assign, target: $shift, expr: "$imm5"}
 
   # Istate
-  # ===
-  
+  # ===  
   extract_istate_b3_0:
     op: and
     args:
@@ -304,11 +299,17 @@ deffun:
     cond: {op: logical_not, expr: {op: call, expr: "in_it_block()"}}
     then: {op: call, expr: "append_flags_set()"}
 
+  append_flags_set_s_20:
+    op: if
+    cond: {op: is_equal, left: {op: call, expr: "extract_bit(val=code, msb=l.4, lsb=l.4)"}, right: "1"}
+    then: {op: call, expr: "append_flags_set()"}
+
   append_flags_carry_if_apsr_c:
     op: if
     cond: {op: is_not_equal, left: {op: call, expr: "get_apsr_carry()"}, right: "0"}
     then: {op: call, expr: "append_flags_carry()"}
 
+    
   # Check if unpred
   # ---
   # if InITBlock() && !LastInITBlock() then UNPREDICTABLE;
@@ -346,12 +347,10 @@ deffun:
         target: "_in8"
         expr: {op: call, expr: "extract_bit(val=$imm12, msb=7, lsb=0)"}
         comment: "$in[7:0]"
-        
       - op: assign
         target: "_cond"
         expr: {op: call, expr: "extract_bit(val=$imm12, msb=9, lsb=8)"}
         comment: "$imm12[9:8]"
-        
       - op: switch
         var: "_cond"
         case:
@@ -499,7 +498,7 @@ deffun:
     target: imm32
     expr: {op: call, expr: "extract_bit(val=code, res=imm32, msb=11, lsb=0)"}
 
-  #  shift_n
+  # shift_n
   # ===
   extract_shift_n_imm5:
     op: seq
@@ -514,12 +513,25 @@ deffun:
         args:
         - {op: braces, expr: {op: shiftleft, left: _imm2, right: 0}}
         - {op: braces, expr: {op: shiftleft, left: _imm3, right: 2}}
+    - op: call
+      expr: "DecodeImmShift(cond=cond, shift=shift_n, imm5=imm5)"
 
+
+  extract_shift_n_16bit_imm5:
+    op: seq
+    exprs:
+    - {op: call, expr: "extract_bit_and_assign(res=imm5, msb=l.10, lsb=l.6)"}
+    - {op: assign, target: cond, expr: "0b01"}
     - op: call
       expr: "DecodeImmShift(cond=cond, shift=shift_n, imm5=imm5)"
   
   # Register d
   # ===
+  extract_d_16bit_2_0:
+    op: assign
+    target: d
+    expr: {op: call, expr: "extract_bit(val=code, res=d, msb=l.2, lsb=l.0)"}
+
   extract_d_16bit_10_8:
     op: assign
     target: d
@@ -577,6 +589,11 @@ deffun:
     target: m
     expr: {op: call, expr: "extract_bit(val=code, msb=h.3, lsb=h.0)"}
 
+  extract_m_16bit_5_3:
+    op: assign
+    target: m
+    expr: {op: call, expr: "extract_bit(val=code, msb=l.5, lsb=l.3)"}
+
   extract_m_16bit_6_3:
     op: assign
     target: m
@@ -588,7 +605,6 @@ deffun:
     target: carry
     expr: "0x0"
   
-
 patterns:
 
   # AddRegister
@@ -669,8 +685,8 @@ patterns:
 
   # LsrImmediate
   # ---
-  00001xxxxxxxxxxx: {name: lsr_immediate_t1, to: LsrImmediate, call: [set_flags_16bit()]}
-  11101010010x11110xxxxxxxxx01xxxx: {name: lsr_immediate_t2, to: LsrImmediate, call: [set_flags_32bit(), extract_d_11_8(), extract_m_3_0(), extract_shift_n_imm5()]}
+  00001xxxxxxxxxxx: {name: lsr_immediate_t1, to: LsrImmediate, call: [set_flags_16bit(),  append_flags_set_not_it_block(), extract_d_16bit_2_0(),  extract_m_16bit_5_3(), extract_shift_n_16bit_imm5()]}
+  11101010010x11110xxxxxxxxx01xxxx: {name: lsr_immediate_t2, to: LsrImmediate, call: [set_flags_32bit(), extract_d_11_8(), extract_m_3_0(), extract_shift_n_imm5(), append_flags_set_s_20()]}
 
   # AsrImmediate
   # ---
