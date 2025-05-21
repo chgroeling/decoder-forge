@@ -43,7 +43,7 @@ struct_def:
   LdrshImmediate: {members: [flags]}
   LslImmediate: {members: [flags]}
   LslRegister: {members: [flags]}
-  LsrImmediate: {members: [flags]}
+  LsrImmediate: {members: [flags, d, m, shift_n]}
   LsrRegister: {members: [flags]}
   Mla: {members: [flags]}
   Mls: {members: [flags]}
@@ -199,7 +199,63 @@ deffun:
         expr:
           op: call
           expr: "extract_bit(val=$res, msb=31, lsb=31)"
-          
+
+
+
+  # SRType_None = 0b000,  
+  # SRType_LSL  = 0b001,
+  # SRType_LSR  = 0b010,
+  # SRType_ASR  = 0b011,
+  # SRType_ROR  = 0b100,
+  # SRType_RRX  = 0b101
+  DecodeImmShift:
+    op: switch
+    var: "$cond"
+    case:
+    - when: "0b00"
+      then:
+        op: seq
+        exprs:
+        - {op: assign, target: type_, expr: "0b001", comment: "SRType_LSL"} # type = SRType_LSL
+        - {op: assign, target: $shift, expr: "$imm5"}
+    - when: "0b01"
+      then:
+        op: seq
+        exprs:
+        - {op: assign, target: type_, expr: "0b010", comment: "SRType_LSR"}  # type = SRType_LSR
+        - op: if
+          cond: {op: is_equal, left: "$imm5", right: "0x0"}
+          then: {op: assign, target: $shift, expr: "32"}
+          else: {op: assign, target: $shift, expr: "$imm5"}
+    - when: "0b10"
+      then:
+        op: seq
+        exprs:
+        - {op: assign, target: type_, expr: "0b011", comment: "SRType_ASR"}  # type = SRType_ASR
+        - op: if
+          cond: {op: is_equal, left: "$imm5", right: "0x0"}
+          then: {op: assign, target: $shift, expr: "32"}
+          else: {op: assign, target: $shift, expr: "$imm5"}
+    - when: "0b11"
+      then:
+        op: seq
+        exprs:
+        - op: if
+          cond:
+            op: is_equal
+            left: "$imm5"
+            right: "0x0"
+          then:
+            op: seq
+            exprs:
+            - {op: assign, target: type_, expr: "0b101", comment: "SRType_RRX"}  # type = SRType_RRX
+            - {op: assign, target: $shift, expr: "1"}
+          else:
+            op: seq
+            exprs:
+            - {op: assign, target: type_, expr: "0b100", comment: "SRType_ROR"}  # type = SRType_ROR
+            - {op: assign, target: $shift, expr: "$imm5"}
+
   # Istate
   # ===
   
@@ -443,7 +499,25 @@ deffun:
     target: imm32
     expr: {op: call, expr: "extract_bit(val=code, res=imm32, msb=11, lsb=0)"}
 
+  #  shift_n
+  # ===
+  extract_shift_n_imm5:
+    op: seq
+    exprs:
+    - {op: call, expr: "extract_bit_and_assign(res=_imm2, msb=h.7, lsb=h.6)"}
+    - {op: call, expr: "extract_bit_and_assign(res=_imm3, msb=h.14, lsb=h.12)"}
+    - {op: assign, target: cond, expr: "0b01"}
+    - op: assign
+      target: imm5
+      expr:
+        op: or
+        args:
+        - {op: braces, expr: {op: shiftleft, left: _imm2, right: 0}}
+        - {op: braces, expr: {op: shiftleft, left: _imm3, right: 2}}
 
+    - op: call
+      expr: "DecodeImmShift(cond=cond, shift=shift_n, imm5=imm5)"
+  
   # Register d
   # ===
   extract_d_16bit_10_8:
@@ -498,6 +572,11 @@ deffun:
 
   # Register m
   # ===
+  extract_m_3_0:
+    op: assign
+    target: m
+    expr: {op: call, expr: "extract_bit(val=code, msb=h.3, lsb=h.0)"}
+
   extract_m_16bit_6_3:
     op: assign
     target: m
@@ -591,7 +670,7 @@ patterns:
   # LsrImmediate
   # ---
   00001xxxxxxxxxxx: {name: lsr_immediate_t1, to: LsrImmediate, call: [set_flags_16bit()]}
-  11101010010x11110xxxxxxxxx01xxxx: {name: lsr_immediate_t2, to: LsrImmediate, call: [set_flags_32bit()]}
+  11101010010x11110xxxxxxxxx01xxxx: {name: lsr_immediate_t2, to: LsrImmediate, call: [set_flags_32bit(), extract_d_11_8(), extract_m_3_0(), extract_shift_n_imm5()]}
 
   # AsrImmediate
   # ---
