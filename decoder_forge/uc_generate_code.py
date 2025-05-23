@@ -97,10 +97,19 @@ def uc_generate_code(
             val = val.strip()
             if val.startswith("$"):
                 ph = val.strip("$")
+
                 if ph in placeholders:
                     arg_dict[dname] = placeholders[ph]
             else:
-                arg_dict[dname] = val
+                if val.startswith("&") and val[1:] in deffun:
+                    val_func = val.strip("&")
+                    func_ast_arg = deffun[val_func]
+                    func_res = transpill(
+                        yaml_ast=yaml.dump(func_ast_arg), placeholders=arg_dict, call=tcall
+                    )
+                    arg_dict[dname] = func_res
+                else:  
+                    arg_dict[dname] = val
 
         # code = deffun[name]
 

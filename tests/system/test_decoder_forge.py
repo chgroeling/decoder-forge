@@ -10,7 +10,6 @@ class InstrFlags(IntFlag):
     ADD = 0b0100  # 4
     CARRY = 0b1000  # 8
 
-
 @pytest.fixture
 def project_path(request):
     rootpath = request.config.rootpath
@@ -47,8 +46,9 @@ def test_generate_code_armv7m(project_path):
     Context = ns["Context"]
     decode = ns["decode"]
     ISF = InstrFlags
+    # fmt: off
 
-    tests = [
+    tests = [ 
         # bl 40
         (b"\xf0\x00\xf8\x14", ns["Bl"](flags=ISF.I32BIT, imm32=40)),
         # bl 33928
@@ -58,27 +58,15 @@ def test_generate_code_armv7m(project_path):
         # bl -32
         (b"\xf7\xff\xff\xf0", ns["Bl"](flags=ISF.I32BIT, imm32=-32)),
         # movs r0, #22
-        (b"\x20\x16", ns["MovImmediate"](flags=ISF.SET, d=0, carry=0, imm32=22)),
+        (b"\x20\x16", ns["MovImmediate"](flags=ISF.SET, d=0, imm32=22)),
         # mov r9, #1
-        (
-            b"\xf0\x4f\x09\x01",
-            ns["MovImmediate"](flags=ISF.I32BIT, d=9, carry=0, imm32=1),
-        ),
+        (b"\xf0\x4f\x09\x01", ns["MovImmediate"](flags=ISF.I32BIT, d=9, imm32=1)),
         # mov.w   r3, #1073741824 ; 0x40000000
-        (
-            b"\xf0\x4f\x43\x80",
-            ns["MovImmediate"](flags=ISF.I32BIT, d=3, carry=0, imm32=1 << 30),
-        ),
+        (b"\xf0\x4f\x43\x80", ns["MovImmediate"](flags=ISF.I32BIT, d=3, imm32=1 << 30)),
         # mov.w   r3, #32768 ; 0x8000
-        (
-            b"\xf4\x4f\x43\x00",
-            ns["MovImmediate"](flags=ISF.I32BIT, d=3, carry=0, imm32=0x8000),
-        ),
+        (b"\xf4\x4f\x43\x00", ns["MovImmediate"](flags=ISF.I32BIT, d=3, imm32=0x8000)),
         # movw    r3, #1234 ; 0x4d2
-        (
-            b"\xf2\x40\x43\xd2",
-            ns["MovImmediate"](flags=ISF.I32BIT, d=3, carry=0, imm32=1234),
-        ),
+        (b"\xf2\x40\x43\xd2", ns["MovImmediate"](flags=ISF.I32BIT, d=3, imm32=1234)),
         # add r1, pc, #196
         (b"\xa1\x31", ns["AddPcPlusImmediate"](flags=ISF.ADD, d=1, imm32=196)),
         # bkpt 0x00ab
@@ -86,30 +74,27 @@ def test_generate_code_armv7m(project_path):
         # ldr r0, [pc, #192]
         (b"\x48\x30", ns["LdrLiteral"](flags=ISF.ADD, t=0, imm32=192)),
         # ldr.w	r8, [pc, #228]
-        (
-            b"\xf8\xdf\x80\xe4",
-            ns["LdrLiteral"](flags=ISF.I32BIT + ISF.ADD, t=8, imm32=228),
-        ),
+        (b"\xf8\xdf\x80\xe4", ns["LdrLiteral"](flags=ISF.I32BIT + ISF.ADD, t=8, imm32=228)),
         # mov r3, r5
         (b"\x46\x2b", ns["MovRegister"](flags=0x0, d=3, m=5)),
         # mov.w	r3, r1, lsr #9 / LSR r3,r1,#9
-        (
-            b"\xea\x4f\x23\x51",
-            ns["LsrImmediate"](flags=ISF.I32BIT, d=3, m=1, shift_n=9),
-        ),
+        (b"\xea\x4f\x23\x51", ns["LsrImmediate"](flags=ISF.I32BIT, d=3, m=1, shift_n=9)),
         # movs.w r3, r1, lsr #9 / LSRS r3,r1,#9
-        (
-            b"\xea\x5f\x23\x51",
-            ns["LsrImmediate"](flags=ISF.I32BIT + ISF.SET, d=3, m=1, shift_n=9),
-        ),
+        (b"\xea\x5f\x23\x51", ns["LsrImmediate"](flags=ISF.I32BIT + ISF.SET, d=3, m=1, shift_n=9)),
         # lsrs	r3, r5, #6
         (b"\x09\xab", ns["LsrImmediate"](flags=ISF.SET, d=3, m=5, shift_n=6)),
         # nop
         (b"\xbf\00", ns["Nop"](flags=0x0)),
         # nop.w
         (b"\xf3\xaf\x80\x00", ns["Nop"](flags=ISF.I32BIT)),
+        # adc.w	r4, r4, #253 ; 0xfd
+        (b"\xf1\x44\x04\xfd", ns["AdcImmediate"](flags=ISF.I32BIT, d=4, n=4, imm32=253)),
+        # adc.w	r1, r1, r4, lsl #20
+        (b"\xeb\x41\x51\x04", ns["AdcRegister"](flags=ISF.I32BIT, d=1, n=1, m=4, shift_t=1, shift_n=20)),
+        # add.w r1, r1, #1048576 ; 0x100000
+        (b"\xf5\x01\x11\x80", ns["AddImmediate"](flags=ISF.I32BIT, d=1, n=1, imm32=0x100000)),
     ]
-
+    # fmt: on
     data = bytes()
     for adr in tests:
         data = data + adr[0]

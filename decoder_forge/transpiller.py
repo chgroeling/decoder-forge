@@ -124,14 +124,14 @@ class VisitorPython:
 
     def do_switch(self, var, *cond_then):
         out = ""
-        first=True
+        first = True
         for cond, then in cond_then:
             if first:
-                out += f"if {var}=={cond}:\n"
+                out += f"if {var} == {cond}:\n"
             else:
-                out += f"elif {var}=={cond}:\n"
+                out += f"elif {var} == {cond}:\n"
 
-            first=False
+            first = False
             then_lines = then.split("\n")
             for line in then_lines:
                 out += f"    {line}\n"
