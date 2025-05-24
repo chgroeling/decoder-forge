@@ -7,6 +7,7 @@ from decoder_forge.uc_show_decode_tree import uc_show_decode_tree
 from decoder_forge.external.printer import Printer
 from decoder_forge.external.template_engine import TemplateEngine
 from decoder_forge.uc_generate_code import uc_generate_code
+from decoder_forge.uc_decode import uc_decode
 from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,38 @@ def open_output_stream(output_file: Optional[str]):
 
 
 @cli.command()
+@click.argument("DECODER_PATH", type=str)
+@click.argument("BIN_PATH", type=str)
+@click.option(
+    "--decoder_width",
+    help="Target bit width; patterns are extended to this width before decoding "
+    + "(default: 32)",
+    default=32,
+    type=int,
+)
+@click.option(
+    "--out_file",
+    help="Output file to write the generated code. Defaults to None, which outputs to "
+    + "stdout.",
+    default=None,
+    type=str,
+)
+@click.pass_context
+def decode(
+    self, decoder_path: str, bin_path: str, decoder_width: int, out_file: Optional[str]
+):
+
+    yaml_buf = ""
+    with open(decoder_path, "r", encoding="utf-8") as fp:
+        yaml_buf = fp.read()
+
+    tengine = TemplateEngine()
+    with open_output_stream(out_file) as f:
+        printer = Printer(f)
+        uc_decode(printer, tengine, yaml_buf, decoder_width, bin_path)
+
+
+@cli.command()
 @click.argument("INPUT_PATH", type=str)
 @click.option(
     "--decoder_width",
@@ -74,9 +107,7 @@ def open_output_stream(output_file: Optional[str]):
     type=str,
 )
 @click.pass_context
-def generate_code(
-    self, input_path: str, decoder_width: int, out_file: Optional[str]
-):
+def generate_code(self, input_path: str, decoder_width: int, out_file: Optional[str]):
     """Generate decoder code from YAML instruction patterns.
 
     This command reads a YAML file from the provided INPUT_PATH which should contain
@@ -142,6 +173,7 @@ def show_tree(ctx, input_path: str, decoder_width: int):
 
 def main():
     cli()
+
 
 if __name__ == "__main__":
     main()

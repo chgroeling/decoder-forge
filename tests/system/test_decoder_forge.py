@@ -83,6 +83,8 @@ def test_generate_code_armv7m(project_path):
         (b"\xea\x5f\x23\x51", ns["LsrImmediate"](flags=ISF.I32BIT + ISF.SET, d=3, m=1, shift_n=9)),
         # lsrs	r3, r5, #6
         (b"\x09\xab", ns["LsrImmediate"](flags=ISF.SET, d=3, m=5, shift_n=6)),
+        # movs	r0, #22
+        (b"\x20\x16", ns["MovImmediate"](flags=ISF.SET, d=0, imm32=22)),
         # nop
         (b"\xbf\00", ns["Nop"](flags=0x0)),
         # nop.w
@@ -93,6 +95,8 @@ def test_generate_code_armv7m(project_path):
         (b"\xeb\x41\x51\x04", ns["AdcRegister"](flags=ISF.I32BIT, d=1, n=1, m=4, shift_t=1, shift_n=20)),
         # add.w r1, r1, #1048576 ; 0x100000
         (b"\xf5\x01\x11\x80", ns["AddImmediate"](flags=ISF.I32BIT, d=1, n=1, imm32=0x100000)),
+        
+     
     ]
     # fmt: on
     data = bytes()

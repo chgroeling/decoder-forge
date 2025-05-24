@@ -48,7 +48,6 @@ struct_def:
   Mla: {members: [flags]}
   Mls: {members: [flags]}
   MovImmediate: {members: [flags, d, imm32]}
-  MovImmediateTemp: {members: [flags]}
   MovRegister: {members: [flags, d, m]}
   Mrs: {members: [flags]}
   Msr: {members: [flags]}
