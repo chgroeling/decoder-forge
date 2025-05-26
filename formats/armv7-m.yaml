@@ -665,13 +665,13 @@ patterns:
   # LdrImmediate
   01101xxxxxxxxxxx: {name: ldr_immediate_t1, to: LdrImmediate, call: [set_flags_16bit()]}
   10011xxxxxxxxxxx: {name: ldr_immediate_t2, to: LdrImmediate, call: [set_flags_16bit()]}
-  111110001101xxxx: {name: ldr_immediate_t3, to: LdrImmediate, call: [set_flags_16bit()]}
+  111110001101xxxxxxxxxxxxxxxxxxxx: {name: ldr_immediate_t3, to: LdrImmediate, call: [set_flags_32bit()]}
   111110000101xxxxxxxx1xxxxxxxxxxx: {name: ldr_immediate_t4, to: LdrImmediate, call: [set_flags_32bit()]}
 
   # StrImmediate
   01100xxxxxxxxxxx: {name: str_immediate_t1, to: StrImmediate, call: [set_flags_16bit()]}
   10010xxxxxxxxxxx: {name: str_immediate_t2, to: StrImmediate, call: [set_flags_16bit()]}
-  111110001100xxxx: {name: str_immediate_t3, to: StrImmediate, call: [set_flags_16bit()]}
+  111110001100xxxxxxxxxxxxxxxxxxxx: {name: str_immediate_t3, to: StrImmediate, call: [set_flags_32bit()]}
   111110000100xxxxxxxx1xxxxxxxxxxx: {name: str_immediate_t4, to: StrImmediate, call: [set_flags_32bit()]}
 
   # LslImmediate
@@ -739,31 +739,31 @@ patterns:
 
   # StrbImmediate
   01110xxxxxxxxxxx: {name: strb_immediate_t1, to: StrbImmediate, call: [set_flags_16bit()]}
-  111110001000xxxx: {name: strb_immediate_t2, to: StrbImmediate, call: [set_flags_16bit()]}
+  111110001000xxxxxxxxxxxxxxxxxxxx: {name: strb_immediate_t2, to: StrbImmediate, call: [set_flags_32bit()]}
   111110000000xxxxxxxx1xxxxxxxxxxx: {name: strb_immediate_t3, to: StrbImmediate, call: [set_flags_32bit()]}
 
   
   # StrhImmediate
   10000xxxxxxxxxxx: {name: strh_immediate_t1, to: StrhImmediate, call: [set_flags_16bit()]}
-  111110001010xxxx: {name: strh_immediate_t2, to: StrhImmediate, call: [set_flags_16bit()]}
+  111110001010xxxxxxxxxxxxxxxxxxxx: {name: strh_immediate_t2, to: StrhImmediate, call: [set_flags_32bit()]}
   111110000010xxxxxxxx1xxxxxxxxxxx: {name: strh_immediate_t3, to: StrhImmediate, call: [set_flags_32bit()]}
 
   # LdrsbImmediate
-  111110011001xxxx: {name: ldrsb_immediate_t1, to: LdrsbImmediate, call: [set_flags_16bit()]}
+  111110011001xxxxxxxxxxxxxxxxxxxx: {name: ldrsb_immediate_t1, to: LdrsbImmediate, call: [set_flags_32bit()]}
   111110010001xxxxxxxx1xxxxxxxxxxx: {name: ldrsb_immediate_t2, to: LdrsbImmediate, call: [set_flags_32bit()]}
 
   # LdrshImmediate
-  111110011011xxxx: {name: ldrsh_immediate_t1, to: LdrshImmediate, call: [set_flags_16bit()]}
+  111110011011xxxxxxxxxxxxxxxxxxxx: {name: ldrsh_immediate_t1, to: LdrshImmediate, call: [set_flags_32bit()]}
   111110010011xxxxxxxx1xxxxxxxxxxx: {name: ldrsh_immediate_t2, to: LdrshImmediate, call: [set_flags_32bit()]}
 
   # LdrbImmediate
   01111xxxxxxxxxxx: {name: ldrb_immediate_t1, to: LdrbImmediate, call: [set_flags_16bit()]}
-  111110001001xxxx: {name: ldrb_immediate_t2, to: LdrbImmediate, call: [set_flags_16bit()]}
+  111110001001xxxxxxxxxxxxxxxxxxxx: {name: ldrb_immediate_t2, to: LdrbImmediate, call: [set_flags_32bit()]}
   111110000001xxxxxxxx1xxxxxxxxxxx: {name: ldrb_immediate_t3, to: LdrbImmediate, call: [set_flags_32bit()]}
 
   # LdrhImmediate
   10001xxxxxxxxxxx: {name: ldrh_immediate_t1, to: LdrhImmediate, call: [set_flags_16bit()]}
-  111110001011xxxx: {name: ldrh_immediate_t2, to: LdrhImmediate, call: [set_flags_16bit()]}
+  111110001011xxxxxxxxxxxxxxxxxxxx: {name: ldrh_immediate_t2, to: LdrhImmediate, call: [set_flags_32bit()]}
   111110000011xxxxxxxx1xxxxxxxxxxx: {name: ldrh_immediate_t3, to: LdrhImmediate, call: [set_flags_32bit()]}
 
   # TstRegister
@@ -849,7 +849,7 @@ patterns:
   11011111xxxxxxxx: {name: svc_t1, to: Svc, call: [set_flags_16bit()]}
 
   # Strex
-  111010000100xxxx: {name: strex_t1, to: Strex, call: [set_flags_16bit()]}
+  111010000100xxxxxxxxxxxxxxxxxxxx: {name: strex_t1, to: Strex, call: [set_flags_32bit()]}
 
   # Ldrex
   111010000101xxxxxxxx1111xxxxxxxx: {name: ldrex_t1, to: Ldrex, call: [set_flags_32bit()]}
@@ -861,10 +861,10 @@ patterns:
   1110100100x0xxxx0x0xxxxxxxxxxxxx: {name: stmdb_t1, to: Stmdb, call: [set_flags_32bit()]}
 
   # StrdImmediate
-  1110100xx1x0xxxx: {name: strd_immediate_t1, to: StrdImmediate, call: [set_flags_16bit()]}
+  1110100xx1x0xxxxxxxxxxxxxxxxxxxx: {name: strd_immediate_t1, to: StrdImmediate, call: [set_flags_32bit()]}
 
   # LdrdImmediate
-  1110100xx1x1xxxx: {name: ldrd_immediate_t1, to: LdrdImmediate, call: [set_flags_16bit()]}
+  1110100xx1x1xxxxxxxxxxxxxxxxxxxx: {name: ldrd_immediate_t1, to: LdrdImmediate, call: [set_flags_32bit()]}
 
   # Rrx
   11101010010x11110000xxxx0011xxxx: {name: rrx_t1, to: Rrx, call: [set_flags_32bit()]}

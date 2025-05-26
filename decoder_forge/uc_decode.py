@@ -60,18 +60,17 @@ def uc_decode(
     with open(bin_file, "rb") as fp:
         fp.seek(0xD2)
 
-        for i in range(0,10):
+        for i in range(0, 10):
             raw_code = fp.read(4)
-            #print(f"{adr} 0x{raw_code.hex()}")
-            code = int.from_bytes(raw_code,'little')
-            #print(f"{adr} {hex(code)}")
+            # print(f"{adr} 0x{raw_code.hex()}")
+            code = int.from_bytes(raw_code, "little")
+            # print(f"{adr} {hex(code)}")
             out = decode(code, context=context)
 
             print(f"{adr} 0x{raw_code.hex()} {out}")
-            
+
             if translate_flags(out.flags) & ISF.I32BIT:
                 adr += 4
             else:
                 adr += 2
                 fp.seek(-2, 1)
-

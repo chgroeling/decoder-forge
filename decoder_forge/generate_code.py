@@ -8,9 +8,78 @@ from decoder_forge.pattern_algorithms import (
     build_decode_tree_by_fixed_bits,
     flatten_decode_tree,
 )
-from decoder_forge.bit_utils import create_bit_mask
+from copy import deepcopy
+from decoder_forge.pattern_algorithms import DecodeLeaf
+from decoder_forge.pattern_algorithms import DecodeTree
+from decoder_forge.print_tree import print_tree
+from uuid import uuid1
+from decoder_forge.i_printer import IPrinter
 
 logger = logging.getLogger(__name__)
+
+
+class OutPrinter(IPrinter):
+
+    def __init__(self):
+        pass
+
+    def print(self, out: str):
+        print(out)
+
+
+def create_or_get_duid(guid, f_guid_to_data, duid_to_data):
+
+    if guid in duid_to_data:
+        data_entry = duid_to_data[guid]
+    else:
+        data_entry = f_guid_to_data(guid)
+
+    data_to_duid = {v: k for k, v in duid_to_data.items()}
+    duid = data_to_duid.get(data_entry, uuid1())
+    duid_to_data[duid] = duid_to_data.get(duid, data_entry)
+    return duid
+
+
+def minimalize_tree(pat, children, f_guid_to_data, duid_to_data):
+
+    duid_list = []
+    for i in children:
+        duid = create_or_get_duid(i.uid, f_guid_to_data, duid_to_data)
+        duid_list.append(duid)
+
+    duid_set = set(duid_list)
+    if len(duid_set) <= 1:
+        duid = duid_list[0]
+        return DecodeLeaf(pat=pat, uid=duid)
+
+    children = deepcopy(children)
+    return DecodeTree(pat=pat, uid="", children=children)
+
+
+def minimalize_tree_with_data_algo(tree, f_guid_to_data, duid_to_data=dict()):
+
+    children = []
+    for item in tree.children:
+        if isinstance(item, DecodeTree):
+            tree_item = minimalize_tree_with_data_algo(
+                item, f_guid_to_data, duid_to_data
+            )
+            children.append(tree_item)
+        else:
+            duid = create_or_get_duid(item.uid, f_guid_to_data, duid_to_data)
+            tree_item = DecodeLeaf(pat=item.pat, uid=duid)
+            children.append(tree_item)
+
+    if all([isinstance(i, DecodeLeaf) for i in children]):
+        return minimalize_tree(tree.pat, children, f_guid_to_data, duid_to_data)
+    else:
+        return DecodeTree(pat=tree.pat, uid="", children=children)
+
+
+def minimalize_tree_with_data(tree, f_guid_to_data):
+    duid_to_data = dict()
+    data_tree = minimalize_tree_with_data_algo(tree, f_guid_to_data, duid_to_data)
+    return data_tree, duid_to_data
 
 
 def generate_code(input_yaml, decoder_width, tengine, printer):
@@ -74,6 +143,12 @@ def generate_code(input_yaml, decoder_width, tengine, printer):
         BitPattern.parse_pattern(str(pat)): dct for pat, dct in ins["patterns"].items()
     }
 
+    uid_to_pat = {
+        uuid1(): BitPattern.parse_pattern(str(pat))
+        for pat, dct in ins["patterns"].items()
+    }
+    pat_to_uid = {v: k for k, v in uid_to_pat.items()}
+
     # associated structs
     as_repo = AssociatedStructRepo.build(
         struct_def=ins["struct_def"], pat_repo=pat_repo
@@ -82,9 +157,27 @@ def generate_code(input_yaml, decoder_width, tengine, printer):
     context = ins["context"]
 
     # build decode tree
-    decode_tree = build_decode_tree_by_fixed_bits(pats, decoder_width=decoder_width)
+    pats_with_uid = [(i, pat_to_uid[i]) for i in pats]
+
+    decode_tree = build_decode_tree_by_fixed_bits(
+        pats_with_uid, decoder_width=decoder_width
+    )
+
     flat_decode_tree = flatten_decode_tree(decode_tree)
 
+    size_tree, size_dict = minimalize_tree_with_data(
+        decode_tree, lambda guid: uid_to_pat[guid].bit_length
+    )
+
+    op = OutPrinter()
+
+    def uid_to_size(uid):
+        if uid not in size_dict:
+            return uid
+        return f"{size_dict[uid]}"
+
+    print_tree(op, size_tree, uid_to_size)
+    print(size_dict)
     tengine.load("python")
 
     deffun = ins["deffun"]
@@ -127,13 +220,11 @@ def generate_code(input_yaml, decoder_width, tengine, printer):
 
     context = {
         "pat_repo": pat_repo,
+        "uid_to_pat": uid_to_pat,
         "as_repo": as_repo,
         "context": context,
         "tcall": tcall,
-        "decode_tree": decode_tree,
         "flat_decode_tree": flat_decode_tree,
-        # Add some conveniece functions
-        "bit_utils": {"create_bit_mask": create_bit_mask},
     }
     rendered_code = tengine.generate(context)
 
