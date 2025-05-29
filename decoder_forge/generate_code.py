@@ -165,19 +165,19 @@ def generate_code(input_yaml, decoder_width, tengine, printer):
 
     flat_decode_tree = flatten_decode_tree(decode_tree)
 
-    size_tree, size_dict = minimalize_tree_with_data(
-        decode_tree, lambda guid: uid_to_pat[guid].bit_length
-    )
+    #size_tree, size_dict = minimalize_tree_with_data(
+    #     decode_tree, lambda guid: uid_to_pat[guid].bit_length
+    # )
 
     op = OutPrinter()
 
-    def uid_to_size(uid):
-        if uid not in size_dict:
-            return uid
-        return f"{size_dict[uid]}"
+    #def uid_to_size(uid):
+    #    if uid not in size_dict:
+    #        return uid
+    #    return f"{size_dict[uid]}"
 
-    print_tree(op, size_tree, uid_to_size)
-    print(size_dict)
+    #print_tree(op, size_tree, uid_to_size)
+    #print(size_dict)
     tengine.load("python")
 
     deffun = ins["deffun"]

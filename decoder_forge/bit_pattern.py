@@ -1,4 +1,5 @@
 import copy
+from itertools import takewhile
 
 
 def is_undef_bit(ch: str):
@@ -109,6 +110,28 @@ class BitPattern:
         )
         return pat
 
+    @property
+    def trailing_wildcard_count(self):
+        """Count the trailing wildcard bits in the BitPattern.
+
+        This property computes the number of trailing 'x' characters in the string
+        representation of the pattern. These trailing wildcards indicate the insignificant
+        or "don't care" bits at the end of the bit pattern.
+
+        Returns:
+          int: The number of trailing wildcard bits.
+
+        Example:
+        >>> bp = BitPattern.parse_pattern("101xx")
+        >>> bp.trailing_wilcard_count
+        2
+        """
+
+        def count_trailing_char(s: str, char: str) -> int:
+            return sum(1 for c in takewhile(lambda x: x == char, reversed(s)))
+
+        return count_trailing_char(str(self), "x")
+
     @staticmethod
     def to_string(pat: "BitPattern") -> str:
         """
@@ -179,9 +202,8 @@ class BitPattern:
         return hash((self.fixedmask, self.fixedbits, self.bit_length))
 
     def combine(self, other: "BitPattern") -> "BitPattern":
-        """
-        Combine this BitPattern with another, creating a new BitPattern that represents
-        the union of the fixed bits of both patterns.
+        """Combine this BitPattern with another, creating a new BitPattern that
+        represents the union of the fixed bits of both patterns.
 
         The resulting BitPattern's fixedmask is the bitwise OR of the fixedmasks, and
         its fixedbits is the bitwise OR of the fixedbits of both patterns. The method
@@ -203,6 +225,7 @@ class BitPattern:
             >>> p1 = BitPattern.parse_pattern("10x1")
             >>> p2 = BitPattern.parse_pattern("x1x0")
             >>> p_combined = p1.combine(p2)
+
         """
 
         new_fixedmask = self.fixedmask | other.fixedmask
@@ -275,9 +298,54 @@ class BitPattern:
 
         return pat_1, pat_2
 
-    def extend_and_shift_to_msb(self, bit_length: int) -> "BitPattern":
+    def extract_from_msb(self, bit_length: int) -> "BitPattern":
+        """Extract a BitPattern slice from the most significant bits.
+
+        This method extracts a new BitPattern consisting of the leading bits from the
+        most significant side of the original pattern. It shifts the fixedmask and
+        fixedbits so that the extracted bits occupy the entire bit representation of the
+        new pattern.  If the requested bit_length is equal to the current BitPattern's
+        bit_length, a copy of the BitPattern is returned. If the requested bit_length is
+        greater than or equal to the current BitPattern's bit_length, a ValueError is
+        raised.
+
+        Args:
+            bit_length (int): The number of bits for the extracted pattern. This value
+              must be strictly less than the current BitPattern's bit_length.
+
+        Returns:
+            BitPattern: A new BitPattern object representing the most significant bits
+              up to the specified bit_length.
+
+        Raises:
+            ValueError: If the specified bit_length is greater than or equal to the
+              current bit_length.
+
+        Example:
+            >>> bp = BitPattern.parse_pattern("101x")
+            >>> msb_slice = bp.extract_from_msb(2)
+            >>> print(msb_slice)
+            '10'
+
         """
-        Extend the BitPattern to a new higher bit length and shift it so that the
+
+        if bit_length >= self.bit_length:
+            raise ValueError("BitPattern bit length is to big")
+
+        if bit_length == self.bit_length:  # exact representation
+            return copy.copy(self)
+
+        fixedmask = self.fixedmask >> (-bit_length + self.bit_length)
+        fixedbits = self.fixedbits >> (-bit_length + self.bit_length)
+
+        return BitPattern(
+            fixedmask=fixedmask,
+            fixedbits=fixedbits,
+            bit_length=bit_length,
+        )
+
+    def extend_and_shift_to_msb(self, bit_length: int) -> "BitPattern":
+        """Extend the BitPattern to a new higher bit length and shift it so that the
         original bits occupy the most significant positions of the new representation.
 
         This method increases the total number of bits in the pattern by shifting both

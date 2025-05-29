@@ -206,3 +206,36 @@ def test_combine_incompatible_masks_raises_value_error():
     with pytest.raises(ValueError):
         _ = pat_a.combine(pat_b)
 
+
+def test_trailing_wildcard_count_8_out_16():
+    pat_a = BitPattern(fixedmask=0xFF00, fixedbits=0x0, bit_length=16)
+    elen = pat_a.trailing_wildcard_count
+    assert elen == 8
+
+
+def test_trailing_wildcard_count_0_out_16():
+    pat_a = BitPattern(fixedmask=0x1, fixedbits=0x0, bit_length=16)
+    elen = pat_a.trailing_wildcard_count
+    assert elen == 0
+
+
+def test_trailing_wildcard_count_16_out_16():
+    pat_a = BitPattern(fixedmask=0x0, fixedbits=0x0, bit_length=16)
+    elen = pat_a.trailing_wildcard_count
+    assert elen == 16
+
+
+def test_extract_from_msb_6_out_8():
+    pat_a = BitPattern(fixedmask=0xAA, fixedbits=0xAA, bit_length=8)
+    pat_b = pat_a.extract_from_msb(6)
+    assert pat_b.bit_length == 6
+    assert pat_b.fixedmask == 0x2A
+    assert pat_b.fixedbits == 0x2A
+
+
+def test_extract_from_msb_3_out_8():
+    pat_a = BitPattern(fixedmask=0xAA, fixedbits=0xAA, bit_length=8)
+    pat_b = pat_a.extract_from_msb(3)
+    assert pat_b.bit_length == 3
+    assert pat_b.fixedmask == 0x5
+    assert pat_b.fixedbits == 0x5
