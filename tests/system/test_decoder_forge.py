@@ -72,6 +72,8 @@ def test_generate_code_armv7m(project_path):
         (b"\xf4\x4f\x43\x00", ns["MovImmediate"](flags=ISF.I32BIT, d=3, imm32=0x8000)),
         # movw    r3, #1234 ; 0x4d2
         (b"\xf2\x40\x43\xd2", ns["MovImmediate"](flags=ISF.I32BIT, d=3, imm32=1234)),
+        # movs	r0, #22
+        (b"\x20\x16", ns["MovImmediate"](flags=ISF.SET, d=0, imm32=22)),
         # add r1, pc, #196
         (b"\xa1\x31", ns["AddPcPlusImmediate"](flags=ISF.ADD, d=1, imm32=196)),
         # bkpt 0x00ab
@@ -82,24 +84,35 @@ def test_generate_code_armv7m(project_path):
         (b"\xf8\xdf\x80\xe4", ns["LdrLiteral"](flags=ISF.I32BIT + ISF.ADD, t=8, imm32=228)),
         # mov r3, r5
         (b"\x46\x2b", ns["MovRegister"](flags=0x0, d=3, m=5)),
+        # movs r2, r3
+        (b"\x00\x1a", ns["MovRegister"](flags=ISF.SET, d=2, m=3)),
         # mov.w	r3, r1, lsr #9 / LSR r3,r1,#9
         (b"\xea\x4f\x23\x51", ns["LsrImmediate"](flags=ISF.I32BIT, d=3, m=1, shift_n=9)),
         # movs.w r3, r1, lsr #9 / LSRS r3,r1,#9
         (b"\xea\x5f\x23\x51", ns["LsrImmediate"](flags=ISF.I32BIT + ISF.SET, d=3, m=1, shift_n=9)),
         # lsrs	r3, r5, #6
         (b"\x09\xab", ns["LsrImmediate"](flags=ISF.SET, d=3, m=5, shift_n=6)),
-        # movs	r0, #22
-        (b"\x20\x16", ns["MovImmediate"](flags=ISF.SET, d=0, imm32=22)),
         # nop
         (b"\xbf\00", ns["Nop"](flags=0x0)),
         # nop.w
         (b"\xf3\xaf\x80\x00", ns["Nop"](flags=ISF.I32BIT)),
         # adc.w	r4, r4, #253 ; 0xfd
         (b"\xf1\x44\x04\xfd", ns["AdcImmediate"](flags=ISF.I32BIT, d=4, n=4, imm32=253)),
-        # adc.w	r1, r1, r4, lsl #20
-        (b"\xeb\x41\x51\x04", ns["AdcRegister"](flags=ISF.I32BIT, d=1, n=1, m=4, shift_t=1, shift_n=20)),
+        # adds	r0, r7, #4
+        (b"\x1d\x38", ns["AddImmediate"](flags=ISF.SET, d=0, n=7, imm32=0x4)),
+        # add r1, r1, #1
+        (b"\x31\x01", ns["AddImmediate"](flags=ISF.SET, d=1, n=1, imm32=0x1)),
+        # add.w r0, r12, #10
+        (b"\xf2\x1c\x00\x10", ns["AddImmediate"](flags=ISF.I32BIT, d=0, n=12, imm32=0x10)),
         # add.w r1, r1, #1048576 ; 0x100000
         (b"\xf5\x01\x11\x80", ns["AddImmediate"](flags=ISF.I32BIT, d=1, n=1, imm32=0x100000)),
+        # adc.w	r1, r1, r4, lsl #20
+        (b"\xeb\x41\x51\x04", ns["AdcRegister"](flags=ISF.I32BIT, d=1, n=1, m=4, shift_t=1, shift_n=20)),
+        # movs.w	ip, r0
+        (b"\xea\x5f\x0c\x00",  ns["MovRegister"](flags=ISF.SET+ ISF.I32BIT, d=12, m=0)),
+
+        # adcs	r5, r5
+        (b"\x41\x6d",  ns["AdcRegister"](flags=ISF.SET, d=5, n=5, m=5, shift_t=1, shift_n=0)),
     ]
     # fmt: on
 

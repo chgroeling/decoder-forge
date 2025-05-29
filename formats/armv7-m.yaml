@@ -259,6 +259,7 @@ deffun:
 
   is_set_bit: {op: is_not_equal, left: {op: and, args: [flags, {op: call, expr: "flag_set()"}]}, right: "0b0000"}
 
+  is_not_set_bit: {op: is_equal, left: {op: and, args: [flags, {op: call, expr: "flag_set()"}]}, right: "0b0000"}
 
   append_flags_set_not_it_block:
     op: if
@@ -284,7 +285,23 @@ deffun:
 
   # Check if unpred
   # ===
-  
+
+  cond_x_13:
+    op: braces
+    expr: {op: is_equal, left: "$x", right: "13"}
+
+  cond_x_15:
+    op: braces
+    expr: {op: is_equal, left: "$x", right: "15"}
+
+  cond_xy_13_15:
+    op: logical_or
+    args:
+    - {op: call, expr: "cond_x_13(x=$x)"}
+    - {op: call, expr: "cond_x_15(x=$x)"}
+    - {op: call, expr: "cond_x_13(x=$y)"}
+    - {op: call, expr: "cond_x_15(x=$y)"}
+    
   # if InITBlock() && !LastInITBlock() then UNPREDICTABLE;
   unpred_if_it_block_not_last_in_it_block:
     op: if
@@ -319,13 +336,7 @@ deffun:
   # if $x=13 || $x == 15 || $y==13 || $y ==15 then UNPREDICTABLE;
   unpred_if_x_sp_or_x_pc_or_y_sp_or_y_pc:
     op: if
-    cond:
-      op: logical_or
-      args:
-      - {op: braces, expr: {op: is_equal, left: "$x", right: "13"}}
-      - {op: braces, expr: {op: is_equal, left: "$x", right: "15"}}
-      - {op: braces, expr: {op: is_equal, left: "$y", right: "13"}}
-      - {op: braces, expr: {op: is_equal, left: "$y", right: "15"}}
+    cond: {op: call, expr: "cond_xy_13_15(x=$x, y=$y)"}
     then: {op: return, expr: Unpredictable(instr)}
 
   # if $x=13 || ($x == 15 && set_flag) || $y ==15 then UNPREDICTABLE;
@@ -344,6 +355,41 @@ deffun:
       - {op: braces, expr: {op: is_equal, left: "$y", right: "15"}}
     then: {op: return, expr: Unpredictable(instr)}
 
+
+  # if setflags && (d IN {13,15} || m IN {13,15}) then UNPREDICTABLE;
+  unpred_if_s_and_x_sp_or_x_pc_or_y_sp_or_y_pc:
+    op: if
+    cond:
+      op: logical_and
+      args:
+      - {op: braces, expr: {op: call, expr: "is_set_bit()"}}
+      - op: braces
+        expr: {op: call, expr: "cond_xy_13_15(x=$x, y=$y)"}
+    then: {op: return, expr: Unpredictable(instr)}
+    
+  # if !setflags && (d == 15 || m == 15 || (d == 13 && m == 13)) then UNPREDICTABLE;
+  unpred_if_not_s_and_x_pc_or_y_pc_or_xy_sp:
+    op: if
+    cond:
+      op: logical_and
+      args:
+      - {op: braces, expr: {op: call, expr: "is_not_set_bit()"}}
+      - op: braces
+        expr:
+          op: logical_or
+          args:
+          - {op: braces, expr: {op: is_equal, left: "$x", right: "15"}}
+          - {op: braces, expr: {op: is_equal, left: "$y", right: "15"}}
+          - op: braces
+            expr:
+              op: logical_and
+              args:
+              - {op: braces, expr: {op: is_equal, left: "$x", right: "13"}}
+              - {op: braces, expr: {op: is_equal, left: "$y", right: "13"}}
+              
+    then: {op: return, expr: Unpredictable(instr)}
+
+  
   # if $x=13 || $x == 15 || $y==13 || $y ==15 || $z==13 || $z ==15 then UNPREDICTABLE;
   unpred_if_x_sp_or_x_pc_or_y_sp_or_y_pc_or_z_sp_or_z_pc:
     op: if
@@ -518,6 +564,21 @@ deffun:
         - {op: braces, expr: {op: shiftleft, left: _imm3, right: 8}}
         - {op: braces, expr: {op: shiftleft, left: _imm8, right: 0}}
 
+  extract_imm32_12bit_parts:
+    op: seq
+    exprs:
+    - {op: call, expr: "extract_bit_and_assign(res=_imm8, msb=h.7, lsb=h.0)"}
+    - {op: call, expr: "extract_bit_and_assign(res=_imm3, msb=h.14, lsb=h.12)"}
+    - {op: call, expr: "extract_bit_and_assign(res=_i, msb=l.10, lsb=l.10)"}
+    - op: assign
+      target: imm32
+      expr:
+        op: or
+        args:
+        - {op: braces, expr: {op: shiftleft, left: _i, right: 11}}
+        - {op: braces, expr: {op: shiftleft, left: _imm3, right: 8}}
+        - {op: braces, expr: {op: shiftleft, left: _imm8, right: 0}}
+
   extract_imm32_16bit_7_0_sl2:
     op: assign
     target: imm32
@@ -527,10 +588,17 @@ deffun:
       right: 2
       
   extract_imm32_16bit_7_0: {op: assign, target: imm32, expr: {op: call, expr: "extract_bit(val=instr, res=imm32, msb=l.7, lsb=l.0)"}}
+  extract_imm32_16bit_8_6: {op: assign, target: imm32, expr: {op: call, expr: "extract_bit(val=instr, res=imm32, msb=l.8, lsb=l.6)"}}
   extract_imm32_11_0: {op: assign, target: imm32, expr: {op: call, expr: "extract_bit(val=instr, res=imm32, msb=11, lsb=0)"}}
 
-  # shift_n
+  # shift_n / shift_t
   # ===
+  set_lsl_0:
+    op: seq
+    exprs:
+    - {op: assign, target: shift_t, expr: "0b001", comment: "SRType_LSL"}
+    - {op: assign, target: shift_n, expr: "0b0"}
+    
   extract_shift_n_imm_2_3:
     op: seq
     exprs:
@@ -604,15 +672,31 @@ deffun:
 
   # Register n
   # ===
+  extract_n_16bit_5_3: {op: assign, target: n, expr: {op: call, expr: "extract_bit(val=instr, msb=l.5, lsb=l.3)"}}
+
   extract_n_19_16: {op: assign, target: n, expr: {op: call, expr: "extract_bit(val=instr, msb=l.3, lsb=l.0)"}}
-  
+
+  # Register d,n
+  # ===
+  extract_dn_16bit_2_0:
+    op: seq
+    exprs:
+      - {op: assign, target: n, expr: {op: call, expr: "extract_bit(val=instr, msb=l.2, lsb=l.0)"}}
+      - {op: assign, target: d, expr: n}
+
+  extract_dn_16bit_26_24:
+    op: seq
+    exprs:
+      - {op: assign, target: n, expr: {op: call, expr: "extract_bit(val=instr, msb=l.3, lsb=l.0)"}}
+      - {op: assign, target: d, expr: n}
+
 patterns:
 
   # AdcImmediate
   11110x01010xxxxx0xxxxxxxxxxxxxxx: {name: adc_immediate_t1, to: AdcImmediate, call: [set_flags_32bit(), append_flags_set_s_20(), extract_d_11_8(), extract_n_19_16(), extract_imm32_thumb_expand(), "unpred_if_x_sp_or_x_pc_or_y_sp_or_y_pc(x=d, y=n)" ]}
 
   # AdcRegister
-  0100000101xxxxxx: {name: adc_register_t1, to: AdcRegister, call: [set_flags_16bit()]}
+  0100000101xxxxxx: {name: adc_register_t1, to: AdcRegister, call: [set_flags_16bit(),  extract_m_16bit_5_3(), extract_dn_16bit_2_0(), append_flags_set_not_it_block(), set_lsl_0() ]}
   11101011010xxxxx0xxxxxxxxxxxxxxx: {name: adc_register_t2, to: AdcRegister, call: [set_flags_32bit(), append_flags_set_s_20(), extract_n_19_16(), extract_d_11_8(), extract_m_3_0(), extract_shift_n_shift_t_imm_2_3(), "unpred_if_x_sp_or_x_pc_or_y_sp_or_y_pc_or_z_sp_or_z_pc(x=n, y=m, z=d)"]}
 
   # AddRegister
@@ -621,10 +705,10 @@ patterns:
   11101011000xxxxx0xxxxxxxxxxxxxxx: {name: add_register_t3, to: AddRegister, call: [set_flags_32bit()]}
 
   # AddImmediate
-  0001110xxxxxxxxx: {name: add_immediate_t1, to: AddImmediate, call: [set_flags_16bit()]}
-  00110xxxxxxxxxxx: {name: add_immediate_t2, to: AddImmediate, call: [set_flags_16bit()]}
+  0001110xxxxxxxxx: {name: add_immediate_t1, to: AddImmediate, call: [set_flags_16bit(), extract_n_16bit_5_3(),  extract_d_16bit_2_0(), extract_imm32_16bit_8_6(), append_flags_set_not_it_block()]}
+  00110xxxxxxxxxxx: {name: add_immediate_t2, to: AddImmediate, call: [set_flags_16bit(), extract_dn_16bit_26_24(), extract_imm32_16bit_7_0(), append_flags_set_not_it_block()]}
   11110x01000xxxxx0xxxxxxxxxxxxxxx: {name: add_immediate_t3, to: AddImmediate, call: [set_flags_32bit(), append_flags_set_s_20(), extract_n_19_16(), extract_d_11_8(), extract_imm32_thumb_expand(), "unpred_if_x_sp_or_x_pc_S_or_y_pc(x=d, y=n)"]}
-  11110x10000xxxxx0xxxxxxxxxxxxxxx: {name: add_immediate_t4, to: AddImmediate, call: [set_flags_32bit()]}
+  11110x10000xxxxx0xxxxxxxxxxxxxxx: {name: add_immediate_t4, to: AddImmediate, call: [set_flags_32bit(), extract_n_19_16(), extract_d_11_8(), extract_imm32_12bit_parts(), "unpred_if_x_sp_or_d_pc(x=d)"]}
 
   # AddPcPlusImmediate
   10100xxxxxxxxxxx: {name: add_pc_plus_immediate_t1, to: AddPcPlusImmediate, call: [set_flags_16bit(), append_flags_add(), extract_d_16bit_10_8(), extract_imm32_16bit_7_0_sl2()]}
@@ -650,8 +734,8 @@ patterns:
 
   # MovRegister
   01000110xxxxxxxx: {name: mov_register_t1, to: MovRegister, call: [set_flags_16bit(), extract_d_16bit_7_7_2_0(), extract_m_16bit_6_3(), unpred_if_x_pc_it_block_not_last_in_it_block(x=d)]}
-  0000000000xxxxxx: {name: mov_register_t2, to: MovRegister, call: [set_flags_16bit()]}
-  11101010010x11110000xxxx0000xxxx: {name: mov_register_t3, to: MovRegister, call: [set_flags_32bit()]}
+  0000000000xxxxxx: {name: mov_register_t2, to: MovRegister, call: [set_flags_16bit(), extract_m_16bit_5_3(), extract_d_16bit_2_0(), append_flags_set()]}
+  11101010010x11110000xxxx0000xxxx: {name: mov_register_t3, to: MovRegister, call: [set_flags_32bit(), extract_d_11_8(), extract_m_3_0(), append_flags_set_s_20(), "unpred_if_s_and_x_sp_or_x_pc_or_y_sp_or_y_pc(x=d, y=m)", "unpred_if_not_s_and_x_pc_or_y_pc_or_xy_sp(x=d, y=m)"]}
 
   # MovImmediate
   00100xxxxxxxxxxx: {name: mov_immediate_t1, to: MovImmediate, call: [set_flags_16bit(), append_flags_set_not_it_block(), append_flags_carry_if_apsr_c(), extract_d_16bit_10_8(), extract_imm32_16bit_7_0()]}

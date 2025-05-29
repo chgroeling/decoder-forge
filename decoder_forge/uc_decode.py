@@ -58,11 +58,12 @@ def uc_decode(
     size_bytes = ns["get_size_eval_bytes"]()
     decoder_bytes = ns["get_decoder_eval_bytes"]()
 
+    adr = 0xD4
     with open(bin_file, "rb") as fp:
 
-        fp.seek(0xD4)
+        fp.seek(adr)
 
-        for i in range(0, 30):
+        for i in range(0, 50000):
 
             raw_size_code = fp.read(size_bytes)
             # read the part of the code which is necessary to estimate its size
@@ -77,13 +78,13 @@ def uc_decode(
             if to_shift > 0:
                 short_instr = data_for_size_eval
                 instr = short_instr << (to_shift * 8)
-                print(f"{adr:4} {hex(short_instr):10} ", end="")
+                print(f"{hex(adr):4} {hex(short_instr):10} ", end="")
                 adr += 2
             else:
                 missing_bytes = decoder_bytes - size_bytes
                 instr = data_for_size_eval << (missing_bytes * 8)
                 instr |= int.from_bytes(fp.read(missing_bytes), "little")
-                print(f"{adr:4} {hex(instr):10} ", end="")
+                print(f"{hex(adr):4} {hex(instr):10} ", end="")
                 adr += 4
 
             # decode
