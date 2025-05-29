@@ -77,7 +77,7 @@ def test_uc_generate_code_generate_and_eval_0x40_test_context_updated():
     assert context.context1 == 0x0
 
     # call the decoder
-    _ = test_namespace["decode"](code=0x40, context=context)
+    _ = test_namespace["decode"](instr=0x40, context=context)
 
     assert context.context1 == 0xCAFE
 

@@ -2,6 +2,7 @@ import subprocess
 import pytest
 import pathlib
 from enum import IntFlag
+from math import ceil
 
 
 class InstrFlags(IntFlag):
@@ -9,6 +10,7 @@ class InstrFlags(IntFlag):
     SET = 0b0010  # 2
     ADD = 0b0100  # 4
     CARRY = 0b1000  # 8
+
 
 @pytest.fixture
 def project_path(request):
@@ -34,17 +36,20 @@ def test_generate_code_armv7m(project_path):
         check=True,
         capture_output=True,
     )
-    code = None
+    instr = None
     with open(decoder_file, "r") as f:
-        code = f.read()
+        instr = f.read()
 
-    compiled_code = compile(code, decoder_file, "exec")
+    compiled_code = compile(instr, decoder_file, "exec")
 
     ns = {}
     exec(compiled_code, ns)
 
     Context = ns["Context"]
     decode = ns["decode"]
+    decode_size = ns["decode_size"]
+    size_bytes = ns["get_size_eval_bytes"]()
+    instr_bytes = ns["get_decoder_eval_bytes"]()
     ISF = InstrFlags
     # fmt: off
 
@@ -95,15 +100,13 @@ def test_generate_code_armv7m(project_path):
         (b"\xeb\x41\x51\x04", ns["AdcRegister"](flags=ISF.I32BIT, d=1, n=1, m=4, shift_t=1, shift_n=20)),
         # add.w r1, r1, #1048576 ; 0x100000
         (b"\xf5\x01\x11\x80", ns["AddImmediate"](flags=ISF.I32BIT, d=1, n=1, imm32=0x100000)),
-        
-     
     ]
     # fmt: on
+
     data = bytes()
     for adr in tests:
         data = data + adr[0]
 
-    data += b"\x00" * 2
     context = Context()
 
     def translate_flags(flags):
@@ -113,13 +116,22 @@ def test_generate_code_armv7m(project_path):
     i = 0
 
     while i < len(tests):
-        code = int.from_bytes(data[adr : adr + 4])
-        out = decode(code, context=context)
+        # read the part of the code which is necessary to estimate its size
+        data_for_size_eval = int.from_bytes(data[adr : adr + size_bytes])
+
+        # calculate size of the following code
+        instr_size = int(ceil(decode_size(data_for_size_eval) / 8))
+
+        # read the code
+        instr = int.from_bytes(data[adr : adr + instr_size])
+
+        # align it to ths msb of der decoder size
+        right_shift = (instr_bytes - instr_size) * 8
+        instr = instr << right_shift
+
+        # decode
+        out = decode(instr, context=context)
 
         assert out == tests[i][1]
-        if translate_flags(out.flags) & ISF.I32BIT:
-            adr += 4
-        else:
-            adr += 2
-
+        adr += instr_size
         i += 1

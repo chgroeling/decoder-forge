@@ -93,7 +93,7 @@ struct_def:
   Umull: {members: [flags]}
   Uxtb: {members: [flags]}
   Uxth: {members: [flags]}
-  Unpredictable: {members: [code]}
+  Unpredictable: {members: [instr]}
   
 deffun:
 
@@ -114,7 +114,7 @@ deffun:
   extract_bit_and_assign:
     op: assign
     target: $res
-    expr: {op: call, expr: "extract_bit(val=code, msb=$msb, lsb=$lsb)"}
+    expr: {op: call, expr: "extract_bit(val=instr, msb=$msb, lsb=$lsb)"}
 
   # bit_mask 1 << $bit
   bit_mask:
@@ -267,12 +267,12 @@ deffun:
 
   append_flags_set_s_20:
     op: if
-    cond: {op: is_equal, left: {op: call, expr: "extract_bit(val=code, msb=l.4, lsb=l.4)"}, right: "1"}
+    cond: {op: is_equal, left: {op: call, expr: "extract_bit(val=instr, msb=l.4, lsb=l.4)"}, right: "1"}
     then: {op: call, expr: "append_flags_set()"}
 
   append_flags_add_u_23:
     op: if
-    cond: {op: call, expr: "extract_bit(val=code, msb=l.7, lsb=l.7)"}
+    cond: {op: call, expr: "extract_bit(val=instr, msb=l.7, lsb=l.7)"}
     then: {op: call, expr: "append_flags_add()"}
 
   append_flags_carry_if_apsr_c:
@@ -293,7 +293,7 @@ deffun:
       args:
       - {op: braces, expr: {op: call, expr: "in_it_block()"}}
       - {op: logical_not,expr: {op: braces, expr: {op: call, expr: "last_in_it_block()"}}}
-    then: {op: return, expr: "Unpredictable(code)"}
+    then: {op: return, expr: "Unpredictable(instr)"}
 
   # if $x == 15 && InITBlock() && !LastInITBlock() then UNPREDICTABLE;
   unpred_if_x_pc_it_block_not_last_in_it_block:
@@ -304,7 +304,7 @@ deffun:
       - {op: braces, expr: {op: is_equal, left: "$x", right: "15"}}
       - {op: braces, expr: {op: call, expr: "in_it_block()"}}
       - {op: logical_not, expr: {op: braces, expr: {op: call, expr: "last_in_it_block()"}}}
-    then: {op: return, expr: "Unpredictable(code)"}
+    then: {op: return, expr: "Unpredictable(instr)"}
 
   # if $x=13 || $x == 15 then UNPREDICTABLE;
   unpred_if_x_sp_or_d_pc:
@@ -314,7 +314,7 @@ deffun:
       args:
       - {op: is_equal, left: $x, right: 13}
       - {op: is_equal, left: $x, right: 15}
-    then: {op: return, expr: Unpredictable(code)}
+    then: {op: return, expr: Unpredictable(instr)}
 
   # if $x=13 || $x == 15 || $y==13 || $y ==15 then UNPREDICTABLE;
   unpred_if_x_sp_or_x_pc_or_y_sp_or_y_pc:
@@ -326,7 +326,7 @@ deffun:
       - {op: braces, expr: {op: is_equal, left: "$x", right: "15"}}
       - {op: braces, expr: {op: is_equal, left: "$y", right: "13"}}
       - {op: braces, expr: {op: is_equal, left: "$y", right: "15"}}
-    then: {op: return, expr: Unpredictable(code)}
+    then: {op: return, expr: Unpredictable(instr)}
 
   # if $x=13 || ($x == 15 && set_flag) || $y ==15 then UNPREDICTABLE;
   unpred_if_x_sp_or_x_pc_S_or_y_pc:
@@ -342,7 +342,7 @@ deffun:
           - {op: braces, expr: {op: is_equal, left: "$x", right: "15"}}
           - {op: braces, expr: {op: call, expr: "is_set_bit()"}}
       - {op: braces, expr: {op: is_equal, left: "$y", right: "15"}}
-    then: {op: return, expr: Unpredictable(code)}
+    then: {op: return, expr: Unpredictable(instr)}
 
   # if $x=13 || $x == 15 || $y==13 || $y ==15 || $z==13 || $z ==15 then UNPREDICTABLE;
   unpred_if_x_sp_or_x_pc_or_y_sp_or_y_pc_or_z_sp_or_z_pc:
@@ -356,7 +356,7 @@ deffun:
       - {op: braces, expr: {op: is_equal, left: "$y", right: "15"}}
       - {op: braces, expr: {op: is_equal, left: "$z", right: "13"}}
       - {op: braces, expr: {op: is_equal, left: "$z", right: "15"}}
-    then: {op: return, expr: Unpredictable(code)}
+    then: {op: return, expr: Unpredictable(instr)}
 
   # imm32
   # ===
@@ -386,7 +386,7 @@ deffun:
             exprs:
             - op: if
               cond: {op: is_equal, left: _in8, right: "0"}
-              then: {op: return, expr: Unpredictable(code)}
+              then: {op: return, expr: Unpredictable(instr)}
             - op: assign
               target: $res
               expr:
@@ -401,7 +401,7 @@ deffun:
             exprs:
             - op: if
               cond: {op: is_equal, left: _in8, right: "0"}
-              then: {op: return, expr: Unpredictable(code)}
+              then: {op: return, expr: Unpredictable(instr)}
             - op: assign
               target: $res
               expr:
@@ -416,7 +416,7 @@ deffun:
             exprs:
             - op: if
               cond: {op: is_equal, left: _in8, right: "0"}
-              then: {op: return, expr: Unpredictable(code)}
+              then: {op: return, expr: Unpredictable(instr)}
             - op: assign
               target: $res
               expr:
@@ -523,11 +523,11 @@ deffun:
     target: imm32
     expr:
       op: shiftleft
-      left: {op: braces, expr: {op: call, expr: "extract_bit(val=code, msb=l.7, lsb=l.0)"}}
+      left: {op: braces, expr: {op: call, expr: "extract_bit(val=instr, msb=l.7, lsb=l.0)"}}
       right: 2
       
-  extract_imm32_16bit_7_0: {op: assign, target: imm32, expr: {op: call, expr: "extract_bit(val=code, res=imm32, msb=l.7, lsb=l.0)"}}
-  extract_imm32_11_0: {op: assign, target: imm32, expr: {op: call, expr: "extract_bit(val=code, res=imm32, msb=11, lsb=0)"}}
+  extract_imm32_16bit_7_0: {op: assign, target: imm32, expr: {op: call, expr: "extract_bit(val=instr, res=imm32, msb=l.7, lsb=l.0)"}}
+  extract_imm32_11_0: {op: assign, target: imm32, expr: {op: call, expr: "extract_bit(val=instr, res=imm32, msb=11, lsb=0)"}}
 
   # shift_n
   # ===
@@ -571,8 +571,8 @@ deffun:
   
   # Register d
   # ===
-  extract_d_16bit_2_0: {op: assign, target: d, expr: {op: call, expr: "extract_bit(val=code, res=d, msb=l.2, lsb=l.0)"}}
-  extract_d_16bit_10_8: {op: assign, target: d, expr: {op: call, expr: "extract_bit(val=code, res=d, msb=l.10, lsb=l.8)"}}
+  extract_d_16bit_2_0: {op: assign, target: d, expr: {op: call, expr: "extract_bit(val=instr, res=d, msb=l.2, lsb=l.0)"}}
+  extract_d_16bit_10_8: {op: assign, target: d, expr: {op: call, expr: "extract_bit(val=instr, res=d, msb=l.10, lsb=l.8)"}}
   extract_d_16bit_7_7_2_0:
     op: assign
     target: d
@@ -584,27 +584,27 @@ deffun:
           op: shiftleft
           left:
             op: braces
-            expr: {op: call, expr: "extract_bit(val=code, res=d, msb=l.7, lsb=l.7)"}
+            expr: {op: call, expr: "extract_bit(val=instr, res=d, msb=l.7, lsb=l.7)"}
           right: 2
-      - {op: braces, expr: {op: call, expr: "extract_bit(val=code, res=d, msb=l.2, lsb=l.0)"}}
-    comment: "(code[7:7] <<3) | code[2:0]"
-  extract_d_11_8: {op: assign, target: d, expr: {op: call, expr: "extract_bit(val=code, res=d, msb=h.11, lsb=h.8)"}}  
+      - {op: braces, expr: {op: call, expr: "extract_bit(val=instr, res=d, msb=l.2, lsb=l.0)"}}
+    comment: "(instr[7:7] <<3) | instr[2:0]"
+  extract_d_11_8: {op: assign, target: d, expr: {op: call, expr: "extract_bit(val=instr, res=d, msb=h.11, lsb=h.8)"}}  
 
 
   # Register t
   # ===
-  extract_t_16bit_10_8: {op: assign, target: t, expr: {op: call, expr: "extract_bit(val=code, msb=l.10, lsb=l.8)"}}
-  extract_t_15_12: {op: assign, target: t, expr: {op: call, expr: "extract_bit(val=code, res=t, msb=h.15, lsb=h.12)"}}
+  extract_t_16bit_10_8: {op: assign, target: t, expr: {op: call, expr: "extract_bit(val=instr, msb=l.10, lsb=l.8)"}}
+  extract_t_15_12: {op: assign, target: t, expr: {op: call, expr: "extract_bit(val=instr, res=t, msb=h.15, lsb=h.12)"}}
 
   # Register m
   # ===
-  extract_m_3_0: {op: assign, target: m, expr: {op: call, expr: "extract_bit(val=code, msb=h.3, lsb=h.0)"}}
-  extract_m_16bit_5_3: {op: assign, target: m, expr: {op: call, expr: "extract_bit(val=code, msb=l.5, lsb=l.3)"}}
-  extract_m_16bit_6_3: {op: assign, target: m, expr: {op: call, expr: "extract_bit(val=code, msb=l.6, lsb=l.3)"}}
+  extract_m_3_0: {op: assign, target: m, expr: {op: call, expr: "extract_bit(val=instr, msb=h.3, lsb=h.0)"}}
+  extract_m_16bit_5_3: {op: assign, target: m, expr: {op: call, expr: "extract_bit(val=instr, msb=l.5, lsb=l.3)"}}
+  extract_m_16bit_6_3: {op: assign, target: m, expr: {op: call, expr: "extract_bit(val=instr, msb=l.6, lsb=l.3)"}}
 
   # Register n
   # ===
-  extract_n_19_16: {op: assign, target: n, expr: {op: call, expr: "extract_bit(val=code, msb=l.3, lsb=l.0)"}}
+  extract_n_19_16: {op: assign, target: n, expr: {op: call, expr: "extract_bit(val=instr, msb=l.3, lsb=l.0)"}}
   
 patterns:
 

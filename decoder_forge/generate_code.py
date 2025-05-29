@@ -14,6 +14,7 @@ from decoder_forge.pattern_algorithms import DecodeTree
 from decoder_forge.print_tree import print_tree
 from uuid import uuid1
 from decoder_forge.i_printer import IPrinter
+from math import ceil
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,6 @@ def minimalize_tree(pat, children, f_guid_to_data, duid_to_data):
 
 
 def minimalize_tree_with_data_algo(tree, f_guid_to_data, duid_to_data=dict()):
-
     children = []
     for item in tree.children:
         if isinstance(item, DecodeTree):
@@ -79,6 +79,11 @@ def minimalize_tree_with_data_algo(tree, f_guid_to_data, duid_to_data=dict()):
 def minimalize_tree_with_data(tree, f_guid_to_data):
     duid_to_data = dict()
     data_tree = minimalize_tree_with_data_algo(tree, f_guid_to_data, duid_to_data)
+
+    # all patterns match
+    if isinstance(data_tree, DecodeLeaf):
+        return None, duid_to_data
+
     return data_tree, duid_to_data
 
 
@@ -159,27 +164,68 @@ def generate_code(input_yaml, decoder_width, tengine, printer):
     # build decode tree
     pats_with_uid = [(i, pat_to_uid[i]) for i in pats]
 
-    decode_tree = build_decode_tree_by_fixed_bits(
-        pats_with_uid, decoder_width=decoder_width
-    )
+    # only build decode tree when patterns are assigned
+    if len(pats_with_uid) != 0:
+        max_decoder_bits = max((i.bit_length for i in pats))
+        min_decoder_bits = min((i.bit_length for i in pats))
 
-    flat_decode_tree = flatten_decode_tree(decode_tree)
+        if max_decoder_bits > decoder_width:
+            raise ValueError("Patterns are to long for given decoder width")
 
-    #size_tree, size_dict = minimalize_tree_with_data(
-    #     decode_tree, lambda guid: uid_to_pat[guid].bit_length
-    # )
+        decode_tree = build_decode_tree_by_fixed_bits(
+            pats_with_uid, decoder_width=decoder_width
+        )
+        flat_decode_tree = flatten_decode_tree(decode_tree)
+    else:
+        decoder_width = 0
+        max_decoder_bits = 0
+        min_decoder_bits = 0
 
-    op = OutPrinter()
+        decode_tree = None
+        flat_decode_tree = list()
 
-    #def uid_to_size(uid):
-    #    if uid not in size_dict:
-    #        return uid
-    #    return f"{size_dict[uid]}"
+    sliced_flat_size_tree = list()
+    size_dict = dict()
+    default_size = decoder_width
+    needed_bytes_for_size_eval = int(ceil(min_decoder_bits / 8))
+    needed_bytes_for_code_eval = int(ceil(decoder_width / 8))
 
-    #print_tree(op, size_tree, uid_to_size)
-    #print(size_dict)
+    # only build size tree if decode tree was created
+    if decode_tree is not None:
+
+        size_tree, size_dict = minimalize_tree_with_data(
+            decode_tree, lambda guid: uid_to_pat[guid].bit_length
+        )
+
+        def uid_to_size(uid):
+            if uid not in size_dict:
+                return uid
+            return f"{size_dict[uid]}"
+
+        sliced_flat_size_tree = list()
+
+        if size_tree is not None:
+
+            flat_size_tree = flatten_decode_tree(size_tree)
+
+            needed_bits_for_size_eval = decoder_width - max(
+                (i.trailing_wildcard_count for i, _, _, _, _ in flat_size_tree)
+            )
+
+            required_bytes_for_size_eval = int(ceil(needed_bits_for_size_eval / 8))
+
+            if required_bytes_for_size_eval > needed_bytes_for_size_eval:
+                raise ValueError("Size decoder needs more bits than smalles pattern")
+
+            sliced_flat_size_tree = [
+                (pat.extract_from_msb(needed_bytes_for_size_eval * 8), a, b, c, d)
+                for pat, a, b, c, d in flat_size_tree
+            ]
+
+            # with an existing size decoder the default is always wrong
+            default_size = 0
+
     tengine.load("python")
-
     deffun = ins["deffun"]
 
     def tcall(expr, placeholders=dict()):
@@ -220,11 +266,16 @@ def generate_code(input_yaml, decoder_width, tengine, printer):
 
     context = {
         "pat_repo": pat_repo,
+        "size_dict": size_dict,
         "uid_to_pat": uid_to_pat,
         "as_repo": as_repo,
         "context": context,
         "tcall": tcall,
         "flat_decode_tree": flat_decode_tree,
+        "default_size": default_size,
+        "needed_bytes_for_size_eval": needed_bytes_for_size_eval,
+        "needed_bytes_for_code_eval": needed_bytes_for_code_eval,
+        "sliced_flat_size_tree": sliced_flat_size_tree,
     }
     rendered_code = tengine.generate(context)
 

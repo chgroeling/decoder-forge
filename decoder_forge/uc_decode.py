@@ -5,6 +5,7 @@ from decoder_forge.i_printer import IPrinter
 from decoder_forge.i_template_engine import ITemplateEngine
 from decoder_forge.generate_code import generate_code
 from enum import IntFlag
+from math import ceil
 
 logger = logging.getLogger(__name__)
 
@@ -46,31 +47,45 @@ def uc_decode(
     ns = {}
     exec(compiled_code, ns)
 
-    ISF = InstrFlags
     Context = ns["Context"]
     decode = ns["decode"]
-
-    def translate_flags(flags):
-        return ISF(flags)
+    decode_size = ns["decode_size"]
 
     context = Context()
 
     adr = 0
     i = 0
+    size_bytes = ns["get_size_eval_bytes"]()
+    decoder_bytes = ns["get_decoder_eval_bytes"]()
+
     with open(bin_file, "rb") as fp:
-        fp.seek(0xD2)
 
-        for i in range(0, 10):
-            raw_code = fp.read(4)
-            # print(f"{adr} 0x{raw_code.hex()}")
-            code = int.from_bytes(raw_code, "little")
-            # print(f"{adr} {hex(code)}")
-            out = decode(code, context=context)
+        fp.seek(0xD4)
 
-            print(f"{adr} 0x{raw_code.hex()} {out}")
+        for i in range(0, 30):
 
-            if translate_flags(out.flags) & ISF.I32BIT:
-                adr += 4
-            else:
+            raw_size_code = fp.read(size_bytes)
+            # read the part of the code which is necessary to estimate its size
+            data_for_size_eval = int.from_bytes(raw_size_code, "little")
+
+            # calculate size of the following code
+            act_instr_size = int(ceil(decode_size(data_for_size_eval) / 8))
+
+            to_shift = decoder_bytes - act_instr_size
+
+            # read the code
+            if to_shift > 0:
+                short_instr = data_for_size_eval
+                instr = short_instr << (to_shift * 8)
+                print(f"{adr:4} {hex(short_instr):10} ", end="")
                 adr += 2
-                fp.seek(-2, 1)
+            else:
+                missing_bytes = decoder_bytes - size_bytes
+                instr = data_for_size_eval << (missing_bytes * 8)
+                instr |= int.from_bytes(fp.read(missing_bytes), "little")
+                print(f"{adr:4} {hex(instr):10} ", end="")
+                adr += 4
+
+            # decode
+            out = decode(instr, context=context)
+            print(out)

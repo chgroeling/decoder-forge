@@ -5,7 +5,7 @@
         elif{{" "}}
     {%- endif -%}
 
-    (code & {{-" 0x%x" % pat.fixedmask}}) == {{"0x%x" % pat.fixedbits-}}:  # {{pat}}
+    (instr & {{-" 0x%x" % pat.fixedmask}}) == {{"0x%x" % pat.fixedbits-}}:  # {{pat}}
 {%- endmacro -%}
 
 {% macro gen_pat(pat, first_child, origin) -%}
@@ -34,9 +34,23 @@
     {%- endif %}
 {%- endmacro -%}
 
-{% macro no_match() -%}
-    return Undef(code)  # no match
+{% macro gen_pat_data(pat, first_child, data) -%}
+    {{ match_pat(pat, first_child) }}
+    {%- if data == None %}
+    {%- else %}
+        return {{data}}
+    {%- endif %}
 {%- endmacro -%}
+
+
+{% macro no_match() -%}
+    return Undef(instr)  # no match
+{%- endmacro -%}
+
+{% macro no_match_return_default() -%}
+    return {{default_size}}  # no match
+{%- endmacro -%}
+
 
 from dataclasses import dataclass
 {{""}}
@@ -66,7 +80,35 @@ class {{struct.name}}:
 {%- endfor -%}
 
 {{""}}
-def decode(code: int, context: Context):
+def get_size_eval_bytes():
+    return {{needed_bytes_for_size_eval}};
+    
+{{""}}
+def decode_size(instr: int):
+{%- for pat, uid, depth, first_child, last_child in sliced_flat_size_tree %}       
+    {%- set size = size_dict[uid] | default(None) %}
+    {{ gen_pat_data(pat, first_child, size) | indent(depth*4, first=True) }}
+    {%- if loop.nextitem is defined %}
+        {%- set backtrack = depth-loop.nextitem[2] %}
+        {%- if backtrack > 0 %}
+            {%- for bs in range(0, backtrack) %}
+        {{no_match_return_default() | indent((depth-bs-1)*4, first=True)}}
+            {%- endfor %}
+        {%- endif %}
+    {%- else %}
+        {%- if depth>0 %}
+        {{no_match_return_default() | indent((depth-1)*4, first=True)}}
+        {%- endif %}               
+    {%- endif %}
+{%- endfor %}
+    {{no_match_return_default()}}
+
+{{""}}
+def get_decoder_eval_bytes():
+    return {{needed_bytes_for_code_eval}};
+
+{{""}}
+def decode(instr: int, context: Context):
 {%- for pat, uid, depth, first_child, last_child in flat_decode_tree %}       
     {%- set origin = uid_to_pat[uid] | default(None) %}
     {{ gen_pat(pat, first_child, origin) | indent(depth*4, first=True) }}
@@ -78,7 +120,9 @@ def decode(code: int, context: Context):
             {%- endfor %}
         {%- endif %}
     {%- else %}
+        {%- if depth>0 %}
         {{no_match() | indent((depth-1)*4, first=True)}}
+        {%- endif %}               
     {%- endif %}
 {%- endfor %}
-    return Undef(code) # no match
+    {{no_match()}}

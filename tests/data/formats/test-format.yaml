@@ -6,13 +6,13 @@ struct_def:
   StructB: { }
   StructC: {members: [rc0, rc1]}
   StructD: {members: [rd0]}
-  Unpred: {members: [code]}
+  Unpred: {members: [instr]}
   
 deffun:
   extract_bit:
     op: and
     args:
-    - {op: braces, expr: {op: shiftright, left: code, right: $lsb}}
+    - {op: braces, expr: {op: shiftright, left: instr, right: $lsb}}
     - {op: eval, expr: "hex((1 << (int($msb)-int($lsb)+1)) - 1)"}
 
   extract_bit_and_assign:
@@ -25,7 +25,7 @@ deffun:
   extract_rd0: 
     op: call
     expr: "extract_bit_and_assign(res=rd0, msb=5, lsb=3)"
-    comment: "rd0 = code[5:3]"
+    comment: "rd0 = instr[5:3]"
     
   set_ra0_1 : {op: assign, target: ra0, expr: "1", comment: "ra_0"}
   set_ra1_2 : {op: assign, target: ra1, expr: "2", comment: "ra_1"}
@@ -60,7 +60,7 @@ deffun:
         comment: "set context0"
       - op: return
         comment: "call if 0x3"
-        expr: "Unpred(code)"
+        expr: "Unpred(instr)"
   
 patterns:
   00xxx00x: {name: instr_A0, to: StructA, call: [set_ra0_1(), set_ra1_2()]}
