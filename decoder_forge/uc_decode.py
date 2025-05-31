@@ -18,7 +18,7 @@ class InstrFlags(IntFlag):
     CARRY = 0b1000  # 8
 
 
-class StrPrinter(IPrinter):
+class CodePrinter(IPrinter):
 
     def __init__(self):
         self._file_object = io.StringIO()
@@ -40,7 +40,7 @@ def uc_decode(
     bin_file: str,
 ):
     logger.info("Call: uc_decode")
-    code_printer = StrPrinter()
+    code_printer = CodePrinter()
     generate_code(input_yaml, decoder_width, tengine, code_printer)
     code = code_printer.to_string()
     compiled_code = compile(code, "", "exec")
