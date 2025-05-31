@@ -30,7 +30,7 @@ struct_def:
   EorRegister: {members: [flags]}
   It: {members: [flags]}
   Ldm: {members: [flags]}
-  LdrImmediate: {members: [flags]}
+  LdrImmediate: {members: [flags, t, n, imm32]}
   LdrLiteral: {members: [flags, t, imm32]}
   LdrRegister: {members: [flags]}
   LdrbImmediate: {members: [flags]}
@@ -247,6 +247,8 @@ deffun:
   flag_set: {op: call, expr: bit_mask(bit=0)}
   flag_add: {op: call, expr: bit_mask(bit=1)}
   flag_carry: {op: call, expr: bit_mask(bit=2)}
+  flag_index: {op: call, expr: bit_mask(bit=3)}
+  flag_wback: {op: call, expr: bit_mask(bit=4)}
 
   # set to initial value
   set_flags_def: {op: assign, target: flags, expr: "0x0", comment: "initial value"}
@@ -256,9 +258,15 @@ deffun:
   append_flags_add: {op: call, expr: "append_bitmask(val=flags, bm=&flag_add)", comment: "flags |= Add"}
   append_flags_carry: {op: call, expr: "append_bitmask(val=flags, bm=&flag_carry)", comment: "flags |= Carry"}
 
+  append_flags_index: {op: call, expr: "append_bitmask(val=flags, bm=&flag_index)", comment: "flags |= Index"}
+  
+  append_flags_wback: {op: call, expr: "append_bitmask(val=flags, bm=&flag_wback)", comment: "flags |= Wback"}
+
   is_set_bit: {op: is_not_equal, left: {op: and, args: [flags, {op: call, expr: "flag_set()"}]}, right: "0b0000"}
   is_not_set_bit: {op: is_equal, left: {op: and, args: [flags, {op: call, expr: "flag_set()"}]}, right: "0b0000"}
 
+  is_wback_bit: {op: is_not_equal, left: {op: and, args: [flags, {op: call, expr: "flag_wback()"}]}, right: "0b0000"}
+  
   append_flags_set_not_it_block:
     op: if
     cond: {op: logical_not, expr: {op: call, expr: "in_it_block()"}}
@@ -269,6 +277,21 @@ deffun:
     cond: {op: is_equal, left: {op: call, expr: "extract_bit(val=instr, msb=l.4, lsb=l.4)"}, right: "1"}
     then: {op: call, expr: "append_flags_set()"}
 
+  append_flags_index_p_10:
+    op: if
+    cond: {op: is_equal, left: {op: call, expr: "extract_bit(val=instr, msb=h.10, lsb=h.10)"}, right: "1"}
+    then: {op: call, expr: "append_flags_index()"}
+
+  append_flags_add_u_9:
+    op: if
+    cond: {op: is_equal, left: {op: call, expr: "extract_bit(val=instr, msb=h.9, lsb=h.9)"}, right: "1"}
+    then: {op: call, expr: "append_flags_add()"}
+
+  append_flags_wback_u_8:
+    op: if
+    cond: {op: is_equal, left: {op: call, expr: "extract_bit(val=instr, msb=h.8, lsb=h.8)"}, right: "1"}
+    then: {op: call, expr: "append_flags_wback()"}
+
   append_flags_add_u_23:
     op: if
     cond: {op: call, expr: "extract_bit(val=instr, msb=l.7, lsb=l.7)"}
@@ -278,7 +301,6 @@ deffun:
     op: if
     cond: {op: is_not_equal, left: {op: call, expr: "get_apsr_carry()"}, right: "0"}
     then: {op: call, expr: "append_flags_carry()"}
-
 
 
   # Check if unpred
@@ -316,6 +338,23 @@ deffun:
     - {op: call, expr: "cond_x_13(x=$z)"}
     - {op: call, expr: "cond_x_15(x=$z)"}
 
+  cond_it_block_not_last_in_it_block:
+    op: braces
+    expr:
+      op: logical_and
+      args:
+      - {op: braces, expr: {op: call, expr: "in_it_block()"}}
+      - {op: logical_not, expr: {op: braces, expr: {op: call, expr: "last_in_it_block()"}}}
+
+  # $x == 15 && InITBlock() && !LastInITBlock()
+  cond_x_pc_it_block_not_last_in_it_block:
+    op: braces
+    expr:
+      op: logical_and
+      args:
+      - {op: call, expr: "cond_x_15(x=$x)"}
+      - {op: call, expr: "cond_it_block_not_last_in_it_block()"}
+
   # if $x=13 || $x == 15 then UNPREDICTABLE;
   unpred_if_x_sp_or_d_pc:
     op: if
@@ -337,22 +376,28 @@ deffun:
   # if InITBlock() && !LastInITBlock() then UNPREDICTABLE;
   unpred_if_it_block_not_last_in_it_block:
     op: if
-    cond:
-      op: logical_and
-      args:
-      - {op: braces, expr: {op: call, expr: "in_it_block()"}}
-      - {op: logical_not,expr: {op: braces, expr: {op: call, expr: "last_in_it_block()"}}}
+    cond: {op: call, expr: "cond_it_block_not_last_in_it_block()"}
     then: {op: return, expr: "Unpredictable(instr)"}
-
+          
   # if $x == 15 && InITBlock() && !LastInITBlock() then UNPREDICTABLE;
   unpred_if_x_pc_it_block_not_last_in_it_block:
     op: if
+    cond: {op: call, expr: "cond_x_pc_it_block_not_last_in_it_block(x=$x)"}
+    then: {op: return, expr: "Unpredictable(instr)"}
+
+  # if (wback && $y == $x) || ($x == 15 && InITBlock() && !LastInITBlock()) then UNPREDICTABLE;
+  unpred_if_wback_xy_x_pc_it_block_not_last_in_it_block:
+    op: if
     cond:
-      op: logical_and
+      op: logical_or
       args:
-      - {op: call, expr: "cond_x_15(x=$x)"}
-      - {op: braces, expr: {op: call, expr: "in_it_block()"}}
-      - {op: logical_not, expr: {op: braces, expr: {op: call, expr: "last_in_it_block()"}}}
+      - op: braces
+        expr:
+          op: logical_and
+          args:
+          - {op: call, expr: "is_wback_bit()"}
+          - {op: is_equal, left: $y, right: $x}
+      - {op: call, expr: "cond_x_pc_it_block_not_last_in_it_block(x=$x)"}
     then: {op: return, expr: "Unpredictable(instr)"}
 
   # if $x=13 || ($x == 15 && set_flag) || $y ==15 then UNPREDICTABLE;
@@ -579,12 +624,22 @@ deffun:
         - {op: braces, expr: {op: shiftleft, left: _imm3, right: 8}}
         - {op: braces, expr: {op: shiftleft, left: _imm8, right: 0}}
 
+  extract_imm32_7_0: {op: assign, target: imm32, expr: {op: call, expr: "extract_bit(val=instr, res=imm32, msb=h.7, lsb=h.0)"}}
+  
   extract_imm32_16bit_7_0_sl2:
     op: assign
     target: imm32
     expr:
       op: shiftleft
       left: {op: braces, expr: {op: call, expr: "extract_bit(val=instr, msb=l.7, lsb=l.0)"}}
+      right: 2
+
+  extract_imm32_16bit_10_6_sl2:
+    op: assign
+    target: imm32
+    expr:
+      op: shiftleft
+      left: {op: braces, expr: {op: call, expr: "extract_bit(val=instr, msb=l.10, lsb=l.6)"}}
       right: 2
       
   extract_imm32_16bit_7_0: {op: assign, target: imm32, expr: {op: call, expr: "extract_bit(val=instr, res=imm32, msb=l.7, lsb=l.0)"}}
@@ -661,6 +716,7 @@ deffun:
 
   # Register t
   # ===
+  extract_t_16bit_2_0: {op: assign, target: t, expr: {op: call, expr: "extract_bit(val=instr, msb=l.2, lsb=l.0)"}}
   extract_t_16bit_10_8: {op: assign, target: t, expr: {op: call, expr: "extract_bit(val=instr, msb=l.10, lsb=l.8)"}}
   extract_t_15_12: {op: assign, target: t, expr: {op: call, expr: "extract_bit(val=instr, res=t, msb=h.15, lsb=h.12)"}}
 
@@ -675,6 +731,8 @@ deffun:
   extract_n_16bit_5_3: {op: assign, target: n, expr: {op: call, expr: "extract_bit(val=instr, msb=l.5, lsb=l.3)"}}
 
   extract_n_19_16: {op: assign, target: n, expr: {op: call, expr: "extract_bit(val=instr, msb=l.3, lsb=l.0)"}}
+
+  set_n_13: {op: assign, target: n, expr: 13 }
 
   # Register d,n
   # ===
@@ -747,10 +805,10 @@ patterns:
   11111000x1011111xxxxxxxxxxxxxxxx: {name: ldr_literal_t2, to: LdrLiteral, call: [set_flags_def(), append_flags_add_u_23(), extract_t_15_12(), extract_imm32_11_0(), unpred_if_x_pc_it_block_not_last_in_it_block(x=t)]}
 
   # LdrImmediate
-  01101xxxxxxxxxxx: {name: ldr_immediate_t1, to: LdrImmediate, call: [set_flags_def()]}
-  10011xxxxxxxxxxx: {name: ldr_immediate_t2, to: LdrImmediate, call: [set_flags_def()]}
-  111110001101xxxxxxxxxxxxxxxxxxxx: {name: ldr_immediate_t3, to: LdrImmediate, call: [set_flags_def()]}
-  111110000101xxxxxxxx1xxxxxxxxxxx: {name: ldr_immediate_t4, to: LdrImmediate, call: [set_flags_def()]}
+  01101xxxxxxxxxxx: {name: ldr_immediate_t1, to: LdrImmediate, call: [set_flags_def(), append_flags_index(), append_flags_add(),  extract_n_16bit_5_3(), extract_t_16bit_2_0(), extract_imm32_16bit_10_6_sl2() ]}
+  10011xxxxxxxxxxx: {name: ldr_immediate_t2, to: LdrImmediate, call: [set_flags_def(), append_flags_index(), append_flags_add(), set_n_13(), extract_t_16bit_10_8(), extract_imm32_16bit_7_0_sl2()]}
+  111110001101xxxxxxxxxxxxxxxxxxxx: {name: ldr_immediate_t3, to: LdrImmediate, call: [set_flags_def(), extract_t_15_12(), extract_n_19_16(),  extract_imm32_11_0(), append_flags_index(), append_flags_add(), unpred_if_x_pc_it_block_not_last_in_it_block(x=t)]}
+  111110000101xxxxxxxx1xxxxxxxxxxx: {name: ldr_immediate_t4, to: LdrImmediate, call: [set_flags_def(),  extract_t_15_12(), extract_n_19_16(), extract_imm32_7_0(), append_flags_index_p_10(), append_flags_add_u_9(), append_flags_wback_u_8(), "unpred_if_wback_xy_x_pc_it_block_not_last_in_it_block(y=n, x=t)"]}
 
   # StrImmediate
   01100xxxxxxxxxxx: {name: str_immediate_t1, to: StrImmediate, call: [set_flags_def()]}

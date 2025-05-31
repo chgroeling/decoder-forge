@@ -6,9 +6,11 @@ from math import ceil
 
 
 class InstrFlags(IntFlag):
-    SET = 0b0001  # 1
-    ADD = 0b0010  # 2
-    CARRY = 0b0100  # 4
+    SET = 0b00001  # 1
+    ADD = 0b00010  # 2
+    CARRY = 0b00100  # 4
+    INDEX = 0b01000  # 8
+    WBACK = 0b10000  # 16
 
 
 @pytest.fixture
@@ -63,6 +65,8 @@ def test_generate_code_armv7m(project_path):
         (b"\xf7\xff\xff\xf0", ns["Bl"](flags=0x0, imm32=-32)),
         # movs r0, #22
         (b"\x20\x16", ns["MovImmediate"](flags=ISF.SET, d=0, imm32=22)),
+        # movs	r0, #22
+        (b"\x20\x16", ns["MovImmediate"](flags=ISF.SET, d=0, imm32=22)),
         # mov r9, #1
         (b"\xf0\x4f\x09\x01", ns["MovImmediate"](flags=0x0, d=9, imm32=1)),
         # mov.w   r3, #1073741824 ; 0x40000000
@@ -71,8 +75,6 @@ def test_generate_code_armv7m(project_path):
         (b"\xf4\x4f\x43\x00", ns["MovImmediate"](flags=0x0, d=3, imm32=0x8000)),
         # movw    r3, #1234 ; 0x4d2
         (b"\xf2\x40\x43\xd2", ns["MovImmediate"](flags=0x0, d=3, imm32=1234)),
-        # movs	r0, #22
-        (b"\x20\x16", ns["MovImmediate"](flags=ISF.SET, d=0, imm32=22)),
         # add r1, pc, #196
         (b"\xa1\x31", ns["AddPcPlusImmediate"](flags=ISF.ADD, d=1, imm32=196)),
         # bkpt 0x00ab
@@ -85,6 +87,8 @@ def test_generate_code_armv7m(project_path):
         (b"\x46\x2b", ns["MovRegister"](flags=0x0, d=3, m=5)),
         # movs r2, r3
         (b"\x00\x1a", ns["MovRegister"](flags=ISF.SET, d=2, m=3)),
+        # movs.w	ip, r0
+        (b"\xea\x5f\x0c\x00",  ns["MovRegister"](flags=ISF.SET, d=12, m=0)),
         # mov.w	r3, r1, lsr #9 / LSR r3,r1,#9
         (b"\xea\x4f\x23\x51", ns["LsrImmediate"](flags=0x0, d=3, m=1, shift_n=9)),
         # movs.w r3, r1, lsr #9 / LSRS r3,r1,#9
@@ -107,10 +111,16 @@ def test_generate_code_armv7m(project_path):
         (b"\xf5\x01\x11\x80", ns["AddImmediate"](flags=0x0, d=1, n=1, imm32=0x100000)),
         # adc.w	r1, r1, r4, lsl #20
         (b"\xeb\x41\x51\x04", ns["AdcRegister"](flags=0x0, d=1, n=1, m=4, shift_t=1, shift_n=20)),
-        # movs.w	ip, r0
-        (b"\xea\x5f\x0c\x00",  ns["MovRegister"](flags=ISF.SET, d=12, m=0)),
         # adcs	r5, r5
         (b"\x41\x6d",  ns["AdcRegister"](flags=ISF.SET, d=5, n=5, m=5, shift_t=1, shift_n=0)),
+        # ldr r1, [r0, #4]
+        (b"\x68\x41", ns["LdrImmediate"](flags=ISF.INDEX+ISF.ADD, t=1, n=0, imm32=0x4)),
+        # ldr	r0, [sp, #0]
+        (b"\x9b\x00", ns["LdrImmediate"](flags=ISF.INDEX+ISF.ADD, t=3, n=13, imm32=0x0)),
+        # ldr.w	r1, [r0, #171]
+        (b"\xf8\xdc\x00\xAB", ns["LdrImmediate"](flags=ISF.INDEX+ISF.ADD, t=0, n=12, imm32=0xAB)),
+        # ldr.w	r4, [r0, #-8]
+        (b"\xf8\x50\x4c\x08", ns["LdrImmediate"](flags=ISF.INDEX, t=4, n=0, imm32=0x8)),	
     ]
     # fmt: on
 
