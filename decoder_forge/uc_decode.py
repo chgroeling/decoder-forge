@@ -6,6 +6,7 @@ from decoder_forge.i_template_engine import ITemplateEngine
 from decoder_forge.generate_code import generate_code
 from enum import IntFlag
 from math import ceil
+from typing import Callable
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,8 @@ def uc_decode(
     code = code_printer.to_string()
     compiled_code = compile(code, "", "exec")
 
-    ns = {}
+    ns : dict[str, Callable] = {}
+
     exec(compiled_code, ns)
 
     Context = ns["Context"]
@@ -63,13 +65,13 @@ def uc_decode(
 
         fp.seek(adr)
 
-        for i in range(0, 500):
+        for i in range(0, 50000):
 
             raw_size_code = fp.read(size_bytes)
 
             if len(raw_size_code) < size_bytes:
                 break
-            
+
             # read the part of the code which is necessary to estimate its size
             data_for_size_eval = int.from_bytes(raw_size_code, "little")
 

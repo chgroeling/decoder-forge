@@ -41,7 +41,8 @@ def open_output_stream(output_file: Optional[str]):
     Otherwise, it opens the specified file for writing and yields the file handle.
 
     Args:
-        output_file (Optional[str]): Path to the output file. If None, sys.stdout is used.
+        output_file (Optional[str]): Path to the output file. If None, sys.stdout is
+        used.
 
     Yields:
         TextIO: A writable file-like object.

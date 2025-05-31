@@ -11,7 +11,6 @@ from decoder_forge.pattern_algorithms import (
 from copy import deepcopy
 from decoder_forge.pattern_algorithms import DecodeLeaf
 from decoder_forge.pattern_algorithms import DecodeTree
-from decoder_forge.print_tree import print_tree
 from uuid import uuid1
 from decoder_forge.i_printer import IPrinter
 from math import ceil
@@ -85,6 +84,45 @@ def minimalize_tree_with_data(tree, f_guid_to_data):
         return None, duid_to_data
 
     return data_tree, duid_to_data
+
+
+def call_expression(expr, placeholders=dict(), deffun=dict()):
+    funname, rest = expr.split("(")
+    rest = rest.strip(")")
+    args = rest.split(",")
+    arg_dict = dict()
+
+    def call_short(expr, placeholders=dict()):
+        # wraps deffun
+        return call_expression(expr, placeholders=placeholders, deffun=deffun)
+
+    for a in args:
+        if "=" not in a:
+            continue
+        dname, val = a.split("=")
+        dname = dname.strip()
+        val = val.strip()
+        if val.startswith("$"):
+            ph = val.strip("$")
+            if ph in placeholders:
+                arg_dict[dname] = placeholders[ph]
+        else:
+            if val.startswith("&") and val[1:] in deffun:
+                val_func = val.strip("&")
+                func_ast_arg = deffun[val_func]
+                func_res = transpill(
+                    yaml_ast=yaml.dump(func_ast_arg),
+                    placeholders=arg_dict,
+                    call=call_short,
+                )
+                arg_dict[dname] = func_res
+            else:
+                arg_dict[dname] = val
+
+    func_ast = deffun[funname]
+    return transpill(
+        yaml_ast=yaml.dump(func_ast), placeholders=arg_dict, call=call_short
+    )
 
 
 def generate_code(input_yaml, decoder_width, tengine, printer):
@@ -226,43 +264,11 @@ def generate_code(input_yaml, decoder_width, tengine, printer):
             default_size = 0
 
     tengine.load("python")
-    deffun = ins["deffun"]
 
-    def tcall(expr, placeholders=dict()):
-        funname, rest = expr.split("(")
-        rest = rest.strip(")")
-        args = rest.split(",")
-        arg_dict = dict()
-        for a in args:
-            if "=" not in a:
-                continue
-            dname, val = a.split("=")
-            dname = dname.strip()
-            val = val.strip()
-            if val.startswith("$"):
-                ph = val.strip("$")
-
-                if ph in placeholders:
-                    arg_dict[dname] = placeholders[ph]
-            else:
-                if val.startswith("&") and val[1:] in deffun:
-                    val_func = val.strip("&")
-                    func_ast_arg = deffun[val_func]
-                    func_res = transpill(
-                        yaml_ast=yaml.dump(func_ast_arg),
-                        placeholders=arg_dict,
-                        call=tcall,
-                    )
-                    arg_dict[dname] = func_res
-                else:
-                    arg_dict[dname] = val
-
-        # code = deffun[name]
-
-        func_ast = deffun[funname]
-        return transpill(
-            yaml_ast=yaml.dump(func_ast), placeholders=arg_dict, call=tcall
-        )
+    def call_expr(expr, placeholders=dict()):
+        # wraps deffun
+        deffun = ins["deffun"]
+        return call_expression(expr, placeholders=placeholders, deffun=deffun)
 
     context = {
         "pat_repo": pat_repo,
@@ -270,7 +276,7 @@ def generate_code(input_yaml, decoder_width, tengine, printer):
         "uid_to_pat": uid_to_pat,
         "as_repo": as_repo,
         "context": context,
-        "tcall": tcall,
+        "call_expr": call_expr,
         "flat_decode_tree": flat_decode_tree,
         "default_size": default_size,
         "needed_bytes_for_size_eval": needed_bytes_for_size_eval,

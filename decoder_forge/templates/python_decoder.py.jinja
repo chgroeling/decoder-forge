@@ -12,7 +12,7 @@
     {{ match_pat(pat, first_child) }}
     {%- if "call" in pat_repo[origin] %}
         {%- for j in pat_repo[origin]['call'] %}
-          {%- for line in tcall(j).split("\n") %}
+          {%- for line in call_expr(j).split("\n") %}
         {{line }}
            {%- endfor -%}
         {%- endfor -%}
