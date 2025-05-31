@@ -257,20 +257,22 @@ deffun:
   append_flags_set: {op: call, expr: "append_bitmask(val=flags, bm=&flag_set)", comment: "flags |= Set"}
   append_flags_add: {op: call, expr: "append_bitmask(val=flags, bm=&flag_add)", comment: "flags |= Add"}
   append_flags_carry: {op: call, expr: "append_bitmask(val=flags, bm=&flag_carry)", comment: "flags |= Carry"}
-
   append_flags_index: {op: call, expr: "append_bitmask(val=flags, bm=&flag_index)", comment: "flags |= Index"}
-  
   append_flags_wback: {op: call, expr: "append_bitmask(val=flags, bm=&flag_wback)", comment: "flags |= Wback"}
 
   is_set_bit: {op: is_not_equal, left: {op: and, args: [flags, {op: call, expr: "flag_set()"}]}, right: "0b0000"}
   is_not_set_bit: {op: is_equal, left: {op: and, args: [flags, {op: call, expr: "flag_set()"}]}, right: "0b0000"}
-
   is_wback_bit: {op: is_not_equal, left: {op: and, args: [flags, {op: call, expr: "flag_wback()"}]}, right: "0b0000"}
   
   append_flags_set_not_it_block:
     op: if
     cond: {op: logical_not, expr: {op: call, expr: "in_it_block()"}}
     then: {op: call, expr: "append_flags_set()"}
+    
+  append_flags_add_u_23:
+    op: if
+    cond: {op: call, expr: "extract_bit(val=instr, msb=l.7, lsb=l.7)"}
+    then: {op: call, expr: "append_flags_add()"}
 
   append_flags_set_s_20:
     op: if
@@ -292,10 +294,6 @@ deffun:
     cond: {op: is_equal, left: {op: call, expr: "extract_bit(val=instr, msb=h.8, lsb=h.8)"}, right: "1"}
     then: {op: call, expr: "append_flags_wback()"}
 
-  append_flags_add_u_23:
-    op: if
-    cond: {op: call, expr: "extract_bit(val=instr, msb=l.7, lsb=l.7)"}
-    then: {op: call, expr: "append_flags_add()"}
 
   append_flags_carry_if_apsr_c:
     op: if
@@ -306,13 +304,8 @@ deffun:
   # Check if unpred
   # ===
 
-  cond_x_13:
-    op: braces
-    expr: {op: is_equal, left: "$x", right: "13"}
-
-  cond_x_15:
-    op: braces
-    expr: {op: is_equal, left: "$x", right: "15"}
+  cond_x_13: {op: braces, expr: {op: is_equal, left: "$x", right: "13"}}
+  cond_x_15: {op: braces, expr: {op: is_equal, left: "$x", right: "15"}}
 
   cond_x_13_15:
     op: logical_or
@@ -424,8 +417,7 @@ deffun:
       op: logical_and
       args:
       - {op: braces, expr: {op: call, expr: "is_set_bit()"}}
-      - op: braces
-        expr: {op: call, expr: "cond_xy_13_15(x=$x, y=$y)"}
+      - {op: braces, expr: {op: call, expr: "cond_xy_13_15(x=$x, y=$y)"}}
     then: {op: return, expr: Unpredictable(instr)}
     
   # if !setflags && (d == 15 || m == 15 || (d == 13 && m == 13)) then UNPREDICTABLE;
@@ -592,6 +584,21 @@ deffun:
         - {op: braces, expr: {op: shiftleft, left: _imm11, right: 1}}
     - {op: call, expr: "sign_extend_and_assign(res=imm32, value=_imm32_us, sign_bit=24)"}
 
+  extract_imm32_12bit_parts:
+    op: seq
+    exprs:
+    - {op: call, expr: "extract_bit_and_assign(res=_imm8, msb=h.7, lsb=h.0)"}
+    - {op: call, expr: "extract_bit_and_assign(res=_imm3, msb=h.14, lsb=h.12)"}
+    - {op: call, expr: "extract_bit_and_assign(res=_i, msb=l.10, lsb=l.10)"}
+    - op: assign
+      target: imm32
+      expr:
+        op: or
+        args:
+        - {op: braces, expr: {op: shiftleft, left: _i, right: 11}}
+        - {op: braces, expr: {op: shiftleft, left: _imm3, right: 8}}
+        - {op: braces, expr: {op: shiftleft, left: _imm8, right: 0}}
+        
   extract_imm32_16bit_parts:
     op: seq
     exprs:
@@ -609,23 +616,10 @@ deffun:
         - {op: braces, expr: {op: shiftleft, left: _imm3, right: 8}}
         - {op: braces, expr: {op: shiftleft, left: _imm8, right: 0}}
 
-  extract_imm32_12bit_parts:
-    op: seq
-    exprs:
-    - {op: call, expr: "extract_bit_and_assign(res=_imm8, msb=h.7, lsb=h.0)"}
-    - {op: call, expr: "extract_bit_and_assign(res=_imm3, msb=h.14, lsb=h.12)"}
-    - {op: call, expr: "extract_bit_and_assign(res=_i, msb=l.10, lsb=l.10)"}
-    - op: assign
-      target: imm32
-      expr:
-        op: or
-        args:
-        - {op: braces, expr: {op: shiftleft, left: _i, right: 11}}
-        - {op: braces, expr: {op: shiftleft, left: _imm3, right: 8}}
-        - {op: braces, expr: {op: shiftleft, left: _imm8, right: 0}}
 
   extract_imm32_7_0: {op: assign, target: imm32, expr: {op: call, expr: "extract_bit(val=instr, res=imm32, msb=h.7, lsb=h.0)"}}
-  
+  extract_imm32_11_0: {op: assign, target: imm32, expr: {op: call, expr: "extract_bit(val=instr, res=imm32, msb=11, lsb=0)"}}
+
   extract_imm32_16bit_7_0_sl2:
     op: assign
     target: imm32
@@ -644,8 +638,7 @@ deffun:
       
   extract_imm32_16bit_7_0: {op: assign, target: imm32, expr: {op: call, expr: "extract_bit(val=instr, res=imm32, msb=l.7, lsb=l.0)"}}
   extract_imm32_16bit_8_6: {op: assign, target: imm32, expr: {op: call, expr: "extract_bit(val=instr, res=imm32, msb=l.8, lsb=l.6)"}}
-  extract_imm32_11_0: {op: assign, target: imm32, expr: {op: call, expr: "extract_bit(val=instr, res=imm32, msb=11, lsb=0)"}}
-
+  
   # shift_n / shift_t
   # ===
   set_lsl_0:
@@ -729,7 +722,6 @@ deffun:
   # Register n
   # ===
   extract_n_16bit_5_3: {op: assign, target: n, expr: {op: call, expr: "extract_bit(val=instr, msb=l.5, lsb=l.3)"}}
-
   extract_n_19_16: {op: assign, target: n, expr: {op: call, expr: "extract_bit(val=instr, msb=l.3, lsb=l.0)"}}
 
   set_n_13: {op: assign, target: n, expr: 13 }
