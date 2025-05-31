@@ -120,7 +120,13 @@ def test_generate_code_armv7m(project_path):
         # ldr.w	r1, [r0, #171]
         (b"\xf8\xdc\x00\xAB", ns["LdrImmediate"](flags=ISF.INDEX+ISF.ADD, t=0, n=12, imm32=0xAB)),
         # ldr.w	r4, [r0, #-8]
-        (b"\xf8\x50\x4c\x08", ns["LdrImmediate"](flags=ISF.INDEX, t=4, n=0, imm32=0x8)),	
+        (b"\xf8\x50\x4c\x08", ns["LdrImmediate"](flags=ISF.INDEX, t=4, n=0, imm32=0x8)),
+
+        # cmp	r3, #39	@ 0x27
+        (b"\x2b\x27", ns["CmpImmediate"](flags=0x0, n=3, imm32=0x27)),
+
+        # cmp.w	r3, #500	@ 0x1f4
+        (b"\xf5\xb3\x7f\xfa", ns["CmpImmediate"](flags=0x0, n=3, imm32=0x1f4)),
     ]
     # fmt: on
 

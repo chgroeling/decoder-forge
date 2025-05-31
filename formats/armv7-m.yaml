@@ -23,7 +23,7 @@ struct_def:
   CbNZ: {members: [flags]}
   Clz: {members: [flags]}
   CmnImmediate: {members: [flags]}
-  CmpImmediate: {members: [flags]}
+  CmpImmediate: {members: [flags, n, imm32]}
   CmpRegister: {members: [flags]}
   Dmb: {members: [flags]}
   EorImmediate: {members: [flags]}
@@ -339,6 +339,12 @@ deffun:
       - {op: braces, expr: {op: call, expr: "in_it_block()"}}
       - {op: logical_not, expr: {op: braces, expr: {op: call, expr: "last_in_it_block()"}}}
 
+  # if $x == 15 then UNPREDICTABLE;
+  unpred_if_x_pc:
+    op: if
+    cond: {op: call, expr: "cond_x_15(x=$x)"}
+    then: {op: return, expr: Unpredictable(instr)}
+
   # $x == 15 && InITBlock() && !LastInITBlock()
   cond_x_pc_it_block_not_last_in_it_block:
     op: braces
@@ -618,6 +624,7 @@ deffun:
 
 
   extract_imm32_7_0: {op: assign, target: imm32, expr: {op: call, expr: "extract_bit(val=instr, res=imm32, msb=h.7, lsb=h.0)"}}
+
   extract_imm32_11_0: {op: assign, target: imm32, expr: {op: call, expr: "extract_bit(val=instr, res=imm32, msb=11, lsb=0)"}}
 
   extract_imm32_16bit_7_0_sl2:
@@ -722,6 +729,7 @@ deffun:
   # Register n
   # ===
   extract_n_16bit_5_3: {op: assign, target: n, expr: {op: call, expr: "extract_bit(val=instr, msb=l.5, lsb=l.3)"}}
+  extract_n_16bit_10_8: {op: assign, target: n, expr: {op: call, expr: "extract_bit(val=instr, msb=l.10, lsb=l.8)"}}
   extract_n_19_16: {op: assign, target: n, expr: {op: call, expr: "extract_bit(val=instr, msb=l.3, lsb=l.0)"}}
 
   set_n_13: {op: assign, target: n, expr: 13 }
@@ -779,8 +787,8 @@ patterns:
   111010111011xxxx0xxx1111xxxxxxxx: {name: cmp_register_t3, to: CmpRegister, call: [set_flags_def()]}
 
   # CmpImmediate
-  00101xxxxxxxxxxx: {name: cmp_immediate_t1, to: CmpImmediate, call: [set_flags_def()]}
-  11110x011011xxxx0xxx1111xxxxxxxx: {name: cmp_immediate_t2, to: CmpImmediate, call: [set_flags_def()]}
+  00101xxxxxxxxxxx: {name: cmp_immediate_t1, to: CmpImmediate, call: [set_flags_def(), extract_n_16bit_10_8(),extract_imm32_16bit_7_0()]}
+  11110x011011xxxx0xxx1111xxxxxxxx: {name: cmp_immediate_t2, to: CmpImmediate, call: [set_flags_def(), extract_n_19_16(), extract_imm32_thumb_expand(), unpred_if_x_pc(x=n) ]}
 
   # MovRegister
   01000110xxxxxxxx: {name: mov_register_t1, to: MovRegister, call: [set_flags_def(), extract_d_16bit_7_7_2_0(), extract_m_16bit_6_3(), "unpred_if_x_pc_it_block_not_last_in_it_block(x=d)"]}
