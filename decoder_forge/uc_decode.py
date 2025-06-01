@@ -4,22 +4,13 @@ import io
 from decoder_forge.i_printer import IPrinter
 from decoder_forge.i_template_engine import ITemplateEngine
 from decoder_forge.generate_code import generate_code
-from enum import IntFlag
 from math import ceil
 from typing import Callable
 
 logger = logging.getLogger(__name__)
 
 
-class InstrFlags(IntFlag):
-    I32BIT = 0b0001  # 1
-    SET = 0b0010  # 2
-    ADD = 0b0100  # 4
-    CARRY = 0b1000  # 8
-
-
 class CodePrinter(IPrinter):
-
     def __init__(self):
         self._file_object = io.StringIO()
 
@@ -45,7 +36,7 @@ def uc_decode(
     code = code_printer.to_string()
     compiled_code = compile(code, "", "exec")
 
-    ns : dict[str, Callable] = {}
+    ns: dict[str, Callable] = {}
 
     exec(compiled_code, ns)
 
@@ -55,8 +46,6 @@ def uc_decode(
 
     context = Context()
 
-    adr = 0
-    i = 0
     size_bytes = ns["get_size_eval_bytes"]()
     decoder_bytes = ns["get_decoder_eval_bytes"]()
 
@@ -66,6 +55,7 @@ def uc_decode(
         fp.seek(adr)
 
         for i in range(0, 50):
+            # read enough data to estimate the size of the following code
             raw_size_code = fp.read(size_bytes)
 
             if len(raw_size_code) < size_bytes:
