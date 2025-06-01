@@ -66,7 +66,6 @@ def uc_decode(
         fp.seek(adr)
 
         for i in range(0, 50):
-
             raw_size_code = fp.read(size_bytes)
 
             if len(raw_size_code) < size_bytes:

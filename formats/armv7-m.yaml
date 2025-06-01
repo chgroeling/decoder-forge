@@ -68,7 +68,7 @@ struct_def:
   Smull: {members: [flags]}
   Stm: {members: [flags]}
   Stmdb: {members: [flags]}
-  StrImmediate: {members: [flags]}
+  StrImmediate: {members: [flags, t, n, imm32]}
   StrRegister: {members: [flags]}
   StrbImmediate: {members: [flags]}
   StrbRegister: {members: [flags]}
@@ -382,6 +382,21 @@ deffun:
   unpred_if_x_pc_it_block_not_last_in_it_block:
     op: if
     cond: {op: call, expr: "cond_x_pc_it_block_not_last_in_it_block(x=$x)"}
+    then: {op: return, expr: "Unpredictable(instr)"}
+
+  # if (wback && $y == $x) || ($x == 15) then UNPREDICTABLE;
+  unpred_if_wback_xy_x_pc:
+    op: if
+    cond:
+      op: logical_or
+      args:
+      - op: braces
+        expr:
+          op: logical_and
+          args:
+          - {op: call, expr: "is_wback_bit()"}
+          - {op: is_equal, left: $y, right: $x}
+      - {op: call, expr: "cond_x_15(x=$x)"}
     then: {op: return, expr: "Unpredictable(instr)"}
 
   # if (wback && $y == $x) || ($x == 15 && InITBlock() && !LastInITBlock()) then UNPREDICTABLE;
@@ -805,16 +820,21 @@ patterns:
   11111000x1011111xxxxxxxxxxxxxxxx: {name: ldr_literal_t2, to: LdrLiteral, call: [set_flags_def(), append_flags_add_u_23(), extract_t_15_12(), extract_imm32_11_0(), unpred_if_x_pc_it_block_not_last_in_it_block(x=t)]}
 
   # LdrImmediate
-  01101xxxxxxxxxxx: {name: ldr_immediate_t1, to: LdrImmediate, call: [set_flags_def(), append_flags_index(), append_flags_add(),  extract_n_16bit_5_3(), extract_t_16bit_2_0(), extract_imm32_16bit_10_6_sl2() ]}
+  01101xxxxxxxxxxx: {name: ldr_immediate_t1, to: LdrImmediate, call: [set_flags_def(), append_flags_index(), append_flags_add(), extract_n_16bit_5_3(), extract_t_16bit_2_0(), extract_imm32_16bit_10_6_sl2()]}
   10011xxxxxxxxxxx: {name: ldr_immediate_t2, to: LdrImmediate, call: [set_flags_def(), append_flags_index(), append_flags_add(), set_n_13(), extract_t_16bit_10_8(), extract_imm32_16bit_7_0_sl2()]}
   111110001101xxxxxxxxxxxxxxxxxxxx: {name: ldr_immediate_t3, to: LdrImmediate, call: [set_flags_def(), extract_t_15_12(), extract_n_19_16(),  extract_imm32_11_0(), append_flags_index(), append_flags_add(), unpred_if_x_pc_it_block_not_last_in_it_block(x=t)]}
   111110000101xxxxxxxx1xxxxxxxxxxx: {name: ldr_immediate_t4, to: LdrImmediate, call: [set_flags_def(),  extract_t_15_12(), extract_n_19_16(), extract_imm32_7_0(), append_flags_index_p_10(), append_flags_add_u_9(), append_flags_wback_u_8(), "unpred_if_wback_xy_x_pc_it_block_not_last_in_it_block(y=n, x=t)"]}
 
+  # Undef
+  1111100011001111xxxxxxxxxxxxxxxx: {name: str_immediate_t3_undef, to: Undef, call: []}
+  1111100001001111xxxx10x0xxxxxxxx: {name: str_immediate_t4_undef, to: StrImmediate, call: []}
+
+  
   # StrImmediate
-  01100xxxxxxxxxxx: {name: str_immediate_t1, to: StrImmediate, call: [set_flags_def()]}
-  10010xxxxxxxxxxx: {name: str_immediate_t2, to: StrImmediate, call: [set_flags_def()]}
-  111110001100xxxxxxxxxxxxxxxxxxxx: {name: str_immediate_t3, to: StrImmediate, call: [set_flags_def()]}
-  111110000100xxxxxxxx1xxxxxxxxxxx: {name: str_immediate_t4, to: StrImmediate, call: [set_flags_def()]}
+  01100xxxxxxxxxxx: {name: str_immediate_t1, to: StrImmediate, call: [set_flags_def(), append_flags_index(), append_flags_add(), extract_n_16bit_5_3(), extract_t_16bit_2_0(), extract_imm32_16bit_10_6_sl2()]}
+  10010xxxxxxxxxxx: {name: str_immediate_t2, to: StrImmediate, call: [set_flags_def(), append_flags_index(), append_flags_add(), set_n_13(), extract_t_16bit_10_8(), extract_imm32_16bit_7_0_sl2()]}
+  111110001100xxxxxxxxxxxxxxxxxxxx: {name: str_immediate_t3, to: StrImmediate, call: [set_flags_def(), extract_t_15_12(), extract_n_19_16(),  extract_imm32_11_0(), append_flags_index(), append_flags_add(), unpred_if_x_pc(x=t)]}
+  111110000100xxxxxxxx1xxxxxxxxxxx: {name: str_immediate_t4, to: StrImmediate, call: [set_flags_def(),  extract_t_15_12(), extract_n_19_16(), extract_imm32_7_0(), append_flags_index_p_10(), append_flags_add_u_9(), append_flags_wback_u_8(), "unpred_if_wback_xy_x_pc(y=n, x=t)"]}
 
   # LslImmediate
   00000xxxxxxxxxxx: {name: lsl_immediate_t1, to: LslImmediate, call: [set_flags_def()]}
