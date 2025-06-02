@@ -12,7 +12,7 @@ struct_def:
   AndRegister: {members: [flags]}
   AsrImmediate: {members: [flags]}
   AsrRegister: {members: [flags]}
-  B: {members: [flags]}
+  B: {members: [flags, cond, imm32]}
   Bfi: {members: [flags]}
   BicImmediate: {members: [flags]}
   BicRegister: {members: [flags]}
@@ -331,6 +331,10 @@ deffun:
     - {op: call, expr: "cond_x_13(x=$z)"}
     - {op: call, expr: "cond_x_15(x=$z)"}
 
+  cond_it_block:
+    op: braces
+    expr: {op: braces, expr: {op: call, expr: "in_it_block()"}}
+
   cond_it_block_not_last_in_it_block:
     op: braces
     expr:
@@ -338,12 +342,6 @@ deffun:
       args:
       - {op: braces, expr: {op: call, expr: "in_it_block()"}}
       - {op: logical_not, expr: {op: braces, expr: {op: call, expr: "last_in_it_block()"}}}
-
-  # if $x == 15 then UNPREDICTABLE;
-  unpred_if_x_pc:
-    op: if
-    cond: {op: call, expr: "cond_x_15(x=$x)"}
-    then: {op: return, expr: Unpredictable(instr)}
 
   # $x == 15 && InITBlock() && !LastInITBlock()
   cond_x_pc_it_block_not_last_in_it_block:
@@ -353,6 +351,13 @@ deffun:
       args:
       - {op: call, expr: "cond_x_15(x=$x)"}
       - {op: call, expr: "cond_it_block_not_last_in_it_block()"}
+
+  # if $x == 15 then UNPREDICTABLE;
+  unpred_if_x_pc:
+    op: if
+    cond: {op: call, expr: "cond_x_15(x=$x)"}
+    then: {op: return, expr: Unpredictable(instr)}
+
 
   # if $x=13 || $x == 15 then UNPREDICTABLE;
   unpred_if_x_sp_or_d_pc:
@@ -371,7 +376,13 @@ deffun:
     op: if
     cond: {op: call, expr: "cond_xyz_13_15(x=$x, y=$y, z=$z)"}
     then: {op: return, expr: Unpredictable(instr)}
-    
+
+  # if InITBlock() then UNPREDICTABLE;
+  unpred_if_it_block:
+    op: if
+    cond: {op: call, expr: "cond_it_block()"}
+    then: {op: return, expr: "Unpredictable(instr)"}
+
   # if InITBlock() && !LastInITBlock() then UNPREDICTABLE;
   unpred_if_it_block_not_last_in_it_block:
     op: if
@@ -650,6 +661,17 @@ deffun:
       left: {op: braces, expr: {op: call, expr: "extract_bit(val=instr, msb=l.7, lsb=l.0)"}}
       right: 2
 
+  extract_imm32_16bit_7_0_sign_extend_sl1:
+    op: seq
+    exprs:
+    - op: assign
+      target: _imm9_us
+      expr:
+        op: shiftleft
+        left: {op: braces, expr: {op: call, expr: "extract_bit(val=instr, msb=l.7, lsb=l.0)"}}
+        right: 1
+    - {op: call, expr: "sign_extend_and_assign(res=imm32, value=_imm9_us, sign_bit=8)"}
+    
   extract_imm32_16bit_10_6_sl2:
     op: assign
     target: imm32
@@ -763,6 +785,9 @@ deffun:
       - {op: assign, target: n, expr: {op: call, expr: "extract_bit(val=instr, msb=l.3, lsb=l.0)"}}
       - {op: assign, target: d, expr: n}
 
+  # Condition: cond
+  extract_cond_16bit_11_8: {op: assign, target: cond, expr: {op: call, expr: "extract_bit(val=instr, msb=l.11, lsb=l.8)"}}
+  
 patterns:
 
   # AdcImmediate
@@ -879,7 +904,7 @@ patterns:
   11110x10000011010xxxxxxxxxxxxxxx: {name: add_sp_plus_immediate_t4, to: AddSpPlusImmediate, call: [set_flags_def()]}
 
   # B
-  1101xxxxxxxxxxxx: {name: b_t1, to: B, call: [set_flags_def()]}
+  1101xxxxxxxxxxxx: {name: b_t1, to: B, call: [set_flags_def(), extract_cond_16bit_11_8(), extract_imm32_16bit_7_0_sign_extend_sl1(), unpred_if_it_block()]}
   11100xxxxxxxxxxx: {name: b_t2, to: B, call: [set_flags_def()]}
   11110xxxxxxxxxxx10x0xxxxxxxxxxxx: {name: b_t3, to: B, call: [set_flags_def()]}
   11110xxxxxxxxxxx10x1xxxxxxxxxxxx: {name: b_t4, to: B, call: [set_flags_def()]}

@@ -138,10 +138,12 @@ def test_generate_code_armv7m(project_path):
         (b"\x93\x00", ns["StrImmediate"](flags=ISF.INDEX+ISF.ADD, t=3, n=13, imm32=0x0)),
 
         # str.w	r3, [r0, #0]
-        (b"\xf8\xcc\x00\x00", ns["StrImmediate"](flags=ISF.INDEX+ISF.ADD, t=0, n=12, imm32=0x0)),
-        
+        (b"\xf8\xcc\x00\x00", ns["StrImmediate"](flags=ISF.INDEX+ISF.ADD, t=0, n=12, imm32=0x0)),        
         # str.w	r3, [r0, #-4]
         (b"\xf8\x40\x3c\x04", ns["StrImmediate"](flags=ISF.INDEX, t=3, n=0, imm32=0x4)),
+
+        # beq.n	e6 
+        (b"\xd0\x01", ns["B"](flags=0x0, cond=0, imm32=0x2)),
     ]
     # fmt: on
 
