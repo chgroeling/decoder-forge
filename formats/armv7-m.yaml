@@ -12,7 +12,8 @@ struct_def:
   AndRegister: {members: [flags]}
   AsrImmediate: {members: [flags]}
   AsrRegister: {members: [flags]}
-  B: {members: [flags, cond, imm32]}
+  BCond: {members: [flags, cond, imm32]}
+  B: {members: [flags, imm32]}
   Bfi: {members: [flags]}
   BicImmediate: {members: [flags]}
   BicRegister: {members: [flags]}
@@ -671,7 +672,18 @@ deffun:
         left: {op: braces, expr: {op: call, expr: "extract_bit(val=instr, msb=l.7, lsb=l.0)"}}
         right: 1
     - {op: call, expr: "sign_extend_and_assign(res=imm32, value=_imm9_us, sign_bit=8)"}
-    
+
+  extract_imm32_16bit_10_0_sign_extend_sl1:
+    op: seq
+    exprs:
+    - op: assign
+      target: _imm9_us
+      expr:
+        op: shiftleft
+        left: {op: braces, expr: {op: call, expr: "extract_bit(val=instr, msb=l.10, lsb=l.0)"}}
+        right: 1
+    - {op: call, expr: "sign_extend_and_assign(res=imm32, value=_imm9_us, sign_bit=11)"}
+
   extract_imm32_16bit_10_6_sl2:
     op: assign
     target: imm32
@@ -904,10 +916,10 @@ patterns:
   11110x10000011010xxxxxxxxxxxxxxx: {name: add_sp_plus_immediate_t4, to: AddSpPlusImmediate, call: [set_flags_def()]}
 
   # B
-  1101xxxxxxxxxxxx: {name: b_t1, to: B, call: [set_flags_def(), extract_cond_16bit_11_8(), extract_imm32_16bit_7_0_sign_extend_sl1(), unpred_if_it_block()]}
-  11100xxxxxxxxxxx: {name: b_t2, to: B, call: [set_flags_def()]}
+  1101xxxxxxxxxxxx: {name: b_t1, to: BCond, call: [set_flags_def(), extract_cond_16bit_11_8(), extract_imm32_16bit_7_0_sign_extend_sl1(), unpred_if_it_block()]}
+  11100xxxxxxxxxxx: {name: b_t2, to: B, call: [set_flags_def(), extract_imm32_16bit_10_0_sign_extend_sl1(), unpred_if_it_block_not_last_in_it_block()]}
   11110xxxxxxxxxxx10x0xxxxxxxxxxxx: {name: b_t3, to: B, call: [set_flags_def()]}
-  11110xxxxxxxxxxx10x1xxxxxxxxxxxx: {name: b_t4, to: B, call: [set_flags_def()]}
+  11110xxxxxxxxxxx10x1xxxxxxxxxxxx: {name: b_t4, to: B, call: [set_flags_def(), extract_imm32_long_branch(), unpred_if_it_block_not_last_in_it_block()]}
 
   # Push
   1011010xxxxxxxxx: {name: push_t1, to: Push, call: [set_flags_def()]}

@@ -121,32 +121,28 @@ def test_generate_code_armv7m(project_path):
         (b"\xf8\xdc\x00\xAB", ns["LdrImmediate"](flags=ISF.INDEX+ISF.ADD, t=0, n=12, imm32=0xAB)),
         # ldr.w	r4, [r0, #-8]
         (b"\xf8\x50\x4c\x08", ns["LdrImmediate"](flags=ISF.INDEX, t=4, n=0, imm32=0x8)),
-
         # cmp	r3, #39	@ 0x27
         (b"\x2b\x27", ns["CmpImmediate"](flags=0x0, n=3, imm32=0x27)),
-
         # cmp.w	r3, #500	@ 0x1f4
         (b"\xf5\xb3\x7f\xfa", ns["CmpImmediate"](flags=0x0, n=3, imm32=0x1f4)),
-
         # str r1, [r2, #0]
         (b"\x60\x11", ns["StrImmediate"](flags=ISF.INDEX+ISF.ADD, t=1, n=2, imm32=0x0)),
-
         # str r0, [r7, #4]
         (b"\x60\x78", ns["StrImmediate"](flags=ISF.INDEX+ISF.ADD, t=0, n=7, imm32=0x4)),
-
         # str r3, [sp, #0]
         (b"\x93\x00", ns["StrImmediate"](flags=ISF.INDEX+ISF.ADD, t=3, n=13, imm32=0x0)),
-
         # str.w	r3, [r0, #0]
         (b"\xf8\xcc\x00\x00", ns["StrImmediate"](flags=ISF.INDEX+ISF.ADD, t=0, n=12, imm32=0x0)),
         # str.w	r3, [r0, #-4]
         (b"\xf8\x40\x3c\x04", ns["StrImmediate"](flags=ISF.INDEX, t=3, n=0, imm32=0x4)),
-
         # beq.n	2
-        (b"\xd0\x01", ns["B"](flags=0x0, cond=0, imm32=0x2)),
-
-        # b.n	140 <_mainCRTStartup+0x6c>
-        (b"\xe0\x01", ns["B"](flags=0x0, cond=0, imm32=0x2)),
+        (b"\xd0\x01", ns["BCond"](flags=0x0, cond=0, imm32=0x2)),
+        # b.n 2
+        (b"\xe0\x01", ns["B"](flags=0x0, imm32=0x2)),
+        # beq.w	3f0c <__gxx_personality_v0+0x168>
+        (b"\xf0\x00\x80\xa8", ns["B"](flags=0x0, imm32=0x2)),
+        # b.w -190 (- 0xBE)
+        (b"\xf7\xff\xbf\xa1", ns["B"](flags=0x0, imm32=-190)),
     ]
     # fmt: on
 
