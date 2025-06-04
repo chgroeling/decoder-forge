@@ -139,8 +139,10 @@ def test_generate_code_armv7m(project_path):
         (b"\xd0\x01", ns["BCond"](flags=0x0, cond=0, imm32=0x2)),
         # b.n 2
         (b"\xe0\x01", ns["B"](flags=0x0, imm32=0x2)),
-        # beq.w	3f0c <__gxx_personality_v0+0x168>
-        (b"\xf0\x00\x80\xa8", ns["B"](flags=0x0, imm32=0x2)),
+        # beq.w	+336
+        (b"\xf0\x00\x80\xa8", ns["BCond"](flags=0x0, cond=0, imm32=336)),
+        # bgt.w	dae4 -- gt = 12
+        (b"\xf3\x00\x80\xab", ns["BCond"](flags=0x0, cond=12, imm32=342)),
         # b.w -190 (- 0xBE)
         (b"\xf7\xff\xbf\xa1", ns["B"](flags=0x0, imm32=-190)),
     ]

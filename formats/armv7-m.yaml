@@ -595,6 +595,26 @@ deffun:
       - {op: call, expr: "ThumbExpandImm_C(res=imm32, carry_out=carry, carry_in=_carry_in,  imm12=_imm12)"}
       - {op: if, cond: carry, then: {op: call, expr: "append_flags_carry()"}}
 
+  extract_imm32_short_branch:
+    op: seq
+    exprs:
+    - {op: call, expr: "extract_bit_and_assign(res=_s, msb=l.10, lsb=l.10)"}
+    - {op: call, expr: "extract_bit_and_assign(res=_imm6, msb=l.5, lsb=l.0)"}
+    - {op: call, expr: "extract_bit_and_assign(res=_j1, msb=h.13, lsb=h.13)"}
+    - {op: call, expr: "extract_bit_and_assign(res=_j2, msb=h.11, lsb=h.11)"}
+    - {op: call, expr: "extract_bit_and_assign(res=_imm11, msb=h.10, lsb=h.0)"}
+    - op: assign
+      target: _imm20_us
+      expr:
+        op: or
+        args:
+        - {op: braces, expr: {op: shiftleft, left: _s, right: 20}}
+        - {op: braces, expr: {op: shiftleft, left: _j2, right: 19}}
+        - {op: braces, expr: {op: shiftleft, left: _j1, right: 18}}
+        - {op: braces, expr: {op: shiftleft, left: _imm6, right: 12}}
+        - {op: braces, expr: {op: shiftleft, left: _imm11, right: 1}}
+    - {op: call, expr: "sign_extend_and_assign(res=imm32, value=_imm20_us, sign_bit=20)"}
+
   extract_imm32_long_branch:
     op: seq
     exprs:
@@ -606,7 +626,7 @@ deffun:
     - {op: call, expr: "lsb_equal_and_assign(res=_i1, a=_j1, b=_s)"}
     - {op: call, expr: "lsb_equal_and_assign(res=_i2, a=_j2, b=_s)"}
     - op: assign
-      target: _imm32_us
+      target: _imm24_us
       expr:
         op: or
         args:
@@ -615,7 +635,7 @@ deffun:
         - {op: braces, expr: {op: shiftleft, left: _i2, right: 22}}
         - {op: braces, expr: {op: shiftleft, left: _imm10, right: 12}}
         - {op: braces, expr: {op: shiftleft, left: _imm11, right: 1}}
-    - {op: call, expr: "sign_extend_and_assign(res=imm32, value=_imm32_us, sign_bit=24)"}
+    - {op: call, expr: "sign_extend_and_assign(res=imm32, value=_imm24_us, sign_bit=24)"}
 
   extract_imm32_12bit_parts:
     op: seq
@@ -798,7 +818,10 @@ deffun:
       - {op: assign, target: d, expr: n}
 
   # Condition: cond
+  
   extract_cond_16bit_11_8: {op: assign, target: cond, expr: {op: call, expr: "extract_bit(val=instr, msb=l.11, lsb=l.8)"}}
+
+  extract_cond_25_22: {op: assign, target: cond, expr: {op: call, expr: "extract_bit(val=instr, msb=l.9, lsb=l.6)"}}
   
 patterns:
 
@@ -918,7 +941,7 @@ patterns:
   # B
   1101xxxxxxxxxxxx: {name: b_t1, to: BCond, call: [set_flags_def(), extract_cond_16bit_11_8(), extract_imm32_16bit_7_0_sign_extend_sl1(), unpred_if_it_block()]}
   11100xxxxxxxxxxx: {name: b_t2, to: B, call: [set_flags_def(), extract_imm32_16bit_10_0_sign_extend_sl1(), unpred_if_it_block_not_last_in_it_block()]}
-  11110xxxxxxxxxxx10x0xxxxxxxxxxxx: {name: b_t3, to: B, call: [set_flags_def()]}
+  11110xxxxxxxxxxx10x0xxxxxxxxxxxx: {name: b_t3, to: BCond, call: [set_flags_def(), extract_imm32_short_branch(), extract_cond_25_22(), unpred_if_it_block()]}
   11110xxxxxxxxxxx10x1xxxxxxxxxxxx: {name: b_t4, to: B, call: [set_flags_def(), extract_imm32_long_branch(), unpred_if_it_block_not_last_in_it_block()]}
 
   # Push
