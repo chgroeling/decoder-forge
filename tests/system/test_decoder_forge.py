@@ -107,7 +107,7 @@ def test_generate_code_armv7m(project_path):
         (b"\x31\x01", ns["AddImmediate"](flags=ISF.SET, d=1, n=1, imm32=0x1)),
         # add.w r0, r12, #10
         (b"\xf2\x1c\x00\x10", ns["AddImmediate"](flags=0x0, d=0, n=12, imm32=0x10)),
-        # add.w r1, r1, #1048576 ; 0x100000
+        # add.w r1, r1, #1048576 @0x100000
         (b"\xf5\x01\x11\x80", ns["AddImmediate"](flags=0x0, d=1, n=1, imm32=0x100000)),
         # adc.w	r1, r1, r4, lsl #20
         (b"\xeb\x41\x51\x04", ns["AdcRegister"](flags=0x0, d=1, n=1, m=4, shift_t=1, shift_n=20)),
@@ -123,7 +123,7 @@ def test_generate_code_armv7m(project_path):
         (b"\xf8\x50\x4c\x08", ns["LdrImmediate"](flags=ISF.INDEX, t=4, n=0, imm32=0x8)),
         # cmp	r3, #39	@ 0x27
         (b"\x2b\x27", ns["CmpImmediate"](flags=0x0, n=3, imm32=0x27)),
-        # cmp.w	r3, #500	@ 0x1f4
+        # cmp.w	r3, #500  @ 0x1f4
         (b"\xf5\xb3\x7f\xfa", ns["CmpImmediate"](flags=0x0, n=3, imm32=0x1f4)),
         # str r1, [r2, #0]
         (b"\x60\x11", ns["StrImmediate"](flags=ISF.INDEX+ISF.ADD, t=1, n=2, imm32=0x0)),
@@ -145,6 +145,10 @@ def test_generate_code_armv7m(project_path):
         (b"\xf3\x00\x80\xab", ns["BCond"](flags=0x0, cond=12, imm32=342)),
         # b.w -190 (- 0xBE)
         (b"\xf7\xff\xbf\xa1", ns["B"](flags=0x0, imm32=-190)),
+        # subs	r2, r2, r0
+        (b"\x1a\x12", ns["SubRegister"](flags=ISF.SET, d=2, n=2, m=0, shift_t=1, shift_n=0)),
+        # subs.w	r2, r2, ip
+        (b"\xeb\xb2\x02\x0c",ns["SubRegister"](flags=ISF.SET, d=2, n=2, m=0, shift_t=1, shift_n=0))
     ]
     # fmt: on
 

@@ -78,7 +78,7 @@ struct_def:
   StrhImmediate: {members: [flags]}
   StrhRegister: {members: [flags]}
   SubImmediate: {members: [flags]}
-  SubRegister: {members: [flags]}
+  SubRegister: {members: [flags, d, n, m, shift_t, shift_n]}
   SubSpMinusImmediate: {members: [flags]}
   Svc: {members: [flags]}
   Sxtb: {members: [flags]}
@@ -794,6 +794,7 @@ deffun:
   extract_m_3_0: {op: assign, target: m, expr: {op: call, expr: "extract_bit(val=instr, msb=h.3, lsb=h.0)"}}
   extract_m_16bit_5_3: {op: assign, target: m, expr: {op: call, expr: "extract_bit(val=instr, msb=l.5, lsb=l.3)"}}
   extract_m_16bit_6_3: {op: assign, target: m, expr: {op: call, expr: "extract_bit(val=instr, msb=l.6, lsb=l.3)"}}
+  extract_m_16bit_8_6: {op: assign, target: m, expr: {op: call, expr: "extract_bit(val=instr, msb=l.8, lsb=l.6)"}}
 
   # Register n
   # ===
@@ -844,10 +845,10 @@ patterns:
   11110x10000xxxxx0xxxxxxxxxxxxxxx: {name: add_immediate_t4, to: AddImmediate, call: [set_flags_def(), extract_n_19_16(), extract_d_11_8(), extract_imm32_12bit_parts(), "unpred_if_x_sp_or_d_pc(x=d)"]}
 
   # AddPcPlusImmediate
-  10100xxxxxxxxxxx: {name: add_pc_plus_immediate_t1, to: AddPcPlusImmediate, call: [set_flags_def(), append_flags_add(), extract_d_16bit_10_8(), extract_imm32_16bit_7_0_sl2()]}
+  10100xxxxxxxxxxx: {name: add_pc_plus_immediate_t1, to: AddPcPlusImmediate, call: [set_flags_def(), append_flags_add(), extract_d_16bit_10_8(), extract_imm32_16bit_7_0_sl2() ]}
 
   # SubRegister
-  0001101xxxxxxxxx: {name: sub_register_t1, to: SubRegister, call: [set_flags_def()]}
+  0001101xxxxxxxxx: {name: sub_register_t1, to: SubRegister, call: [set_flags_def(), extract_m_16bit_8_6(), extract_n_16bit_5_3(), extract_d_16bit_2_0(), set_lsl_0(), append_flags_set_not_it_block()]}
   11101011101xxxxx0xxxxxxxxxxxxxxx: {name: sub_register_t2, to: SubRegister, call: [set_flags_def()]}
 
   # SubImmediate
@@ -888,7 +889,6 @@ patterns:
   # Undef
   1111100011001111xxxxxxxxxxxxxxxx: {name: str_immediate_t3_undef, to: Undef, call: []}
   1111100001001111xxxx10x0xxxxxxxx: {name: str_immediate_t4_undef, to: StrImmediate, call: []}
-
   
   # StrImmediate
   01100xxxxxxxxxxx: {name: str_immediate_t1, to: StrImmediate, call: [set_flags_def(), append_flags_index(), append_flags_add(), extract_n_16bit_5_3(), extract_t_16bit_2_0(), extract_imm32_16bit_10_6_sl2()]}
