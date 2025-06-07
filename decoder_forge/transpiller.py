@@ -30,6 +30,10 @@ class VisitorPython:
         """Generates a string representing the subtraction of two operands."""
         return " - ".join(args)
 
+    def do_mul(self, *args):
+        """Generates a string representing the subtraction of two operands."""
+        return " * ".join(args)
+
     def do_mod(self, *args):
         """Generates a string representing the modulo of multiple operands."""
         return " % ".join(args)
@@ -61,6 +65,9 @@ class VisitorPython:
         """Generates a string representing the equality check between two operands."""
         return f"{left} == {right}"
 
+    def do_less(self, left, right):
+        return f"{left} < {right}"
+    
     def do_is_not_equal(self, left, right):
         """Generates a string representing the not equality check between two operands."""
         return f"{left} != {right}"
@@ -222,6 +229,13 @@ def transpill_recurse(visitor: VisitorPython, node, placeholders: dict[str, str]
 
         code += visitor.do_sub(*args)
 
+    elif node["op"] == "mul":
+        args = list()
+        for arg_expr in node["args"]:
+            args.append(transpill_or_eval(arg_expr))
+
+        code += visitor.do_mul(*args)
+
     elif node["op"] == "mod":
         args = list()
         for arg_expr in node["args"]:
@@ -277,6 +291,12 @@ def transpill_recurse(visitor: VisitorPython, node, placeholders: dict[str, str]
         arg_left = transpill_or_eval(node["left"])
 
         code += visitor.do_is_not_equal(arg_left, arg_right)
+
+    elif node["op"] == "is_less":
+        arg_right = transpill_or_eval(node["right"])
+        arg_left = transpill_or_eval(node["left"])
+
+        code += visitor.do_less(arg_left, arg_right)
 
     elif node["op"] == "shiftright":
         arg_right = transpill_or_eval(node["right"])

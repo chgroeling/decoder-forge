@@ -178,6 +178,62 @@ deffun:
           op: call
           expr: "extract_bit(val=$res, msb=31, lsb=31)"
 
+  bitcount:
+    op: seq
+    exprs:
+    - op: assign
+      target: _v
+      expr:
+        op: sub
+        args:
+        - $val
+        - op: braces
+          expr:
+            op: and
+            args:
+            - {op: braces, expr: {op: shiftright, left: $val, right: 1}}
+            - "0x55555555"
+    - op: assign
+      target: _v
+      expr:
+        op: add
+        args:
+        - op: braces
+          expr:
+            op: and
+            args: [_v, "0x33333333"]
+        - op: braces
+          expr:
+            op: and
+            args:
+            - op: braces
+              expr: {op: shiftright, left: _v, right: 2}
+            - "0x33333333"
+    - op: assign
+      target: $out
+      expr:
+        op: shiftright
+        left:
+          op: braces
+          expr:
+            op: mul
+            args:
+            - op: braces
+              expr:
+                op: add
+                args:
+                - "_v"
+                - op: and
+                  args:
+                  - op: braces
+                    expr:
+                      op: shiftright
+                      left: "_v"
+                      right: "4"
+                  - "0xF0F0F0F"
+            - "0x1010101"
+        right: 24
+  # ----------------------------
   # SRType_None = 0b000,  
   # SRType_LSL  = 0b001,
   # SRType_LSR  = 0b010,
@@ -383,6 +439,19 @@ deffun:
     op: if
     cond: {op: call, expr: "cond_it_block()"}
     then: {op: return, expr: "Unpredictable(instr)"}
+
+  # if BitCount(registers) < 1 then UNPREDICTABLE;
+  unpred_if_register_count_less_1:
+    op: seq
+    exprs:
+    - op: call
+      expr: "bitcount(val=registers, out=bc)"
+    - op: if
+      cond:
+        op: is_less
+        left: "bc"
+        right: "1"
+      then: {op: return, expr: "Unpredictable(instr)"}
 
   # if InITBlock() && !LastInITBlock() then UNPREDICTABLE;
   unpred_if_it_block_not_last_in_it_block:
@@ -854,10 +923,27 @@ deffun:
       - {op: assign, target: d, expr: n}
 
   # Condition: cond
-  
+  # ===
   extract_cond_16bit_11_8: {op: assign, target: cond, expr: {op: call, expr: "extract_bit(val=instr, msb=l.11, lsb=l.8)"}}
 
   extract_cond_25_22: {op: assign, target: cond, expr: {op: call, expr: "extract_bit(val=instr, msb=l.9, lsb=l.6)"}}
+
+  # Register list
+  # ===
+
+  extract_register_list_16bit:
+    op: seq
+    exprs:
+    - {op: call, expr: "extract_bit_and_assign(res=_register_list, msb=l.7, lsb=l.0)"}
+    - {op: call, expr: "extract_bit_and_assign(res=_M, msb=l.8, lsb=l.8)"}
+    - op: assign
+      target: registers
+      expr:
+        op: or
+        args:
+        - {op: braces, expr: {op: shiftleft, left: _M, right: 14}}
+        - {op: braces, expr: {op: shiftleft, left: _register_list, right: 0}}
+
   
 patterns:
 
@@ -980,7 +1066,7 @@ patterns:
   11110xxxxxxxxxxx10x1xxxxxxxxxxxx: {name: b_t4, to: B, call: [set_flags_def(), extract_imm32_long_branch(), unpred_if_it_block_not_last_in_it_block()]}
 
   # Push
-  1011010xxxxxxxxx: {name: push_t1, to: Push, call: [set_flags_def()]}
+  1011010xxxxxxxxx: {name: push_t1, to: Push, call: [set_flags_def(), extract_register_list_16bit(),unpred_if_register_count_less_1()]}
   11101001001011010x0xxxxxxxxxxxxx: {name: push_t2, to: Push, call: [set_flags_def()]}
   1111100001001101xxxx110100000100: {name: push_t3, to: Push, call: [set_flags_def()]}
 

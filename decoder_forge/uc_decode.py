@@ -54,7 +54,7 @@ def uc_decode(
 
         fp.seek(adr)
 
-        for i in range(0, 500):
+        for i in range(0, 50000):
             # read enough data to estimate the size of the following code
             raw_size_code = fp.read(size_bytes)
 

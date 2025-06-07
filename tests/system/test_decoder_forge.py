@@ -150,7 +150,9 @@ def test_generate_code_armv7m(project_path):
         # subs.w	r2, r2, ip
         (b"\xeb\xb2\x02\x0c", ns["SubRegister"](flags=ISF.SET, d=2, n=2, m=12, shift_t=1, shift_n=0)),
         # push	{r1}
-        (b"\xb4\x02", ns["Push"](flags=0x0))
+        (b"\xb4\x02", ns["Push"](flags=0x0, registers=0x2)),
+        #stmdb	sp!, {r4, r5, r6, r7, r8, lr}
+        (b"\xe9\x2d\x41\xf0", ns["Push"](flags=0x0, registers=0x2))
     ]
     # fmt: on
 
