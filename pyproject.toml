@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "decoder-forge"
+version = "0.1.0"
+description = "A Python tool that generates efficient C++ bit pattern matching algorithms from a simple YAML configuration file."
+authors = [
+    {name = "Christian Gröling", email = "contact@christiangroeling.de"}
+]
+requires-python = ">=3.12"
+license = "GPL-3.0-only"
+readme = "README.md"
+dependencies = [
+    "click>=8.1.8",
+    "jinja2>=3.1.6",
+    "pyyaml>=6.0.2",
+    "sphinx>=8.2.3",
+    "sphinx-rtd-theme>=3.0.2",
+    "charset-normalizer>=3.4.2",
+    "arm-transpiller",
+]
+
+[project.scripts]
+decoder-forge = "decoder_forge.main:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+    "flake8>=7.0",
+]
+
+[tool.uv.sources]
+arm-transpiller = { git = "https://github.com/chgroeling/arm-transpiller", tag = "v1.0.0" }
