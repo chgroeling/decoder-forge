@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Switch from flake8 to ruff for linting.
+
+### Removed
+
+- Remove sphinx, sphinx-rtd-theme, docs/, Makefile, and make.bat.
+- Remove unused charset-normalizer dependency.
+
 ## [1.0.0] - Initial Release
 
 Initial release of decoder-forge.
