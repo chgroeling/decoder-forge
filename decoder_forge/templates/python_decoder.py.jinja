@@ -12,7 +12,8 @@
     {{ match_pat(pat, first_child) }}
     {%- if origin == None %}
     {%- else %}
-        # {{pat_repo[origin]["name"]}} -> {{pat_repo[origin]["struct"]}}
+        # {{pat_repo[origin]["name"]}}
+        # -> {{pat_repo[origin]["struct"]}}
 {{ pat_repo[origin]["body"] | indent(8, first=True) }}
     {%- endif %}
 {%- endmacro -%}

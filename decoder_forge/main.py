@@ -119,6 +119,12 @@ def parse_address(_ctx, _param, value: str) -> int:
     default=None,
     type=str,
 )
+@click.option(
+    "--no_format",
+    help="Disable auto-formatting of the generated code with ruff (default: format).",
+    is_flag=True,
+    default=False,
+)
 @click.pass_context
 def decode(
     self,
@@ -127,6 +133,7 @@ def decode(
     decoder_width: int,
     start_address: int,
     out_file: Optional[str],
+    no_format: bool,
 ):
     """Decode a binary file with a decoder generated from YAML instruction patterns.
 
@@ -143,7 +150,8 @@ def decode(
     tengine = TemplateEngine()
     with open_output_stream(out_file) as f:
         uc_decode(
-            f, tengine, yaml_buf, decoder_width, bin_path, start_address
+            f, tengine, yaml_buf, decoder_width, bin_path, start_address,
+            auto_format=not no_format,
         )
 
 
@@ -163,8 +171,16 @@ def decode(
     default=None,
     type=str,
 )
+@click.option(
+    "--no_format",
+    help="Disable auto-formatting of the generated code with ruff (default: format).",
+    is_flag=True,
+    default=False,
+)
 @click.pass_context
-def generate_code(self, input_path: str, decoder_width: int, out_file: Optional[str]):
+def generate_code(
+    self, input_path: str, decoder_width: int, out_file: Optional[str], no_format: bool
+):
     """Generate decoder code from YAML instruction patterns.
 
     This command reads a YAML file from the provided INPUT_PATH which should contain
@@ -190,7 +206,7 @@ def generate_code(self, input_path: str, decoder_width: int, out_file: Optional[
 
     tengine = TemplateEngine()
     with open_output_stream(out_file) as f:
-        uc_generate_code(f, tengine, yaml_buf, decoder_width)
+        uc_generate_code(f, tengine, yaml_buf, decoder_width, auto_format=not no_format)
 
 
 @cli.command()

@@ -162,7 +162,8 @@ def build_decode_tree_by_fixed_bits(
         ValueError: If a BitPattern cannot be split with the computed common fixed mask.
 
      Example:
-        >>> tree = build_decode_tree_by_fixed_bits([(pattern1, 'id1'), (pattern2, 'id2')], 8)
+        >>> pats = [(pattern1, 'id1'), (pattern2, 'id2')]
+        >>> tree = build_decode_tree_by_fixed_bits(pats, 8)
         >>> print(tree)
     """
     pats_unfolded: list[DecodeNode] = [

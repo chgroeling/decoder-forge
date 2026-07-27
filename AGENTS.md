@@ -13,10 +13,10 @@ uv run pytest                           # Run all tests
 uv run pytest tests/unit                # Unit tests only
 uv run pytest tests/integration         # Integration tests only
 uv run pytest tests/system              # System (e2e) tests
-uv run flake8 decoder_forge tests       # Lint
+uv run ruff check decoder_forge tests    # Lint
 ```
 
-Flake8 is configured with `max-line-length = 88` (matching Black conventions) and `E203` ignored.
+Ruff is configured with `line-length = 88` (matching Black conventions) and checks pycodestyle (`E`, `W`) and pyflakes (`F`) rules.
 
 ## Architecture
 

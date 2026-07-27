@@ -1,4 +1,6 @@
 import logging
+import shutil
+import subprocess
 import yaml
 
 from decoder_forge.bit_pattern import BitPattern
@@ -26,6 +28,36 @@ from arm_transpiller import (
 from arm_transpiller.known_types import join_types
 
 logger = logging.getLogger(__name__)
+
+
+def _format_code(code: str) -> str:
+    """Auto-format the generated code with ruff.
+
+    Runs ``ruff format`` on the generated source; falls back to the unformatted code if
+    ruff is not on ``PATH`` or the command fails.
+
+    Args:
+        code (str): The generated Python source.
+
+    Returns:
+        str: The formatted source, or the original string if formatting is skipped.
+    """
+
+    if not shutil.which("ruff"):
+        logger.warning("ruff not found; skipping formatting")
+        return code
+    try:
+        result = subprocess.run(
+            ["ruff", "format", "--stdin-filename", "decoder.py", "-"],
+            input=code,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        logger.warning("ruff format failed: %s", e.stderr.strip())
+        return code
 
 
 def _merge_members(existing: list[str], new: list[str]) -> list[str]:
@@ -467,7 +499,7 @@ def _load(input_yaml: str, decoder_width: int):
     return pat_repo, struct_list, struct_id_map
 
 
-def generate_code(input_yaml, decoder_width, tengine, printer):
+def generate_code(input_yaml, decoder_width, tengine, printer, auto_format=True):
     """Generate and output decoder code from an ARMv7-M instruction-set YAML string.
 
     The input uses the ``instructions``/``encodings`` format: each encoding provides a
@@ -477,11 +509,16 @@ def generate_code(input_yaml, decoder_width, tengine, printer):
     returns its own byte length, so variable-length instructions need no separate size
     pass.
 
+    When ``auto_format`` is ``True``, the generated source is formatted with ``ruff
+    format`` before being written to the printer.
+
     Args:
         input_yaml (str): A YAML string with an ``instructions`` list.
         decoder_width (int): The bit width used when constructing the decode tree.
         tengine (ITemplateEngine): A template engine instance used to generate code.
         printer: Writable stream with a ``write(str)`` method.
+        auto_format (bool): Whether to run ``ruff format`` on the generated code
+            (default ``True``).
 
     Raises:
         yaml.YAMLError: If the input YAML cannot be parsed.
@@ -525,7 +562,9 @@ def generate_code(input_yaml, decoder_width, tengine, printer):
     # A no-match reports its leading ``min_instr_bytes`` word (the bytes it consumes),
     # shifting the rest of the MSB-aligned read back out.
     no_match_shift = max(0, (needed_bytes_for_code_eval - min_instr_bytes) * 8)
-    no_match_code_expr = "instr" if no_match_shift == 0 else f"instr >> {no_match_shift}"
+    no_match_code_expr = (
+        "instr" if no_match_shift == 0 else f"instr >> {no_match_shift}"
+    )
 
     tengine.load("python")
 
@@ -545,6 +584,9 @@ def generate_code(input_yaml, decoder_width, tengine, printer):
         "no_match_code_expr": no_match_code_expr,
     }
     rendered_code = tengine.generate(context)
+
+    if auto_format:
+        rendered_code = _format_code(rendered_code)
 
     for i in rendered_code.splitlines():
         printer.write(i + "\n")

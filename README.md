@@ -101,7 +101,7 @@ uv run pytest                          # run all tests
 uv run pytest tests/unit               # unit tests
 uv run pytest tests/integration        # integration tests
 uv run pytest tests/system             # system (e2e) tests
-uv run flake8 decoder_forge tests      # lint
+uv run ruff check decoder_forge tests    # lint
 ```
 
 ## License
