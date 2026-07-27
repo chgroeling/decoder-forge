@@ -4,8 +4,8 @@ requires-python = ">=3.12"
 
 [[package]]
 name = "arm-transpiller"
-version = "0.1.0"
-source = { git = "https://github.com/chgroeling/arm-transpiller?tag=v1.1.0#f523007edc534a5cf11444532c23fd42bfa7155f" }
+version = "1.1.1"
+source = { git = "https://github.com/chgroeling/arm-transpiller?tag=v1.1.1#89439506fdb5738e00d2957a8b3935e97c913dcd" }
 dependencies = [
     { name = "click" },
     { name = "lark" },
@@ -34,7 +34,7 @@ wheels = [
 
 [[package]]
 name = "decoder-forge"
-version = "0.1.0"
+version = "1.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "arm-transpiller" },
@@ -51,7 +51,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "arm-transpiller", git = "https://github.com/chgroeling/arm-transpiller?tag=v1.1.0" },
+    { name = "arm-transpiller", git = "https://github.com/chgroeling/arm-transpiller?tag=v1.1.1" },
     { name = "click", specifier = ">=8.1.8" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "pyyaml", specifier = ">=6.0.2" },

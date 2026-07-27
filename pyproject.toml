@@ -35,4 +35,4 @@ line-length = 88
 select = ["E", "W", "F"]
 
 [tool.uv.sources]
-arm-transpiller = { git = "https://github.com/chgroeling/arm-transpiller", tag = "v1.1.0" }
+arm-transpiller = { git = "https://github.com/chgroeling/arm-transpiller", tag = "v1.1.1" }
