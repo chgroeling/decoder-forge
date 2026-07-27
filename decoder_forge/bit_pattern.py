@@ -115,8 +115,8 @@ class BitPattern:
         """Count the trailing wildcard bits in the BitPattern.
 
         This property computes the number of trailing 'x' characters in the string
-        representation of the pattern. These trailing wildcards indicate the insignificant
-        or "don't care" bits at the end of the bit pattern.
+        representation of the pattern. These trailing wildcards indicate the
+        insignificant or "don't care" bits at the end of the bit pattern.
 
         Returns:
           int: The number of trailing wildcard bits.

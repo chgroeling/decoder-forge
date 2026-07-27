@@ -525,7 +525,9 @@ def generate_code(input_yaml, decoder_width, tengine, printer):
     # A no-match reports its leading ``min_instr_bytes`` word (the bytes it consumes),
     # shifting the rest of the MSB-aligned read back out.
     no_match_shift = max(0, (needed_bytes_for_code_eval - min_instr_bytes) * 8)
-    no_match_code_expr = "instr" if no_match_shift == 0 else f"instr >> {no_match_shift}"
+    no_match_code_expr = (
+        "instr" if no_match_shift == 0 else f"instr >> {no_match_shift}"
+    )
 
     tengine.load("python")
 

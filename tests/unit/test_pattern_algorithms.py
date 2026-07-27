@@ -47,7 +47,7 @@ def test_compute_common_fixedmask_with_3_different_pats_returns_common_fixedmask
     assert pat_common == 0x80
 
 
-def test_build_groups_by_fixed_bits_three_patterns_two_with_exclusive_bits_returns_correct_dict():
+def test_build_groups_by_fixed_bits_three_patterns_two_with_exclusive_bits_returns_correct_dict():  # noqa: E501
     # pat_a = "11xxxxx0"
     pat_a = BitPattern(fixedmask=0xC1, fixedbits=0xC0, bit_length=8)
 
@@ -172,7 +172,7 @@ def test_build_decode_tree_by_fixed_bits_two_patterns_one_longer_returns_correct
     )
 
 
-def test_build_decode_tree_by_fixed_bits_three_patterns_two_with_exclusive_bits_returns_correct_tree():
+def test_build_decode_tree_by_fixed_bits_three_patterns_two_with_exclusive_bits_returns_correct_tree():  # noqa: E501
     # pat_a = "11xxxxx0"
     pat_a = BitPattern(fixedmask=0xC1, fixedbits=0xC0, bit_length=8)
 
@@ -220,7 +220,7 @@ def test_build_decode_tree_by_fixed_bits_three_patterns_two_with_exclusive_bits_
     )
 
 
-def test_build_decode_tree_by_fixed_bits_three_patterns_two_with_exclusive_bits_one_longer_returns_correct_tree():
+def test_build_decode_tree_by_fixed_bits_three_patterns_two_with_exclusive_bits_one_longer_returns_correct_tree():  # noqa: E501
     # pat_a = "11xxxxx0"
     pat_a = BitPattern(fixedmask=0xC1, fixedbits=0xC0, bit_length=8)
 
@@ -253,7 +253,8 @@ def test_build_decode_tree_by_fixed_bits_three_patterns_two_with_exclusive_bits_
                     DecodeLeaf(
                         pat=BitPattern(
                             fixedmask=0x6, fixedbits=0x6, bit_length=8
-                        ),  # pat: "xxxxx11x" - longest pattern (no of ones and zeros) first
+                        ),
+                        # pat: "xxxxx11x" - longest pattern (most fixed bits) first
                         uid="UIDC",
                     ),
                     DecodeLeaf(

@@ -56,13 +56,13 @@ def test_generate_code_armv7m(project_path):
         # movs r0, #22
         (b"\x20\x16", ns["MOV_immediate"](d=0, setflags=True, imm32=22, carry=0)),
         # mov r9, #1
-        (b"\xf0\x4f\x09\x01", ns["MOV_immediate"](d=9, setflags=False, imm32=1, carry=0)),
+        (b"\xf0\x4f\x09\x01", ns["MOV_immediate"](d=9, setflags=False, imm32=1, carry=0)),  # noqa: E501
         # mov.w   r3, #1073741824 ; 0x40000000
-        (b"\xf0\x4f\x43\x80", ns["MOV_immediate"](d=3, setflags=False, imm32=1 << 30, carry=0)),
+        (b"\xf0\x4f\x43\x80", ns["MOV_immediate"](d=3, setflags=False, imm32=1 << 30, carry=0)),  # noqa: E501
         # mov.w   r3, #32768 ; 0x8000
-        (b"\xf4\x4f\x43\x00", ns["MOV_immediate"](d=3, setflags=False, imm32=0x8000, carry=0)),
+        (b"\xf4\x4f\x43\x00", ns["MOV_immediate"](d=3, setflags=False, imm32=0x8000, carry=0)),  # noqa: E501
         # movw    r3, #1234 ; 0x4d2
-        (b"\xf2\x40\x43\xd2", ns["MOV_immediate"](d=3, setflags=False, imm32=1234, carry=0)),
+        (b"\xf2\x40\x43\xd2", ns["MOV_immediate"](d=3, setflags=False, imm32=1234, carry=0)),  # noqa: E501
         # add r1, pc, #196  (ADR)
         (b"\xa1\x31", ns["ADR"](d=1, imm32=196, add=True)),
         # bkpt 0x00ab
@@ -96,33 +96,33 @@ def test_generate_code_armv7m(project_path):
         # add.w r0, r12, #10  (ADDW T4; corrected encoding, bit20=0, imm8=0x0A)
         (b"\xf2\x0c\x00\x0a", ns["ADD_immediate"](d=0, n=12, setflags=False, imm32=10)),
         # add.w r1, r1, #1048576 @0x100000
-        (b"\xf5\x01\x11\x80", ns["ADD_immediate"](d=1, n=1, setflags=False, imm32=0x100000)),
+        (b"\xf5\x01\x11\x80", ns["ADD_immediate"](d=1, n=1, setflags=False, imm32=0x100000)),  # noqa: E501
         # adc.w	r1, r1, r4, lsl #20
-        (b"\xeb\x41\x51\x04", ns["ADC_register"](d=1, n=1, m=4, setflags=False, shift_t=1, shift_n=20)),
+        (b"\xeb\x41\x51\x04", ns["ADC_register"](d=1, n=1, m=4, setflags=False, shift_t=1, shift_n=20)),  # noqa: E501
         # adcs	r5, r5
-        (b"\x41\x6d", ns["ADC_register"](d=5, n=5, m=5, setflags=True, shift_t=1, shift_n=0)),
+        (b"\x41\x6d", ns["ADC_register"](d=5, n=5, m=5, setflags=True, shift_t=1, shift_n=0)),  # noqa: E501
         # ldr r1, [r0, #4]
-        (b"\x68\x41", ns["LDR_immediate"](t=1, n=0, imm32=0x4, index=True, add=True, wback=False)),
+        (b"\x68\x41", ns["LDR_immediate"](t=1, n=0, imm32=0x4, index=True, add=True, wback=False)),  # noqa: E501
         # ldr	r3, [sp, #0]
-        (b"\x9b\x00", ns["LDR_immediate"](t=3, n=13, imm32=0x0, index=True, add=True, wback=False)),
+        (b"\x9b\x00", ns["LDR_immediate"](t=3, n=13, imm32=0x0, index=True, add=True, wback=False)),  # noqa: E501
         # ldr.w	r1, [r0, #171]
-        (b"\xf8\xdc\x00\xAB", ns["LDR_immediate"](t=0, n=12, imm32=0xAB, index=True, add=True, wback=False)),
+        (b"\xf8\xdc\x00\xAB", ns["LDR_immediate"](t=0, n=12, imm32=0xAB, index=True, add=True, wback=False)),  # noqa: E501
         # ldr.w	r4, [r0, #-8]
-        (b"\xf8\x50\x4c\x08", ns["LDR_immediate"](t=4, n=0, imm32=0x8, index=True, add=False, wback=False)),
+        (b"\xf8\x50\x4c\x08", ns["LDR_immediate"](t=4, n=0, imm32=0x8, index=True, add=False, wback=False)),  # noqa: E501
         # cmp	r3, #39	@ 0x27
         (b"\x2b\x27", ns["CMP_immediate"](n=3, imm32=0x27)),
         # cmp.w	r3, #500  @ 0x1f4
         (b"\xf5\xb3\x7f\xfa", ns["CMP_immediate"](n=3, imm32=0x1f4)),
         # str r1, [r2, #0]
-        (b"\x60\x11", ns["STR_immediate"](t=1, n=2, imm32=0x0, index=True, add=True, wback=False)),
+        (b"\x60\x11", ns["STR_immediate"](t=1, n=2, imm32=0x0, index=True, add=True, wback=False)),  # noqa: E501
         # str r0, [r7, #4]
-        (b"\x60\x78", ns["STR_immediate"](t=0, n=7, imm32=0x4, index=True, add=True, wback=False)),
+        (b"\x60\x78", ns["STR_immediate"](t=0, n=7, imm32=0x4, index=True, add=True, wback=False)),  # noqa: E501
         # str r3, [sp, #0]
-        (b"\x93\x00", ns["STR_immediate"](t=3, n=13, imm32=0x0, index=True, add=True, wback=False)),
+        (b"\x93\x00", ns["STR_immediate"](t=3, n=13, imm32=0x0, index=True, add=True, wback=False)),  # noqa: E501
         # str.w	r3, [r0, #0]
-        (b"\xf8\xcc\x00\x00", ns["STR_immediate"](t=0, n=12, imm32=0x0, index=True, add=True, wback=False)),
+        (b"\xf8\xcc\x00\x00", ns["STR_immediate"](t=0, n=12, imm32=0x0, index=True, add=True, wback=False)),  # noqa: E501
         # str.w	r3, [r0, #-4]
-        (b"\xf8\x40\x3c\x04", ns["STR_immediate"](t=3, n=0, imm32=0x4, index=True, add=False, wback=False)),
+        (b"\xf8\x40\x3c\x04", ns["STR_immediate"](t=3, n=0, imm32=0x4, index=True, add=False, wback=False)),  # noqa: E501
         # beq.n	2
         (b"\xd0\x01", ns["B"](imm32=0x2, cond=0)),
         # b.n 2
@@ -134,21 +134,21 @@ def test_generate_code_armv7m(project_path):
         # b.w -190 (- 0xBE)
         (b"\xf7\xff\xbf\xa1", ns["B"](imm32=-190, cond=0)),
         # subs	r2, r2, r0
-        (b"\x1a\x12", ns["SUB_register"](d=2, n=2, m=0, setflags=True, shift_t=1, shift_n=0)),
+        (b"\x1a\x12", ns["SUB_register"](d=2, n=2, m=0, setflags=True, shift_t=1, shift_n=0)),  # noqa: E501
         # subs.w	r2, r2, ip
-        (b"\xeb\xb2\x02\x0c", ns["SUB_register"](d=2, n=2, m=12, setflags=True, shift_t=1, shift_n=0)),
+        (b"\xeb\xb2\x02\x0c", ns["SUB_register"](d=2, n=2, m=12, setflags=True, shift_t=1, shift_n=0)),  # noqa: E501
         # push	{r1}
         (b"\xb4\x02", ns["PUSH"](t=0, registers=0x2, UnalignedAllowed=False)),
         # stmdb	sp!, {r4, r5, r6, r7, r8, lr}  (== push.w)
-        (b"\xe9\x2d\x41\xf0", ns["PUSH"](t=0, registers=0x41F0, UnalignedAllowed=False)),
+        (b"\xe9\x2d\x41\xf0", ns["PUSH"](t=0, registers=0x41F0, UnalignedAllowed=False)),  # noqa: E501
         # ldmia   r2!, {r0, r1}
         (b"\xca\x03", ns["LDM"](n=2, registers=0x3, wback=True)),
         # ldmia   r2!, {}  -- register_list=0 → UNPREDICTABLE pseudo-instruction
         (b"\xca\x00", ns["Unpredictable"](code=0xCA00)),
         # add r8, r1  -- DN:Rdn, Rdn is 3 bits wide in this encoding
-        (b"\x44\x88", ns["ADD_register"](d=8, n=8, m=1, setflags=False, shift_t=1, shift_n=0)),
+        (b"\x44\x88", ns["ADD_register"](d=8, n=8, m=1, setflags=False, shift_t=1, shift_n=0)),  # noqa: E501
         # add sp, r8  -- DM:Rdm, Rdm is 3 bits wide in this encoding
-        (b"\x44\xc5", ns["ADD_SP_plus_register"](d=13, m=8, setflags=False, shift_t=1, shift_n=0)),
+        (b"\x44\xc5", ns["ADD_SP_plus_register"](d=13, m=8, setflags=False, shift_t=1, shift_n=0)),  # noqa: E501
         # pop {r0, pc}  -- P:'0000000':register_list
         (b"\xbd\x01", ns["POP"](t=0, registers=0x8001, UnalignedAllowed=False)),
         # push {r4, lr}  -- '0':M:'000000':register_list
