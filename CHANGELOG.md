@@ -15,6 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Switch from flake8 to ruff for linting.
+- Bump arm-transpiller dependency to v1.1.0.
+
+### Fixed
+
+- Split leaf-name comment in generated code across two lines to avoid E501
+  line-too-long errors for long instruction names.
 
 ### Removed
 
