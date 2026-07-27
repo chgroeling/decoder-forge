@@ -15,6 +15,7 @@ def uc_decode(
     decoder_width: int,
     bin_file: str,
     start_address: int = 0x0,
+    auto_format: bool = True,
 ):
     """Generate a decoder from ``input_yaml`` and decode ``bin_file`` with it.
 
@@ -25,11 +26,15 @@ def uc_decode(
         decoder_width (int): The bit width used when constructing the decode tree.
         bin_file (str): Path to the binary to decode.
         start_address (int): Offset into ``bin_file`` at which decoding starts.
+        auto_format (bool): Whether to run ``ruff format`` on the generated code
+            (default ``True``).
     """
 
     logger.info("Call: uc_decode")
     code_printer = io.StringIO()
-    generate_code(input_yaml, decoder_width, tengine, code_printer)
+    generate_code(
+        input_yaml, decoder_width, tengine, code_printer, auto_format=auto_format
+    )
     code = code_printer.getvalue()
     compiled_code = compile(code, "", "exec")
 
