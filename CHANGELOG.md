@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Auto-format generated code with `ruff format` by default; disable with
+  `--no_format` on the `generate-code` and `decode` commands.
+
 ### Changed
 
 - Switch from flake8 to ruff for linting.
