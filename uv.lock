@@ -5,7 +5,7 @@ requires-python = ">=3.12"
 [[package]]
 name = "arm-transpiller"
 version = "0.1.0"
-source = { git = "https://github.com/chgroeling/arm-transpiller?tag=v1.0.0#2dc8d984ec764352d6bcc3d1df6c8d8f72ef4fee" }
+source = { git = "https://github.com/chgroeling/arm-transpiller?tag=v1.1.0#f523007edc534a5cf11444532c23fd42bfa7155f" }
 dependencies = [
     { name = "click" },
     { name = "lark" },
@@ -51,7 +51,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "arm-transpiller", git = "https://github.com/chgroeling/arm-transpiller?tag=v1.0.0" },
+    { name = "arm-transpiller", git = "https://github.com/chgroeling/arm-transpiller?tag=v1.1.0" },
     { name = "click", specifier = ">=8.1.8" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "pyyaml", specifier = ">=6.0.2" },
