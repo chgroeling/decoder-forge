@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "decoder-forge"
-version = "1.1.1"
+version = "1.2.0"
 description = "A Python tool that generates efficient C++ bit pattern matching algorithms from a simple YAML configuration file."
 authors = [
     {name = "Christian Gröling", email = "contact@christiangroeling.de"}
