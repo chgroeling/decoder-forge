@@ -1,5 +1,6 @@
 from decoder_forge.template_engine import TemplateEngine
 from decoder_forge.uc_generate_code import uc_generate_code
+from enum import IntEnum
 from unittest.mock import Mock
 
 
@@ -258,3 +259,36 @@ def test_uc_generate_code_member_type_merges_across_encodings():
     # fills from the operand it extracted anyway.
     assert ns["decode"](0x05, context) == (ns["FOO"](x=True, a=0x5), 1)
     assert ns["decode"](0x15, context) == (ns["FOO"](x=0x5, a=0x5), 1)
+
+
+def test_uc_generate_code_emits_opcode_intenum():
+    """The generated code exports an ``Opcode`` IntEnum with entries for every
+    instruction, ordered by their assigned ID, plus pseudo-instruction entries."""
+    ns = _generate(TEST_FORMAT)
+
+    assert "Opcode" in ns
+    assert issubclass(ns["Opcode"], IntEnum)
+
+    assert ns["Opcode"].OP_NO_MATCH == -1
+    assert ns["Opcode"].OP_UNDEFINED == -2
+    assert ns["Opcode"].OP_UNPREDICTABLE == -3
+    assert ns["Opcode"].OP_SEE == -4
+
+    assert ns["Opcode"].OP_FOO == 0
+    assert ns["Opcode"].OP_BAR == 1
+
+    # The per-class ``opcode`` ClassVar must match the enum entry.
+    assert ns["FOO"].opcode == ns["Opcode"].OP_FOO == 0
+    assert ns["BAR"].opcode == ns["Opcode"].OP_BAR == 1
+    assert ns["NoMatch"].opcode == ns["Opcode"].OP_NO_MATCH == -1
+
+
+def test_uc_generate_code_opcode_empty_format_still_has_pseudo_entries():
+    """An empty format still exports the Opcode enum with pseudo-instruction entries."""
+    ns = _generate("")
+
+    assert issubclass(ns["Opcode"], IntEnum)
+    assert ns["Opcode"].OP_NO_MATCH == -1
+    assert ns["Opcode"].OP_UNDEFINED == -2
+    assert ns["Opcode"].OP_UNPREDICTABLE == -3
+    assert ns["Opcode"].OP_SEE == -4

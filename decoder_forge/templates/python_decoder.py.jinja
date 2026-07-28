@@ -29,6 +29,7 @@
 # The runtime those blocks call into is arm-transpiller's own ``armruntime``, embedded
 # verbatim below, followed by the few decoder-forge additions layered on top of it.
 from dataclasses import dataclass
+from enum import IntEnum
 from typing import ClassVar
 
 
@@ -38,24 +39,34 @@ from typing import ClassVar
 
 
 # --- decoder-forge additions -----------------------------------------------------
+class Opcode(IntEnum):
+    OP_NO_MATCH = -1
+    OP_UNDEFINED = -2
+    OP_UNPREDICTABLE = -3
+    OP_SEE = -4
+    {%- for struct in structs %}
+    OP_{{ struct.name.upper() }} = {{ struct_id_map[struct.name] }}
+    {%- endfor %}
+
+
 @dataclass(frozen=True, eq=True)
 class NoMatch:
     """Returned when no encoding matches the instruction word."""
-    _id: ClassVar[int] = -1
+    opcode: ClassVar[int] = Opcode.OP_NO_MATCH
     code: int = 0
 
 
 @dataclass(frozen=True, eq=True)
 class Undefined:
     """Pseudo-instruction returned when a decode flags the UNDEFINED side effect."""
-    _id: ClassVar[int] = -2
+    opcode: ClassVar[int] = Opcode.OP_UNDEFINED
     code: int = 0
 
 
 @dataclass(frozen=True, eq=True)
 class Unpredictable:
     """Pseudo-instruction returned when a decode flags the UNPREDICTABLE side effect."""
-    _id: ClassVar[int] = -3
+    opcode: ClassVar[int] = Opcode.OP_UNPREDICTABLE
     code: int = 0
 
 
@@ -67,7 +78,7 @@ class See:
     records that the redirect fired (the target survives solely as a comment in the
     transpiled block), so this carries just the raw instruction word.
     """
-    _id: ClassVar[int] = -4
+    opcode: ClassVar[int] = Opcode.OP_SEE
     code: int = 0
 
 
@@ -98,7 +109,7 @@ def _bits(instr, lsb, width):
 {%- for struct in structs %}
 @dataclass(frozen=True, eq=True)
 class {{struct.name}}:
-    _id: ClassVar[int] = {{struct_id_map[struct.name]}}
+    opcode: ClassVar[int] = Opcode.OP_{{ struct.name.upper() }}
     {%- if struct.members|length == 0 %}
     pass
     {%- else %}
