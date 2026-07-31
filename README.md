@@ -8,7 +8,7 @@ Generate efficient decoder source code from YAML descriptions of bit patterns �
 - **Automatic code generation** — produces a self-contained Python module with a `decode(instr, ctx)` entry point that matches patterns by specificity (most fixed bits first).
 - **ARM pseudocode transpilation** — encoding decode logic is written in ARM pseudocode and transpiled to Python via [`arm-transpiller`](https://github.com/chgroeling/arm-transpiller).
 - **Variable-length decoding** — Thumb (16/32-bit) and similar variable-width ISAs work out of the box; the decoder reports the byte-length of each matched instruction.
-- **Side-effect handling** — `UNDEFINED`, `UNPREDICTABLE`, and `SEE` conditions from the ARM ARM are propagated through runtime side effects and surfaced as pseudo-instructions.
+- **Side-effect handling** — `UNDEFINED`, `UNPREDICTABLE`, and `SEE` conditions from the ARM ARM are propagated through runtime side effects and surfaced as pseudo-instructions, each carrying the matched encoding's size via its `decoder_state`.
 
 ## Installation
 
@@ -88,10 +88,10 @@ The generated module exposes:
 | `decode(instr: int, ctx: Context) -> (result, n_bytes)` | Match and decode a single instruction |
 | `get_decoder_eval_bytes() -> int` | Bytes to read per decode attempt |
 | `get_min_instr_bytes() -> int` | Minimum instruction size |
-| `Context` | Runtime context (carries `sideeffect` flags) |
+| `Context` | Runtime context passed through to the transpiled decode block |
 | `NoMatch` / `Undefined` / `Unpredictable` / `See` | Pseudo-instructions |
 
-One frozen dataclass per instruction carries all decoded fields as required members, each annotated with its Python type and (as a trailing comment) its ARM type.
+One frozen dataclass per instruction carries all decoded fields as required members, each annotated with its Python type and (as a trailing comment) its ARM type. Pseudo-instructions (`NoMatch` excepted) carry a `decoder_state` that reflects the bit width of the encoding that raised them (`DECODED_8BIT` / `DECODED_16BIT` / `DECODED_32BIT`).
 
 ## Development
 

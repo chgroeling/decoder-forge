@@ -127,7 +127,7 @@ def test_uc_generate_code_generate_and_eval_see_returns_see_pseudo():
     assert ns["decode"](0x05, context) == (ns["FOO"](decoder_state=1, d=0x5), 1)
 
     # 0x0F (a == 0b1111) flags the SEE side effect -> See pseudo-instruction
-    assert ns["decode"](0x0F, context) == (ns["See"](), 1)
+    assert ns["decode"](0x0F, context) == (ns["See"](decoder_state=1), 1)
 
 
 # A fixture whose decode block only *tests* one operand (``cond``) and ignores another
@@ -164,7 +164,7 @@ def test_uc_generate_code_generate_and_eval_unassigned_and_unused_fields_are_mem
     )
 
     # cond == 0b11 still flags UNPREDICTABLE
-    assert ns["decode"](0x35, context) == (ns["Unpredictable"](), 1)
+    assert ns["decode"](0x35, context) == (ns["Unpredictable"](decoder_state=1), 1)
 
 
 def test_uc_generate_code_members_are_annotated_with_their_inferred_type():

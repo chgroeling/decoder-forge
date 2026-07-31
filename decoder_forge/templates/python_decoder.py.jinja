@@ -68,14 +68,14 @@ class NoMatch:
 class Undefined:
     """Pseudo-instruction returned when a decode flags the UNDEFINED side effect."""
     opcode: ClassVar[int] = Opcode.OP_UNDEFINED
-    decoder_state: int = 0
+    decoder_state: int
 
 
 @dataclass(frozen=True, eq=True)
 class Unpredictable:
     """Pseudo-instruction returned when a decode flags the UNPREDICTABLE side effect."""
     opcode: ClassVar[int] = Opcode.OP_UNPREDICTABLE
-    decoder_state: int = 0
+    decoder_state: int
 
 
 @dataclass(frozen=True, eq=True)
@@ -87,10 +87,10 @@ class See:
     transpiled block).
     """
     opcode: ClassVar[int] = Opcode.OP_SEE
-    decoder_state: int = 0
+    decoder_state: int
 
 
-def _apply_sideeffect(sideffect_flags, decoded):
+def _apply_sideeffect(sideffect_flags, decoded, decoder_state):
     """Map a side effect flagged during decode onto a pseudo-instruction.
 
     ``SEE``, ``UNDEFINED`` and ``UNPREDICTABLE`` set bits on ``sideffect_flags``.
@@ -100,11 +100,11 @@ def _apply_sideeffect(sideffect_flags, decoded):
     then ``UNDEFINED``, then ``UNPREDICTABLE``.
     """
     if sideffect_flags & SIDEFFECT_SEE:
-        return See()
+        return See(decoder_state=decoder_state)
     if sideffect_flags & SIDEFFECT_UNDEFINED:
-        return Undefined()
+        return Undefined(decoder_state=decoder_state)
     if sideffect_flags & SIDEFFECT_UNPREDICTABLE:
-        return Unpredictable()
+        return Unpredictable(decoder_state=decoder_state)
     return decoded
 
 

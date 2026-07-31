@@ -426,7 +426,9 @@ def _build_leaf(
         # Undefined/Unpredictable pseudo-instruction; only wrap the blocks that
         # can actually raise one.
         body.append(
-            f"return _apply_sideeffect(sideffect_flags, {struct_call}), {length_bytes}"
+            f"return _apply_sideeffect("
+            f"sideffect_flags, {struct_call}, decoder_state"
+            f"), {length_bytes}"
         )
     else:
         body.append(f"return {struct_call}, {length_bytes}")

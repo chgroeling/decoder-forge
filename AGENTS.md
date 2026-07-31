@@ -71,9 +71,9 @@ An instruction object's members are, in order:
 
 ### Side effects
 
-Runtime state is threaded through the `ctx` argument the transpiler emits. A transpiled `decode` block flags `SEE`/`UNDEFINED`/`UNPREDICTABLE` by setting bits on `ctx.sideeffect` — there are no hooks. Only blocks that can actually raise one route their return through `_apply_sideeffect`, decided at generation time via `extract_side_effects` (which reports explicit statements and ones raised inside runtime helpers such as `ThumbExpandImm`); the remaining encodings return the decoded instruction directly. 271 of the 369 ARMv7-M encodings can raise.
+Runtime state is threaded through the `ctx` argument the transpiler emits. A transpiled `decode` block flags `SEE`/`UNDEFINED`/`UNPREDICTABLE` by setting bits on the local `sideffect_flags` variable — there are no hooks. Only blocks that can actually raise one route their return through `_apply_sideeffect`, decided at generation time via `extract_side_effects` (which reports explicit statements and ones raised inside runtime helpers such as `ThumbExpandImm`); the remaining encodings return the decoded instruction directly. 271 of the 369 ARMv7-M encodings can raise.
 
-`_apply_sideeffect` inspects `ctx.sideeffect` and, if a side effect was flagged, replaces the decoded instruction with a `See`/`Undefined`/`Unpredictable` pseudo-instruction — `SEE` wins (it redirects to another instruction, so the current decode does not apply), then `UNDEFINED`, then `UNPREDICTABLE`. A no-match yields `NoMatch`. Instructions carry no status field. `Context` is used exactly as the package defines it, which is what the C port needs (`Context` is a fixed struct there).
+`_apply_sideeffect` inspects `sideffect_flags` and, if a side effect was flagged, replaces the decoded instruction with a `See`/`Undefined`/`Unpredictable` pseudo-instruction — `SEE` wins (it redirects to another instruction, so the current decode does not apply), then `UNDEFINED`, then `UNPREDICTABLE`. A no-match yields `NoMatch`. Instructions carry no status field. `Context` is used exactly as the package defines it, which is what the C port needs (`Context` is a fixed struct there).
 
 ## Code Conventions
 
