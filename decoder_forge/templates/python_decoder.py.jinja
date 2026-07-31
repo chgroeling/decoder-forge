@@ -90,21 +90,20 @@ class See:
     decoder_state: int = 0
 
 
-def _apply_sideeffect(ctx, decoded):
+def _apply_sideeffect(sideffect_flags, decoded):
     """Map a side effect flagged during decode onto a pseudo-instruction.
 
-    A transpiled ``decode`` block no longer calls back through hooks: ``SEE``,
-    ``UNDEFINED`` and ``UNPREDICTABLE`` set bits on ``ctx.sideeffect`` instead. Once the
-    block has run, a flagged side effect replaces the decoded instruction with the
-    matching pseudo instruction; otherwise the decoded instruction stands. ``SEE`` wins
-    (it redirects to another instruction, so the current decode does not apply), then
-    ``UNDEFINED``, then ``UNPREDICTABLE``.
+    ``SEE``, ``UNDEFINED`` and ``UNPREDICTABLE`` set bits on ``sideffect_flags``.
+    Once the block has run, a flagged side effect replaces the decoded instruction with
+    the matching pseudo instruction; otherwise the decoded instruction stands. ``SEE``
+    wins (it redirects to another instruction, so the current decode does not apply),
+    then ``UNDEFINED``, then ``UNPREDICTABLE``.
     """
-    if ctx.sideeffect & SIDEFFECT_SEE:
+    if sideffect_flags & SIDEFFECT_SEE:
         return See()
-    if ctx.sideeffect & SIDEFFECT_UNDEFINED:
+    if sideffect_flags & SIDEFFECT_UNDEFINED:
         return Undefined()
-    if ctx.sideeffect & SIDEFFECT_UNPREDICTABLE:
+    if sideffect_flags & SIDEFFECT_UNPREDICTABLE:
         return Unpredictable()
     return decoded
 
@@ -145,7 +144,7 @@ def decode(instr: int, ctx: Context):
     # Returns ``(result, n_bytes)``: the decoded instruction (or a NoMatch / See /
     # Undefined / Unpredictable pseudo-instruction) and the number of bytes it occupies,
     # so the caller can advance without a separate size pass.
-    ctx.sideeffect = SIDEFFECT_NONE
+    sideffect_flags = SIDEFFECT_NONE
 {%- for pat, uid, depth, first_child, last_child in flat_decode_tree %}
     {%- set origin = uid_to_pat[uid] | default(None) %}
     {{ gen_pat(pat, first_child, origin) | indent(depth*4, first=True) }}
