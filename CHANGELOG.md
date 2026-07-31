@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0]
+
+### Added
+
+- `DecoderState` `IntEnum` in the generated decoder (`DECODER_NONE`, `DECODED_8BIT`,
+  `DECODED_16BIT`, `DECODED_32BIT`) and a corresponding `decoder_state` field on every
+  instruction dataclass and pseudo-instruction, recording the matched encoding's bit
+  width.
+
+### Changed
+
+- **Breaking:** Pseudo-instruction constructors (`See`, `Undefined`, `Unpredictable`)
+  now require a `decoder_state` argument (previously defaulted to 0). The value is
+  populated from the encoding that raised the side effect.
+- **Breaking:** Side-effect flags (`SEE`/`UNDEFINED`/`UNPREDICTABLE`) are tracked in a
+  local `sideffect_flags` variable during decode rather than on `ctx.sideffect`.
+- **Breaking:** `_apply_sideeffect` signature changed from `(sideffect_flags, decoded)`
+  to `(sideffect_flags, decoded, decoder_state)`.
+- Upgrade arm-transpiller to v2.0.0.
+
+### Removed
+
+- **Breaking:** `code` field from pseudo-instruction classes. Use the `opcode` ClassVar
+  or compare against `Opcode` enum members instead.
+
 ## [1.2.0]
 
 ### Added
