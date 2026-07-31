@@ -74,7 +74,7 @@ def test_uc_generate_code_generate_and_eval_foo_extracts_field():
     # 0x05 matches FOO/T1 (0000xxxx); operand a = 0x5 -> d = UInt(a)
     decode_output = ns["decode"](0x05, context)
 
-    assert decode_output == (ns["FOO"](d=0x5), 1)
+    assert decode_output == (ns["FOO"](decoder_state=1, d=0x5), 1)
 
 
 def test_uc_generate_code_generate_and_eval_bar_extracts_field_and_flags():
@@ -85,7 +85,7 @@ def test_uc_generate_code_generate_and_eval_bar_extracts_field_and_flags():
     # 0x42 matches BAR/T1 (01xxxxxx); operand b = 0x02
     decode_output = ns["decode"](0x42, context)
 
-    assert decode_output == (ns["BAR"](n=0x2, setflags=True), 1)
+    assert decode_output == (ns["BAR"](decoder_state=1, n=0x2, setflags=True), 1)
 
 
 def test_uc_generate_code_generate_and_eval_no_match_returns_nomatch():
@@ -124,7 +124,7 @@ def test_uc_generate_code_generate_and_eval_see_returns_see_pseudo():
     context = ns["Context"]()
 
     # 0x05 does not trigger the redirect -> normal decode
-    assert ns["decode"](0x05, context) == (ns["FOO"](d=0x5), 1)
+    assert ns["decode"](0x05, context) == (ns["FOO"](decoder_state=1, d=0x5), 1)
 
     # 0x0F (a == 0b1111) flags the SEE side effect -> See pseudo-instruction
     assert ns["decode"](0x0F, context) == (ns["See"](), 1)
@@ -158,7 +158,10 @@ def test_uc_generate_code_generate_and_eval_unassigned_and_unused_fields_are_mem
 
     # 0x15: cond = 0b01 (read but never assigned to an output), opt = 0x5 (never
     # mentioned by the decode block) -- both are carried into the instruction object.
-    assert ns["decode"](0x15, context) == (ns["FOO"](cond=0x1, opt=0x5), 1)
+    assert ns["decode"](0x15, context) == (
+        ns["FOO"](decoder_state=1, cond=0x1, opt=0x5),
+        1,
+    )
 
     # cond == 0b11 still flags UNPREDICTABLE
     assert ns["decode"](0x35, context) == (ns["Unpredictable"](), 1)
@@ -214,8 +217,14 @@ def test_uc_generate_code_members_assigned_in_one_branch_only():
 
     # Every member is required, so the member the taken branch skipped is pre-set to
     # the zero of its type instead of raising UnboundLocalError.
-    assert ns["decode"](0x05, context) == (ns["FOO"](wide=False, big=0, small=0x5), 1)
-    assert ns["decode"](0x0F, context) == (ns["FOO"](wide=True, big=0xF, small=0), 1)
+    assert ns["decode"](0x05, context) == (
+        ns["FOO"](decoder_state=1, wide=False, big=0, small=0x5),
+        1,
+    )
+    assert ns["decode"](0x0F, context) == (
+        ns["FOO"](decoder_state=1, wide=True, big=0xF, small=0),
+        1,
+    )
 
 
 # One instruction whose two encodings type the same member differently: a truth value
@@ -257,8 +266,8 @@ def test_uc_generate_code_member_type_merges_across_encodings():
     # T1 never reads ``a``, so it is carried through; T2 turns it into ``x`` and does
     # not contribute an ``a`` member of its own -- but the struct has one, which T2
     # fills from the operand it extracted anyway.
-    assert ns["decode"](0x05, context) == (ns["FOO"](x=True, a=0x5), 1)
-    assert ns["decode"](0x15, context) == (ns["FOO"](x=0x5, a=0x5), 1)
+    assert ns["decode"](0x05, context) == (ns["FOO"](decoder_state=1, x=True, a=0x5), 1)
+    assert ns["decode"](0x15, context) == (ns["FOO"](decoder_state=1, x=0x5, a=0x5), 1)
 
 
 def test_uc_generate_code_emits_opcode_intenum():

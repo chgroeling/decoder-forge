@@ -39,6 +39,14 @@ from typing import ClassVar
 
 
 # --- decoder-forge additions -----------------------------------------------------
+class DecoderState(IntEnum):
+    """Bit-encoded decoder state flags set on each decoded instruction."""
+    DECODER_NONE = 0
+    DECODED_8BIT = 1
+    DECODED_16BIT = 2
+    DECODED_32BIT = 4
+
+
 class Opcode(IntEnum):
     OP_NO_MATCH = -1
     OP_UNDEFINED = -2
@@ -53,18 +61,21 @@ class Opcode(IntEnum):
 class NoMatch:
     """Returned when no encoding matches the instruction word."""
     opcode: ClassVar[int] = Opcode.OP_NO_MATCH
+    decoder_state: int = 0
 
 
 @dataclass(frozen=True, eq=True)
 class Undefined:
     """Pseudo-instruction returned when a decode flags the UNDEFINED side effect."""
     opcode: ClassVar[int] = Opcode.OP_UNDEFINED
+    decoder_state: int = 0
 
 
 @dataclass(frozen=True, eq=True)
 class Unpredictable:
     """Pseudo-instruction returned when a decode flags the UNPREDICTABLE side effect."""
     opcode: ClassVar[int] = Opcode.OP_UNPREDICTABLE
+    decoder_state: int = 0
 
 
 @dataclass(frozen=True, eq=True)
@@ -76,6 +87,7 @@ class See:
     transpiled block).
     """
     opcode: ClassVar[int] = Opcode.OP_SEE
+    decoder_state: int = 0
 
 
 def _apply_sideeffect(ctx, decoded):
@@ -106,9 +118,8 @@ def _bits(instr, lsb, width):
 @dataclass(frozen=True, eq=True)
 class {{struct.name}}:
     opcode: ClassVar[int] = Opcode.OP_{{ struct.name.upper() }}
-    {%- if struct.members|length == 0 %}
-    pass
-    {%- else %}
+    decoder_state: int
+    {%- if struct.members|length > 0 %}
         {#- The annotation is how the value is represented in Python; the trailing
             comment names the ARM type it was inferred from, which also carries the
             value's bit width. No member has a default: an instruction is only ever

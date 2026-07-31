@@ -267,7 +267,7 @@ def _member_types(
 
 
 def _analyse_encoding(
-    instr, encoding, decoder_width: int, length_bytes: int
+    instr, encoding, decoder_width: int, length_bytes: int, length_bits: int
 ) -> dict:
     """Transpile and analyse a single instruction encoding.
 
@@ -282,11 +282,12 @@ def _analyse_encoding(
         decoder_width (int): The target decoder width.
         length_bytes (int): The encoding's own length in bytes; the leaf returns it
             alongside the decoded instruction so the caller knows how far to advance.
+        length_bits (int): The encoding's own bit length; used to set decoder state.
 
     Returns:
         dict: Analysis with keys ``name``, ``struct``, ``members``, ``member_types``,
-        ``bound``, ``extractions``, ``decode_lines``, ``can_raise`` and
-        ``length_bytes``.
+        ``bound``, ``extractions``, ``decode_lines``, ``can_raise``,
+        ``length_bytes`` and ``length_bits``.
     """
 
     # All encodings (T1, T2, ...) of one instruction share a single struct named
@@ -337,6 +338,7 @@ def _analyse_encoding(
         "decode_lines": decode_py.splitlines(),
         "can_raise": can_raise,
         "length_bytes": length_bytes,
+        "length_bits": length_bits,
     }
 
 
@@ -399,9 +401,24 @@ def _build_leaf(
         body.append("# decode")
         body.extend(analysis["decode_lines"])
 
-    args = ", ".join(f"{member}={member}" for member in members)
-    struct_call = f"{analysis['struct']}({args})"
     length_bytes = analysis["length_bytes"]
+    length_bits = analysis["length_bits"]
+    if length_bits == 8:
+        decoder_state = "DecoderState.DECODED_8BIT"
+    elif length_bits == 16:
+        decoder_state = "DecoderState.DECODED_16BIT"
+    elif length_bits == 32:
+        decoder_state = "DecoderState.DECODED_32BIT"
+    else:
+        decoder_state = "DecoderState.DECODER_NONE"
+    body.append(f"decoder_state = {decoder_state}")
+
+    args = ", ".join(f"{member}={member}" for member in members)
+    if args:
+        args = f"{args}, decoder_state=decoder_state"
+    else:
+        args = "decoder_state=decoder_state"
+    struct_call = f"{analysis['struct']}({args})"
     # ``decode`` returns ``(result, n_bytes)`` so the caller can advance without a
     # separate size pass; the length is a literal known from this encoding's pattern.
     if analysis["can_raise"]:
@@ -459,7 +476,9 @@ def _load(input_yaml: str, decoder_width: int):
         for encoding in instr.get("encodings", []):
             pat = BitPattern.parse_pattern(str(encoding["pattern"]))
             length_bytes = int(ceil(pat.bit_length / 8))
-            analysis = _analyse_encoding(instr, encoding, decoder_width, length_bytes)
+            analysis = _analyse_encoding(
+                instr, encoding, decoder_width, length_bytes, pat.bit_length
+            )
             analyses.append((pat, analysis))
             existing = structs.get(analysis["struct"], {})
             structs[analysis["struct"]] = _merge_member_types(
