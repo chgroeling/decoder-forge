@@ -19,7 +19,7 @@
 {%- endmacro -%}
 
 {% macro no_match() -%}
-    return NoMatch(code={{no_match_code_expr}}), {{min_instr_bytes}}  # no match
+    return NoMatch(), {{min_instr_bytes}}  # no match
 {%- endmacro -%}
 
 
@@ -53,21 +53,18 @@ class Opcode(IntEnum):
 class NoMatch:
     """Returned when no encoding matches the instruction word."""
     opcode: ClassVar[int] = Opcode.OP_NO_MATCH
-    code: int = 0
 
 
 @dataclass(frozen=True, eq=True)
 class Undefined:
     """Pseudo-instruction returned when a decode flags the UNDEFINED side effect."""
     opcode: ClassVar[int] = Opcode.OP_UNDEFINED
-    code: int = 0
 
 
 @dataclass(frozen=True, eq=True)
 class Unpredictable:
     """Pseudo-instruction returned when a decode flags the UNPREDICTABLE side effect."""
     opcode: ClassVar[int] = Opcode.OP_UNPREDICTABLE
-    code: int = 0
 
 
 @dataclass(frozen=True, eq=True)
@@ -76,13 +73,12 @@ class See:
 
     ``SEE <encoding>`` redirects decoding to another instruction. The runtime only
     records that the redirect fired (the target survives solely as a comment in the
-    transpiled block), so this carries just the raw instruction word.
+    transpiled block).
     """
     opcode: ClassVar[int] = Opcode.OP_SEE
-    code: int = 0
 
 
-def _apply_sideeffect(ctx, code, decoded):
+def _apply_sideeffect(ctx, decoded):
     """Map a side effect flagged during decode onto a pseudo-instruction.
 
     A transpiled ``decode`` block no longer calls back through hooks: ``SEE``,
@@ -93,11 +89,11 @@ def _apply_sideeffect(ctx, code, decoded):
     ``UNDEFINED``, then ``UNPREDICTABLE``.
     """
     if ctx.sideeffect & SIDEFFECT_SEE:
-        return See(code=code)
+        return See()
     if ctx.sideeffect & SIDEFFECT_UNDEFINED:
-        return Undefined(code=code)
+        return Undefined()
     if ctx.sideeffect & SIDEFFECT_UNPREDICTABLE:
-        return Unpredictable(code=code)
+        return Unpredictable()
     return decoded
 
 

@@ -63,7 +63,7 @@ def test_uc_generate_code_generate_and_eval__code_empty_format_outputs_None():
     decode_output = ns["decode"](0xFF, context)
 
     # returns NoMatch class, advancing by the minimum instruction width (1 byte)
-    assert decode_output == (ns["NoMatch"](code=0xFF), 1)
+    assert decode_output == (ns["NoMatch"](), 1)
 
 
 def test_uc_generate_code_generate_and_eval_foo_extracts_field():
@@ -96,7 +96,7 @@ def test_uc_generate_code_generate_and_eval_no_match_returns_nomatch():
     # 0x80 matches neither pattern
     decode_output = ns["decode"](0x80, context)
 
-    assert decode_output == (ns["NoMatch"](code=0x80), 1)
+    assert decode_output == (ns["NoMatch"](), 1)
 
 
 # A fixture whose decode block redirects via ``SEE`` when the operand is all-ones.
@@ -127,7 +127,7 @@ def test_uc_generate_code_generate_and_eval_see_returns_see_pseudo():
     assert ns["decode"](0x05, context) == (ns["FOO"](d=0x5), 1)
 
     # 0x0F (a == 0b1111) flags the SEE side effect -> See pseudo-instruction
-    assert ns["decode"](0x0F, context) == (ns["See"](code=0x0F), 1)
+    assert ns["decode"](0x0F, context) == (ns["See"](), 1)
 
 
 # A fixture whose decode block only *tests* one operand (``cond``) and ignores another
@@ -161,7 +161,7 @@ def test_uc_generate_code_generate_and_eval_unassigned_and_unused_fields_are_mem
     assert ns["decode"](0x15, context) == (ns["FOO"](cond=0x1, opt=0x5), 1)
 
     # cond == 0b11 still flags UNPREDICTABLE
-    assert ns["decode"](0x35, context) == (ns["Unpredictable"](code=0x35), 1)
+    assert ns["decode"](0x35, context) == (ns["Unpredictable"](), 1)
 
 
 def test_uc_generate_code_members_are_annotated_with_their_inferred_type():

@@ -407,14 +407,9 @@ def _build_leaf(
     if analysis["can_raise"]:
         # A flagged side effect replaces the decoded instruction with an
         # Undefined/Unpredictable pseudo-instruction; only wrap the blocks that
-        # can actually raise one. The pseudo-instruction carries this encoding's own
-        # word (``instr`` is MSB-aligned to the decoder width, so shift the trailing
-        # bytes of the *next* instruction back out).
-        decoder_bytes = int(ceil(decoder_width / 8))
-        shift = (decoder_bytes - length_bytes) * 8
-        code_expr = "instr" if shift == 0 else f"(instr >> {shift})"
+        # can actually raise one.
         body.append(
-            f"return _apply_sideeffect(ctx, {code_expr}, {struct_call}), {length_bytes}"
+            f"return _apply_sideeffect(ctx, {struct_call}), {length_bytes}"
         )
     else:
         body.append(f"return {struct_call}, {length_bytes}")
@@ -559,13 +554,6 @@ def generate_code(input_yaml, decoder_width, tengine, printer, auto_format=True)
     needed_bytes_for_code_eval = int(ceil(decoder_width / 8))
     min_instr_bytes = max(1, int(ceil(min_decoder_bits / 8)))
 
-    # A no-match reports its leading ``min_instr_bytes`` word (the bytes it consumes),
-    # shifting the rest of the MSB-aligned read back out.
-    no_match_shift = max(0, (needed_bytes_for_code_eval - min_instr_bytes) * 8)
-    no_match_code_expr = (
-        "instr" if no_match_shift == 0 else f"instr >> {no_match_shift}"
-    )
-
     tengine.load("python")
 
     # The transpiled leaves call into ``arm-transpiller``'s runtime (``UInt``,
@@ -581,7 +569,6 @@ def generate_code(input_yaml, decoder_width, tengine, printer, auto_format=True)
         "flat_decode_tree": flat_decode_tree,
         "needed_bytes_for_code_eval": needed_bytes_for_code_eval,
         "min_instr_bytes": min_instr_bytes,
-        "no_match_code_expr": no_match_code_expr,
     }
     rendered_code = tengine.generate(context)
 

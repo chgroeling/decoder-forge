@@ -144,7 +144,7 @@ def test_generate_code_armv7m(project_path):
         # ldmia   r2!, {r0, r1}
         (b"\xca\x03", ns["LDM"](n=2, registers=0x3, wback=True)),
         # ldmia   r2!, {}  -- register_list=0 → UNPREDICTABLE pseudo-instruction
-        (b"\xca\x00", ns["Unpredictable"](code=0xCA00)),
+        (b"\xca\x00", ns["Unpredictable"]()),
         # add r8, r1  -- DN:Rdn, Rdn is 3 bits wide in this encoding
         (b"\x44\x88", ns["ADD_register"](d=8, n=8, m=1, setflags=False, shift_t=1, shift_n=0)),  # noqa: E501
         # add sp, r8  -- DM:Rdm, Rdm is 3 bits wide in this encoding
