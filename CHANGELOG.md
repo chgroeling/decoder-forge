@@ -5,20 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.1.0]
-
-### Added
-
-- On-disk cache for generated decoder sources (`decoder_forge/decoder_cache.py`), used
-  by the `decode` command. Decoding one word previously spent ~17 seconds rebuilding a
-  decoder identical to the last one; a cached decoder takes ~0.3. The key covers the
-  instruction-set YAML, the formatting flag and the sources of both `decoder_forge` and
-  `arm-transpiller`, so editing the format, the generator or the transpiler pin
-  regenerates rather than serving a stale decoder. Entries are stored under
-  `$XDG_CACHE_HOME/decoder-forge` (`DECODER_FORGE_CACHE_DIR` overrides) and pruned to
-  the 8 most recently used.
-- `--no_cache` on the `decode` command, and a `use_cache` argument on `uc_decode()`.
-
 ## [3.0.0]
 
 ### Added
@@ -29,6 +15,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instruction set has no encodings for get an empty decoder that answers `NoMatch`.
 - `get_supported_sizes()` in the generated decoder, listing the sizes the instruction
   set actually uses.
+- On-disk cache for generated decoder sources (`decoder_forge/decoder_cache.py`), used
+  by the `decode` command. Decoding one word previously spent ~17 seconds rebuilding a
+  decoder identical to the last one; a cached decoder takes ~0.3. The key covers the
+  instruction-set YAML, the formatting flag and the sources of both `decoder_forge` and
+  `arm-transpiller`, so editing the format, the generator or the transpiler pin
+  regenerates rather than serving a stale decoder. Entries are stored under
+  `$XDG_CACHE_HOME/decoder-forge` (`DECODER_FORGE_CACHE_DIR` overrides) and pruned to
+  the 8 most recently used.
+- `--no_cache` on the `decode` command, and a `use_cache` argument on `uc_decode()`.
 
 ### Changed
 

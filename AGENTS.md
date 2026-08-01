@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-decoder-forge is a Python 3.11+ code generation toolkit that transforms YAML-based descriptions of bit patterns (machine instruction encodings, binary protocols) into efficient decoder source code. Run it via uv.
+decoder-forge is a Python 3.12+ code generation toolkit that transforms YAML-based descriptions of bit patterns (machine instruction encodings, binary protocols) into efficient decoder source code. Run it via uv.
 
 ## Build, Test & Lint
 
@@ -24,6 +24,7 @@ Ruff is configured with `line-length = 88` (matching Black conventions) and chec
 
 - **Use-case modules**: `decoder_forge/uc_*.py` files orchestrate business logic (decode, generate code, show tree) and are called by the CLI in `main.py`.
 - **Core types**: `BitPattern` (bit mask/pattern), `DecodeTree`/`DecodeLeaf` (tree nodes) — all dataclasses.
+- **Generation**: `generate_code.py` (pipeline) behind `decoder_cache.py` (reuse of a previously generated decoder); `templates/` holds the Jinja2 output templates.
 
 ### Input format
 
@@ -103,11 +104,18 @@ Runtime state is threaded through the `ctx` argument the transpiler emits. A tra
 
 ```
 decoder_forge/              # Source package (CLI, core logic, templates)
+  main.py                   # click CLI: decode / generate-code / show-tree
+  uc_*.py                   # Use cases, one per CLI command
+  generate_code.py          # Generation pipeline
+  decoder_cache.py          # On-disk cache of generated decoders
+  bit_pattern.py            # BitPattern
+  pattern_algorithms.py     # Decode-tree building and flattening
   templates/                # Jinja2 templates for code generation
 formats/                    # YAML format/instruction-set definitions
 tests/
+  conftest.py               # Redirects the decoder cache to a per-test tmp_path
   unit/                     # Isolated tests on BitPattern, algorithms, repo
-  integration/              # Transpiler, generated code execution tests
+  integration/              # Transpiler, generated code execution, cache tests
   system/                   # Full end-to-end ARMv7-M decoder tests
   data/formats/             # Test fixture YAML files
 docs/                       # Sphinx documentation (autodoc + Napoleon, RTD theme)

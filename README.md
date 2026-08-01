@@ -94,6 +94,8 @@ instructions:
 
 **Patterns** use `0` and `1` for fixed bits, `x` for variable. **`bit_fields`** is read MSB to LSB: `skip` entries advance through the bitstream, `field` entries extract named values of the given width.
 
+The pattern's length is the encoding's size and decides which decoder it belongs to, so it must be 8, 16 or 32 bits. `length_bits` states the same thing and is checked against the pattern — a disagreement between the two is an error rather than a silent choice of one.
+
 ## Generated Decoder API
 
 The generated module exposes:
@@ -121,6 +123,9 @@ uv run pytest tests/integration        # integration tests
 uv run pytest tests/system             # system (e2e) tests
 uv run ruff check decoder_forge tests    # lint
 ```
+
+Tests run against a decoder cache of their own, so a test run never reads or evicts the
+entries you are using.
 
 ## License
 
