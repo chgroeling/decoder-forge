@@ -125,14 +125,14 @@ def test_generate_code_armv7m(project_path):
         (b"\xf8\x40\x3c\x04", ns["STR_immediate"](t=3, n=0, imm32=0x4, index=True, add=False, wback=False)),  # noqa: E501
         # beq.n	2
         (b"\xd0\x01", ns["B"](imm32=0x2, cond=0)),
-        # b.n 2
-        (b"\xe0\x01", ns["B"](imm32=0x2, cond=0)),
+        # b.n 2 -- T2 is unconditional, so cond is AL (14) rather than an encoded field
+        (b"\xe0\x01", ns["B"](imm32=0x2, cond=14)),
         # beq.w	+336
         (b"\xf0\x00\x80\xa8", ns["B"](imm32=336, cond=0)),
         # bgt.w	dae4 -- gt = 12
         (b"\xf3\x00\x80\xab", ns["B"](imm32=342, cond=12)),
-        # b.w -190 (- 0xBE)
-        (b"\xf7\xff\xbf\xa1", ns["B"](imm32=-190, cond=0)),
+        # b.w -190 (- 0xBE) -- T4 is unconditional, so cond is AL (14)
+        (b"\xf7\xff\xbf\xa1", ns["B"](imm32=-190, cond=14)),
         # subs	r2, r2, r0
         (b"\x1a\x12", ns["SUB_register"](d=2, n=2, m=0, setflags=True, shift_t=1, shift_n=0)),  # noqa: E501
         # subs.w	r2, r2, ip
