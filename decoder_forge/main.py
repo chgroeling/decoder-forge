@@ -91,6 +91,14 @@ def read_text(path: str) -> str:
     is_flag=True,
     default=False,
 )
+@click.option(
+    "--no_cache",
+    help="Always regenerate the decoder instead of reusing the cached one. The cache "
+    + "is keyed by the format and the generator's own sources, so it only needs "
+    + "disabling to measure generation itself.",
+    is_flag=True,
+    default=False,
+)
 @click.pass_context
 def decode(
     self,
@@ -99,6 +107,7 @@ def decode(
     size: str,
     out_file: Optional[str],
     no_format: bool,
+    no_cache: bool,
 ):
     """Decode one instruction word with a decoder generated from YAML patterns.
 
@@ -124,6 +133,7 @@ def decode(
                 instr_hex,
                 int(size),
                 auto_format=not no_format,
+                use_cache=not no_cache,
             )
         except ValueError as e:
             raise click.BadParameter(str(e))

@@ -1,8 +1,7 @@
 import logging
 
-import io
+from decoder_forge.decoder_cache import load_decoder_source
 from decoder_forge.template_engine import ITemplateEngine
-from decoder_forge.generate_code import generate_code
 from typing import Callable
 
 logger = logging.getLogger(__name__)
@@ -15,6 +14,7 @@ def uc_decode(
     instr_hex: str,
     size: int,
     auto_format: bool = True,
+    use_cache: bool = True,
 ):
     """Generate a decoder from ``input_yaml`` and decode a single instruction word.
 
@@ -30,6 +30,8 @@ def uc_decode(
         size (int): The instruction size to decode the word as, in bits.
         auto_format (bool): Whether to run ``ruff format`` on the generated code
             (default ``True``).
+        use_cache (bool): Whether to reuse a previously generated decoder for this
+            instruction set (default ``True``).
 
     Raises:
         ValueError: If ``instr_hex`` is not hexadecimal, does not fit in ``size`` bits,
@@ -37,9 +39,12 @@ def uc_decode(
     """
 
     logger.info("Call: uc_decode")
-    code_printer = io.StringIO()
-    generate_code(input_yaml, tengine, code_printer, auto_format=auto_format)
-    code = code_printer.getvalue()
+    # Decoding one word is dominated by building the decoder, which does not depend on
+    # the word; a cached decoder is reused whenever the format and generator are
+    # unchanged.
+    code = load_decoder_source(
+        input_yaml, tengine, auto_format=auto_format, use_cache=use_cache
+    )
     compiled_code = compile(code, "", "exec")
 
     ns: dict[str, Callable] = {}

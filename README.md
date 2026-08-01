@@ -41,6 +41,14 @@ The word is written most-significant bit first, the way an architecture manual s
 the encoding — not the byte order a little-endian image stores it in. `--size` is
 required: the decoder does not classify instruction widths.
 
+Generating the ARMv7-M decoder takes ~17 seconds, almost all of it transpiling the
+pseudocode `decode` blocks, so the generated source is cached and reused: the first
+call takes those 17 seconds, later ones ~0.3. The cache key covers the format *and*
+decoder-forge's and `arm-transpiller`'s own sources, so editing either one regenerates
+rather than serving a stale decoder — `--no_cache` exists to measure generation itself,
+not to work around staleness. Entries live in `$XDG_CACHE_HOME/decoder-forge`
+(override with `DECODER_FORGE_CACHE_DIR`), pruned to the 8 most recently used.
+
 ### Visualize the decode trees
 
 ```bash

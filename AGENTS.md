@@ -37,6 +37,14 @@ Jinja2 templates in `decoder_forge/templates/` emit a self-contained module: bit
 
 Encodings are bucketed by their own bit length into one decode tree per `InstructionSize` (8/16/32), each built at that size's width and emitted as its own `decode_8bit` / `decode_16bit` / `decode_32bit` function; `decode` is a thin dispatcher over them. So a 16-bit encoding is matched against a bare 16-bit word and extracts its operands at the offsets its own `bit_fields` give them — it is never padded out to the width of the widest instruction, where its trailing bits would be the *next* instruction's and its operand offsets shifted by 16. Every size gets a function even if the format has no encodings of that length; the empty ones answer `NoMatch`, so asking for an unused size is not an error. An encoding whose pattern is not 8, 16 or 32 bits long has no size to be requested under and is a generation error (`encoding_size`), as is a `length_bits` contradicting the pattern.
 
+### Decoder cache (`decoder_cache.py`)
+
+Generating the ARMv7-M decoder takes ~17s, of which ~16.4s is `_load` transpiling the 369 `decode` blocks (`ruff format` is 0.02s, compiling the 424 KiB result 0.16s). `uc_decode` builds a whole decoder to decode one word, so `load_decoder_source` caches the generated source on disk and reuses it.
+
+The key is a hash of everything the output is a function of: the instruction-set YAML, the `auto_format` flag, and the **generator's own sources** — every `.py`/`.jinja`/`.template`/`.lark` file of both `decoder_forge` and `arm_transpiller`. That last part costs ~3ms and is what makes staleness impossible: editing the template, the pipeline or the transpiler pin (whose version string may not change, since it is a git dependency) all produce different keys. Do not weaken it to a version string.
+
+The cache is an optimisation and never a failure mode — any `OSError` reading or writing it falls back to generating, with a warning. Entries are written to a temporary file and `replace`d into position so an interrupted run cannot leave a half-written decoder for the next call to compile, and pruned to the `_MAX_ENTRIES` most recently used (a hit `touch`es its entry, so the decoder in daily service is not the one evicted). `tests/conftest.py` points the cache at a per-test `tmp_path`, so a test run neither reads nor evicts a developer's real entries.
+
 ### Generation pipeline (`generate_code.py`)
 
 Generation is two passes, because a leaf has to satisfy the member set of the *whole* instruction — including members only a sibling encoding produces, which is not known until every encoding has been analysed:
