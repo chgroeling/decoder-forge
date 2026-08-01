@@ -5,10 +5,10 @@ Generate efficient decoder source code from YAML descriptions of bit patterns �
 ## Features
 
 - **YAML-driven** — describe bit patterns with `0`/`1` for fixed bits and `x` for variable fields; no hand-written matching code.
-- **Automatic code generation** — produces a self-contained Python module with a `decode(instr, ctx)` entry point that matches patterns by specificity (most fixed bits first).
+- **Automatic code generation** — produces a self-contained Python module with a `decode(instr, ctx, size)` entry point that matches patterns by specificity (most fixed bits first).
 - **ARM pseudocode transpilation** — encoding decode logic is written in ARM pseudocode and transpiled to Python via [`arm-transpiller`](https://github.com/chgroeling/arm-transpiller).
-- **Variable-length decoding** — Thumb (16/32-bit) and similar variable-width ISAs work out of the box; the decoder reports the byte-length of each matched instruction.
-- **Side-effect handling** — `UNDEFINED`, `UNPREDICTABLE`, and `SEE` conditions from the ARM ARM are propagated through runtime side effects and surfaced as pseudo-instructions, each carrying the matched encoding's size via its `decoder_state`.
+- **One decoder per instruction size** — 8/16/32-bit encodings each get their own decode tree, built at their own width. A 16-bit instruction is matched against a bare 16-bit word, so its trailing bits are its own rather than the next instruction's. Which size applies is the caller's to say.
+- **Side-effect handling** — `UNDEFINED`, `UNPREDICTABLE`, and `SEE` conditions from the ARM ARM are propagated through runtime side effects and surfaced as pseudo-instructions.
 
 ## Installation
 
@@ -30,19 +30,26 @@ The CLI provides three subcommands:
 decoder-forge generate-code formats/armv7-m.yaml --out_file decoder.py
 ```
 
-### Decode a binary file
+### Decode an instruction word
 
 ```bash
-decoder-forge decode formats/armv7-m.yaml firmware.bin --start_address 0xD4
+decoder-forge decode formats/armv7-m.yaml f000f814 --size 32   # -> BL(imm32=40)
+decoder-forge decode formats/armv7-m.yaml 2016 --size 16       # -> MOV_immediate(d=0, ...)
 ```
 
-### Visualize the decode tree
+The word is written most-significant bit first, the way an architecture manual spells
+the encoding — not the byte order a little-endian image stores it in. `--size` is
+required: the decoder does not classify instruction widths.
+
+### Visualize the decode trees
 
 ```bash
 decoder-forge show-tree formats/armv7-m.yaml
 ```
 
-All commands accept `--decoder_width` (default: 32) and `-v` / `-vv` for verbose output.
+One tree is printed per instruction size the format uses.
+
+All commands accept `-v` / `-vv` for verbose output.
 
 ## YAML Format
 
@@ -85,13 +92,16 @@ The generated module exposes:
 
 | Symbol | Description |
 |--------|-------------|
-| `decode(instr: int, ctx: Context) -> (result, n_bytes)` | Match and decode a single instruction |
-| `get_decoder_eval_bytes() -> int` | Bytes to read per decode attempt |
-| `get_min_instr_bytes() -> int` | Minimum instruction size |
+| `decode(instr: int, ctx: Context, size: InstructionSize) -> result` | Match and decode one instruction word of the given size |
+| `decode_8bit` / `decode_16bit` / `decode_32bit` `(instr, ctx)` | The per-size decoders `decode` routes to; call directly if the size is already known |
+| `InstructionSize` | `SIZE_8BIT` / `SIZE_16BIT` / `SIZE_32BIT`, valued as bit counts |
+| `get_supported_sizes() -> tuple[InstructionSize, ...]` | The sizes this instruction set has encodings for |
 | `Context` | Runtime context passed through to the transpiled decode block |
 | `NoMatch` / `Undefined` / `Unpredictable` / `See` | Pseudo-instructions |
 
-One frozen dataclass per instruction carries all decoded fields as required members, each annotated with its Python type and (as a trailing comment) its ARM type. Pseudo-instructions (`NoMatch` excepted) carry a `decoder_state` that reflects the bit width of the encoding that raised them (`DECODED_8BIT` / `DECODED_16BIT` / `DECODED_32BIT`).
+`instr` holds exactly `size` bits — no padding, and no bits belonging to whatever follows it. A size the instruction set does not use answers `NoMatch` rather than raising.
+
+One frozen dataclass per instruction carries all decoded fields as required members, each annotated with its Python type and (as a trailing comment) its ARM type.
 
 ## Development
 

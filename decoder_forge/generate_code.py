@@ -9,7 +9,6 @@ from decoder_forge.pattern_algorithms import (
     build_decode_tree_by_fixed_bits,
     flatten_decode_tree,
 )
-from math import ceil
 
 from arm_transpiller import (
     ArmType,
@@ -28,6 +27,11 @@ from arm_transpiller import (
 from arm_transpiller.known_types import join_types
 
 logger = logging.getLogger(__name__)
+
+#: The instruction lengths a decoder can be asked to decode. Each one gets its own
+#: decode tree, built at its own width, and its own ``InstructionSize`` member in the
+#: generated code. An encoding of any other length has no size to be requested under.
+INSTRUCTION_SIZES = (8, 16, 32)
 
 
 def _format_code(code: str) -> str:
@@ -103,20 +107,29 @@ def _merge_member_types(
     return merged
 
 
-def _field_extractions(bit_fields: list[dict], decoder_width: int) -> list[str]:
+def _field_extractions(bit_fields: list[dict], size: int) -> list[str]:
     """Generate operand field-extraction statements from a bit_fields list.
 
     The ``bit_fields`` entries are listed most-significant first and their widths sum
-    to the encoding length. Each named ``field`` is extracted from the decoder-width,
-    MSB-aligned instruction word. ``skip`` entries only advance the bit offset.
+    to the encoding length. Each named ``field`` is extracted from an instruction word
+    that is exactly as wide as the encoding itself -- an encoding is only ever decoded
+    by the decoder for its own size, so its bits occupy the whole word and the operand
+    offsets are the ones its own layout gives them. ``skip`` entries only advance the
+    bit offset.
 
     Args:
         bit_fields (list[dict]): The encoding's ``bit_fields`` entries. Each entry has a
             ``width`` and either a ``field`` (operand name) or a ``skip`` (fixed bits).
-        decoder_width (int): Target decoder width the instruction word is aligned to.
+        size (int): The encoding's own bit length, which is the width of the word it is
+            decoded from.
 
     Returns:
         list[str]: The extraction statements, in declaration order.
+
+    Example:
+        >>> fields = [{"skip": 10}, {"width": 3, "field": "Rm"}]
+        >>> _field_extractions(fields, 16)
+        ['Rm = _bits(instr, 3, 3)']
     """
 
     lines: list[str] = []
@@ -125,7 +138,7 @@ def _field_extractions(bit_fields: list[dict], decoder_width: int) -> list[str]:
         width = bf.get("width") if "field" in bf else bf["skip"]
         if "field" in bf:
             name = bf["field"]
-            lsb = decoder_width - offset - width
+            lsb = size - offset - width
             lines.append(f"{name} = _bits(instr, {lsb}, {width})")
         offset += width
     return lines
@@ -266,9 +279,7 @@ def _member_types(
     return types
 
 
-def _analyse_encoding(
-    instr, encoding, decoder_width: int, length_bytes: int, length_bits: int
-) -> dict:
+def _analyse_encoding(instr, encoding, size: int) -> dict:
     """Transpile and analyse a single instruction encoding.
 
     Transpiles the ARM pseudocode ``decode`` block to Python via ``arm-transpiller``
@@ -279,15 +290,12 @@ def _analyse_encoding(
     Args:
         instr (dict): The parent instruction entry (provides ``id`` and ``mnemonic``).
         encoding (dict): The encoding entry (``name``, ``bit_fields``, ``decode`` ...).
-        decoder_width (int): The target decoder width.
-        length_bytes (int): The encoding's own length in bytes; the leaf returns it
-            alongside the decoded instruction so the caller knows how far to advance.
-        length_bits (int): The encoding's own bit length; used to set decoder state.
+        size (int): The encoding's own bit length, which is both the width of the word
+            it is decoded from and the size a caller asks for it under.
 
     Returns:
         dict: Analysis with keys ``name``, ``struct``, ``members``, ``member_types``,
-        ``bound``, ``extractions``, ``decode_lines``, ``can_raise``,
-        ``length_bytes`` and ``length_bits``.
+        ``operands``, ``unbound``, ``extractions``, ``decode_lines`` and ``can_raise``.
     """
 
     # All encodings (T1, T2, ...) of one instruction share a single struct named
@@ -334,18 +342,15 @@ def _analyse_encoding(
         "member_types": member_types,
         "operands": {bf["field"] for bf in bit_fields if "field" in bf},
         "unbound": _unbound_members(members, bit_fields, program, input_types),
-        "extractions": _field_extractions(bit_fields, decoder_width),
+        "extractions": _field_extractions(bit_fields, size),
         "decode_lines": decode_py.splitlines(),
         "can_raise": can_raise,
-        "length_bytes": length_bytes,
-        "length_bits": length_bits,
     }
 
 
 def _build_leaf(
     analysis: dict,
     struct_types: dict[str, ArmType | None],
-    decoder_width: int,
     backend: PythonGenerator,
 ) -> dict:
     """Assemble the leaf body executed once an encoding matches.
@@ -367,7 +372,6 @@ def _build_leaf(
         struct_types (dict[str, ArmType | None]): The member types of the instruction's
             struct, merged over all its encodings; the keys are the full member set in
             emission order.
-        decoder_width (int): The target decoder width.
         backend (PythonGenerator): The generator for the output language; it spells the
             zero value a member of a given ARM type is pre-set to.
 
@@ -401,37 +405,15 @@ def _build_leaf(
         body.append("# decode")
         body.extend(analysis["decode_lines"])
 
-    length_bytes = analysis["length_bytes"]
-    length_bits = analysis["length_bits"]
-    if length_bits == 8:
-        decoder_state = "DecoderState.DECODED_8BIT"
-    elif length_bits == 16:
-        decoder_state = "DecoderState.DECODED_16BIT"
-    elif length_bits == 32:
-        decoder_state = "DecoderState.DECODED_32BIT"
-    else:
-        decoder_state = "DecoderState.DECODER_NONE"
-    body.append(f"decoder_state = {decoder_state}")
-
     args = ", ".join(f"{member}={member}" for member in members)
-    if args:
-        args = f"{args}, decoder_state=decoder_state"
-    else:
-        args = "decoder_state=decoder_state"
     struct_call = f"{analysis['struct']}({args})"
-    # ``decode`` returns ``(result, n_bytes)`` so the caller can advance without a
-    # separate size pass; the length is a literal known from this encoding's pattern.
     if analysis["can_raise"]:
         # A flagged side effect replaces the decoded instruction with an
         # Undefined/Unpredictable pseudo-instruction; only wrap the blocks that
         # can actually raise one.
-        body.append(
-            f"return _apply_sideeffect("
-            f"sideffect_flags, {struct_call}, decoder_state"
-            f"), {length_bytes}"
-        )
+        body.append(f"return _apply_sideeffect(sideffect_flags, {struct_call})")
     else:
-        body.append(f"return {struct_call}, {length_bytes}")
+        body.append(f"return {struct_call}")
 
     return {
         "name": analysis["name"],
@@ -441,18 +423,59 @@ def _build_leaf(
     }
 
 
-def _load(input_yaml: str, decoder_width: int):
+def encoding_size(instr, encoding, pat: BitPattern) -> int:
+    """Determine the instruction size an encoding is decoded under.
+
+    The ``pattern`` string is the authority on an encoding's length -- the mask and
+    match values are derived from it -- so its length decides which decoder the encoding
+    belongs to. Only the lengths in :data:`INSTRUCTION_SIZES` can be asked for, and a
+    ``length_bits`` that contradicts the pattern means the two descriptions of the same
+    encoding have drifted apart.
+
+    Args:
+        instr (dict): The parent instruction entry (provides ``id``).
+        encoding (dict): The encoding entry (provides ``name`` and ``length_bits``).
+        pat (BitPattern): The encoding's parsed pattern.
+
+    Returns:
+        int: The encoding's bit length, one of :data:`INSTRUCTION_SIZES`.
+
+    Raises:
+        ValueError: If the pattern length is not a supported instruction size, or if a
+            declared ``length_bits`` disagrees with it.
+    """
+
+    name = f"{instr['id']} {encoding['name']}"
+    size = pat.bit_length
+    if size not in INSTRUCTION_SIZES:
+        supported = ", ".join(str(i) for i in INSTRUCTION_SIZES)
+        raise ValueError(
+            f"{name}: pattern is {size} bits long; only {supported} are supported"
+        )
+
+    declared = encoding.get("length_bits")
+    if declared is not None and int(declared) != size:
+        raise ValueError(
+            f"{name}: length_bits is {declared} but the pattern is {size} bits long"
+        )
+    return size
+
+
+def _load(input_yaml: str):
     """Parse the instruction-set YAML and build the pattern/struct repositories.
 
     Args:
         input_yaml (str): YAML in the ``instructions``/``encodings`` format.
-        decoder_width (int): The target decoder width.
 
     Returns:
-        tuple: ``(pat_repo, structs, struct_id_map)`` where ``pat_repo`` maps each
-        ``BitPattern`` to its leaf metadata, ``structs`` is the de-duplicated output
-        dataclass list (each member carrying its Python annotation and the ARM type it
-        was inferred from), and ``struct_id_map`` maps struct names to enumerated IDs.
+        tuple: ``(pat_repo, structs, struct_id_map, buckets)`` where ``pat_repo`` maps
+        each ``BitPattern`` to its leaf metadata, ``structs`` is the de-duplicated
+        output dataclass list (each member carrying its Python annotation and the ARM
+        type it was inferred from), ``struct_id_map`` maps struct names to enumerated
+        IDs, and ``buckets`` groups the patterns by the size they decode under.
+
+    Raises:
+        ValueError: If an encoding's length is not a supported instruction size.
     """
 
     ins = yaml.load(input_yaml, Loader=yaml.Loader)
@@ -474,14 +497,14 @@ def _load(input_yaml: str, decoder_width: int):
     # encoding produces, which is not known until all of them have been analysed.
     analyses: list[tuple[BitPattern, dict]] = []
     structs: dict[str, dict[str, ArmType | None]] = {}
+    buckets: dict[int, list[BitPattern]] = {size: [] for size in INSTRUCTION_SIZES}
     for instr in instructions:
         for encoding in instr.get("encodings", []):
             pat = BitPattern.parse_pattern(str(encoding["pattern"]))
-            length_bytes = int(ceil(pat.bit_length / 8))
-            analysis = _analyse_encoding(
-                instr, encoding, decoder_width, length_bytes, pat.bit_length
-            )
+            size = encoding_size(instr, encoding, pat)
+            analysis = _analyse_encoding(instr, encoding, size)
             analyses.append((pat, analysis))
+            buckets[size].append(pat)
             existing = structs.get(analysis["struct"], {})
             structs[analysis["struct"]] = _merge_member_types(
                 existing, analysis["member_types"]
@@ -494,7 +517,7 @@ def _load(input_yaml: str, decoder_width: int):
     backend = PythonGenerator()
 
     pat_repo: dict[BitPattern, dict] = {
-        pat: _build_leaf(analysis, structs[analysis["struct"]], decoder_width, backend)
+        pat: _build_leaf(analysis, structs[analysis["struct"]], backend)
         for pat, analysis in analyses
     }
 
@@ -512,25 +535,28 @@ def _load(input_yaml: str, decoder_width: int):
         }
         for name, member_types in structs.items()
     ]
-    return pat_repo, struct_list, struct_id_map
+    return pat_repo, struct_list, struct_id_map, buckets
 
 
-def generate_code(input_yaml, decoder_width, tengine, printer, auto_format=True):
+def generate_code(input_yaml, tengine, printer, auto_format=True):
     """Generate and output decoder code from an ARMv7-M instruction-set YAML string.
 
     The input uses the ``instructions``/``encodings`` format: each encoding provides a
     match ``pattern`` and an ARM pseudocode ``decode`` block. Patterns are organised
     into a decode tree, while the ``decode`` blocks are transpiled to Python via
-    ``arm-transpiller`` and emitted as the per-encoding leaf bodies. Each leaf also
-    returns its own byte length, so variable-length instructions need no separate size
-    pass.
+    ``arm-transpiller`` and emitted as the per-encoding leaf bodies.
+
+    One decode tree is built per instruction size, each at its own width: a 16-bit
+    encoding is matched against a bare 16-bit word rather than one padded out to the
+    width of the widest instruction, so its trailing bits are its own and not the next
+    instruction's. Which size to decode under is the caller's to say -- the generated
+    ``decode`` takes it as an argument.
 
     When ``auto_format`` is ``True``, the generated source is formatted with ``ruff
     format`` before being written to the printer.
 
     Args:
         input_yaml (str): A YAML string with an ``instructions`` list.
-        decoder_width (int): The bit width used when constructing the decode tree.
         tengine (ITemplateEngine): A template engine instance used to generate code.
         printer: Writable stream with a ``write(str)`` method.
         auto_format (bool): Whether to run ``ruff format`` on the generated code
@@ -538,42 +564,29 @@ def generate_code(input_yaml, decoder_width, tengine, printer, auto_format=True)
 
     Raises:
         yaml.YAMLError: If the input YAML cannot be parsed.
-        ValueError: If a pattern is wider than ``decoder_width``.
+        ValueError: If an encoding's length is not a supported instruction size.
     """
 
     logger.info("Call: generate_code")
 
-    pat_repo, structs, struct_id_map = _load(input_yaml, decoder_width)
+    pat_repo, structs, struct_id_map, buckets = _load(input_yaml)
 
-    pats = list(pat_repo.keys())
-    uid_to_pat, _, pats_with_uid = assign_uids(pats)
-
-    # only build decode tree when patterns are assigned
-    if len(pats_with_uid) != 0:
-        max_decoder_bits = max((i.bit_length for i in pats))
-        min_decoder_bits = min((i.bit_length for i in pats))
-
-        if max_decoder_bits > decoder_width:
-            raise ValueError("Patterns are too long for given decoder width")
-
-        decode_tree = build_decode_tree_by_fixed_bits(
-            pats_with_uid, decoder_width=decoder_width
-        )
-        flat_decode_tree = flatten_decode_tree(decode_tree)
-    else:
-        decoder_width = 0
-        max_decoder_bits = 0
-        min_decoder_bits = 0
-
-        decode_tree = None
-        flat_decode_tree = list()
-
-    # ``decode`` reports the length of each matched instruction directly (each leaf
-    # returns it as a literal), so no separate size decoder is generated. The caller
-    # reads up to ``needed_bytes_for_code_eval`` bytes and, on a no-match, advances by
-    # the smallest possible instruction (``min_instr_bytes``).
-    needed_bytes_for_code_eval = int(ceil(decoder_width / 8))
-    min_instr_bytes = max(1, int(ceil(min_decoder_bits / 8)))
+    # Each size is decoded by a tree of its own, built at that size's width. Sizes the
+    # format has no encoding for still get a decoder -- an empty one, so that asking for
+    # a size the instruction set does not use answers NoMatch rather than raising.
+    uid_to_pat: dict = {}
+    trees: list[dict] = []
+    for size in INSTRUCTION_SIZES:
+        pats = buckets[size]
+        flat_decode_tree: list = []
+        if pats:
+            size_uid_to_pat, _, pats_with_uid = assign_uids(pats)
+            uid_to_pat.update(size_uid_to_pat)
+            decode_tree = build_decode_tree_by_fixed_bits(
+                pats_with_uid, decoder_width=size
+            )
+            flat_decode_tree = flatten_decode_tree(decode_tree)
+        trees.append({"size": size, "flat_decode_tree": flat_decode_tree})
 
     tengine.load("python")
 
@@ -587,9 +600,8 @@ def generate_code(input_yaml, decoder_width, tengine, printer, auto_format=True)
         "structs": structs,
         "struct_id_map": struct_id_map,
         "uid_to_pat": uid_to_pat,
-        "flat_decode_tree": flat_decode_tree,
-        "needed_bytes_for_code_eval": needed_bytes_for_code_eval,
-        "min_instr_bytes": min_instr_bytes,
+        "trees": trees,
+        "supported_sizes": [size for size in INSTRUCTION_SIZES if buckets[size]],
     }
     rendered_code = tengine.generate(context)
 

@@ -68,54 +68,20 @@ def read_text(path: str) -> str:
         return fp.read()
 
 
-def parse_address(_ctx, _param, value: str) -> int:
-    """Click callback parsing an address literal in any base.
-
-    Args:
-        _ctx (click.Context): Unused click context.
-        _param (click.Parameter): Unused click parameter.
-        value (str): The address as written on the command line, e.g. ``0xD4``,
-            ``0b1101``, ``212``.
-
-    Returns:
-        int: The parsed address.
-
-    Raises:
-        click.BadParameter: If the value is not a valid integer literal.
-
-    Example:
-        >>> parse_address(None, None, "0xD4")
-        212
-    """
-
-    try:
-        return int(value, 0)
-    except ValueError:
-        raise click.BadParameter(f"{value!r} is not a valid address")
-
-
 @cli.command()
 @click.argument("DECODER_PATH", type=str)
-@click.argument("BIN_PATH", type=str)
+@click.argument("INSTR_HEX", type=str)
 @click.option(
-    "--decoder_width",
-    help="Target bit width; patterns are extended to this width before decoding "
-    + "(default: 32)",
-    default=32,
-    type=int,
-)
-@click.option(
-    "--start_address",
-    help="Offset into BIN_PATH at which decoding starts. Accepts any base, e.g. "
-    + "0xD4 (default: 0x0)",
-    default="0x0",
-    callback=parse_address,
-    type=str,
+    "--size",
+    help="Width of the instruction word, in bits. The decoder does not determine it; "
+    + "an encoding is only matched by the decoder for its own size.",
+    required=True,
+    type=click.Choice(["8", "16", "32"]),
 )
 @click.option(
     "--out_file",
-    help="Output file to write the generated code. Defaults to None, which outputs to "
-    + "stdout.",
+    help="Output file to write the decoded instruction. Defaults to None, which "
+    + "outputs to stdout.",
     default=None,
     type=str,
 )
@@ -129,41 +95,42 @@ def parse_address(_ctx, _param, value: str) -> int:
 def decode(
     self,
     decoder_path: str,
-    bin_path: str,
-    decoder_width: int,
-    start_address: int,
+    instr_hex: str,
+    size: str,
     out_file: Optional[str],
     no_format: bool,
 ):
-    """Decode a binary file with a decoder generated from YAML instruction patterns.
+    """Decode one instruction word with a decoder generated from YAML patterns.
 
     DECODER_PATH: The file path to the YAML file containing instruction definitions.
 
-    BIN_PATH: The binary file to decode.
+    INSTR_HEX: The instruction word as hexadecimal, written most-significant bit first
+    the way an architecture manual spells the encoding -- not the byte order a
+    little-endian image stores it in.
 
     Example:
-        $ python cli.py decode armv7-m.yaml firmware.bin --start_address 0xD4
+        $ python cli.py decode armv7-m.yaml f000f814 --size 32
     """
 
     yaml_buf = read_text(decoder_path)
 
     tengine = TemplateEngine()
     with open_output_stream(out_file) as f:
-        uc_decode(
-            f, tengine, yaml_buf, decoder_width, bin_path, start_address,
-            auto_format=not no_format,
-        )
+        try:
+            uc_decode(
+                f,
+                tengine,
+                yaml_buf,
+                instr_hex,
+                int(size),
+                auto_format=not no_format,
+            )
+        except ValueError as e:
+            raise click.BadParameter(str(e))
 
 
 @cli.command()
 @click.argument("INPUT_PATH", type=str)
-@click.option(
-    "--decoder_width",
-    help="Target bit width; patterns are extended to this width before decoding "
-    + "(default: 32)",
-    default=32,
-    type=int,
-)
 @click.option(
     "--out_file",
     help="Output file to write the generated code. Defaults to None, which outputs to "
@@ -178,9 +145,7 @@ def decode(
     default=False,
 )
 @click.pass_context
-def generate_code(
-    self, input_path: str, decoder_width: int, out_file: Optional[str], no_format: bool
-):
+def generate_code(self, input_path: str, out_file: Optional[str], no_format: bool):
     """Generate decoder code from YAML instruction patterns.
 
     This command reads a YAML file from the provided INPUT_PATH which should contain
@@ -190,42 +155,32 @@ def generate_code(
     Args:
         input_path (str): The file path to the YAML file containing instruction
           definitions.
-        decoder_width (int): The target bit width for extending patterns
-          (default is 32).
         output_file (Optional[str]): Optional file path to write the generated code.
 
     Raises:
         IOError: If reading the input file or writing to the output file fails.
 
     Example:
-        $ python cli.py generate_code patterns.yaml --decoder_width 32
-          --output_file decoder.py
+        $ python cli.py generate_code patterns.yaml --out_file decoder.py
     """
 
     yaml_buf = read_text(input_path)
 
     tengine = TemplateEngine()
     with open_output_stream(out_file) as f:
-        uc_generate_code(f, tengine, yaml_buf, decoder_width, auto_format=not no_format)
+        uc_generate_code(f, tengine, yaml_buf, auto_format=not no_format)
 
 
 @cli.command()
 @click.argument("INPUT_PATH", type=str)
-@click.option(
-    "--decoder_width",
-    help="Target bit width; patterns are extended to this width before decoding "
-    + "(default: 32)",
-    default=32,
-    type=int,
-)
 @click.pass_context
-def show_tree(ctx, input_path: str, decoder_width: int):
+def show_tree(ctx, input_path: str):
     """
-    Show the decode tree of an instruction set.
+    Show the decode trees of an instruction set.
 
     This command reads a YAML file from the specified INPUT_PATH, which is expected to
-    contain binary instruction definitions. It decodes these definitions to build their
-    decode tree and outputs the tree using a printer.
+    contain binary instruction definitions. It decodes these definitions to build one
+    decode tree per instruction size and outputs them using a printer.
 
     INPUT_PATH: The file path to a YAML file containing pattern definitions.
 
@@ -235,7 +190,7 @@ def show_tree(ctx, input_path: str, decoder_width: int):
 
     yaml_buf = read_text(input_path)
 
-    uc_show_decode_tree(sys.stdout, yaml_buf, decoder_width)
+    uc_show_decode_tree(sys.stdout, yaml_buf)
 
 
 def main():

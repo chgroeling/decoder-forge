@@ -12,29 +12,33 @@ def uc_decode(
     printer,
     tengine: ITemplateEngine,
     input_yaml: str,
-    decoder_width: int,
-    bin_file: str,
-    start_address: int = 0x0,
+    instr_hex: str,
+    size: int,
     auto_format: bool = True,
 ):
-    """Generate a decoder from ``input_yaml`` and decode ``bin_file`` with it.
+    """Generate a decoder from ``input_yaml`` and decode a single instruction word.
+
+    ``instr_hex`` is the instruction word written most-significant bit first, the way
+    an encoding is spelled in an architecture manual -- ``f000f814`` for a 32-bit Thumb
+    ``BL``, not the ``00f014f8`` those bytes are stored as in a little-endian image.
 
     Args:
         printer: Writable stream with a ``write(str)`` method.
         tengine (ITemplateEngine): Template engine used to generate the decoder.
         input_yaml (str): A YAML string with an ``instructions`` list.
-        decoder_width (int): The bit width used when constructing the decode tree.
-        bin_file (str): Path to the binary to decode.
-        start_address (int): Offset into ``bin_file`` at which decoding starts.
+        instr_hex (str): The instruction word as hexadecimal, MSB first.
+        size (int): The instruction size to decode the word as, in bits.
         auto_format (bool): Whether to run ``ruff format`` on the generated code
             (default ``True``).
+
+    Raises:
+        ValueError: If ``instr_hex`` is not hexadecimal, does not fit in ``size`` bits,
+            or if the instruction set has no encodings of that size.
     """
 
     logger.info("Call: uc_decode")
     code_printer = io.StringIO()
-    generate_code(
-        input_yaml, decoder_width, tengine, code_printer, auto_format=auto_format
-    )
+    generate_code(input_yaml, tengine, code_printer, auto_format=auto_format)
     code = code_printer.getvalue()
     compiled_code = compile(code, "", "exec")
 
@@ -43,45 +47,29 @@ def uc_decode(
     exec(compiled_code, ns)
 
     Context = ns["Context"]
+    InstructionSize = ns["InstructionSize"]
     decode = ns["decode"]
 
-    context = Context()
+    try:
+        instr = int(instr_hex, 16)
+    except ValueError:
+        raise ValueError(f"{instr_hex!r} is not a hexadecimal instruction word")
+    if instr < 0:
+        raise ValueError("The instruction word must not be negative")
 
-    # Maximum instruction width (bytes read per attempt) and the smallest instruction
-    # width (read granularity / how few trailing bytes still form a decodable word).
-    decoder_bytes = ns["get_decoder_eval_bytes"]()
-    unit = ns["get_min_instr_bytes"]()
+    supported = ns["get_supported_sizes"]()
+    if size not in supported:
+        sizes = ", ".join(str(int(i)) for i in supported) or "none"
+        raise ValueError(
+            f"This instruction set has no {size}-bit encodings (it has: {sizes})"
+        )
 
-    adr = start_address
-    with open(bin_file, "rb") as fp:
+    # The word is decoded as exactly ``size`` bits, so anything above them is not part
+    # of the instruction -- silently masking it off would decode something the caller
+    # did not write.
+    if instr.bit_length() > size:
+        raise ValueError(f"0x{instr:x} does not fit in {size} bits")
 
-        while True:
-            fp.seek(adr)
-            raw = fp.read(decoder_bytes)
-            if len(raw) < unit:
-                break
+    out = decode(instr, ctx=Context(), size=InstructionSize(size))
 
-            # Build the MSB-aligned instruction word from ``unit``-sized words (each
-            # little-endian; the first word is the most significant, e.g. hw1<<16|hw2
-            # for Thumb). A short tail is zero-padded so a trailing narrow instruction
-            # still decodes.
-            padded = raw.ljust(decoder_bytes, b"\x00")
-            instr = 0
-            for off in range(0, decoder_bytes, unit):
-                instr = (instr << (unit * 8)) | int.from_bytes(
-                    padded[off : off + unit], "little"
-                )
-
-            # ``decode`` reports how many bytes the matched instruction occupies; a
-            # side effect yields a See/Undefined/Unpredictable pseudo-instruction and a
-            # no-match a NoMatch.
-            out, n_bytes = decode(instr, ctx=context)
-
-            # Show only the bytes this instruction actually consumed, zero-padded to
-            # its full width (4 hex digits for a 16-bit instruction, 8 for a 32-bit).
-            consumed = instr >> ((decoder_bytes - n_bytes) * 8)
-            consumed_hex = f"0x{consumed:0{n_bytes * 2}x}"
-            print(f"{hex(adr):8} {consumed_hex:10} ", end="")
-            print(out)
-
-            adr += n_bytes
+    printer.write(f"0x{instr:0{size // 4}x} {out}\n")

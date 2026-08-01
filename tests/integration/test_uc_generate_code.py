@@ -1,10 +1,12 @@
+import pytest
+
 from decoder_forge.template_engine import TemplateEngine
 from decoder_forge.uc_generate_code import uc_generate_code
 from enum import IntEnum
 from unittest.mock import Mock
 
 
-# A minimal instructions/encodings fixture (8-bit decoder width).
+# A minimal instructions/encodings fixture (8-bit instructions).
 TEST_FORMAT = """
 instructions:
 - id: FOO
@@ -44,14 +46,23 @@ def extract_generated_code(printer_mock: Mock):
     return generated_code_str
 
 
-def _generate(yaml_buf: str, decoder_width: int = 8):
+def _generate(yaml_buf: str):
     printer_mock = Mock(spec=["write"])
     tengine = TemplateEngine()
-    uc_generate_code(printer_mock, tengine, yaml_buf, decoder_width=decoder_width)
+    uc_generate_code(printer_mock, tengine, yaml_buf)
     generated_code = extract_generated_code(printer_mock)
     test_namespace: dict = {}
     exec(generated_code, test_namespace)
     return test_namespace
+
+
+def _decode(ns, instr: int, context, size: int = 8):
+    """Decode ``instr`` as an instruction of ``size`` bits.
+
+    The size is the caller's to supply; the fixtures above are 8-bit formats, so that
+    is the default.
+    """
+    return ns["decode"](instr, context, ns["InstructionSize"](size))
 
 
 def test_uc_generate_code_generate_and_eval__code_empty_format_outputs_None():
@@ -59,11 +70,10 @@ def test_uc_generate_code_generate_and_eval__code_empty_format_outputs_None():
 
     context = ns["Context"]()
 
-    # call the decoder; decode returns (result, n_bytes)
-    decode_output = ns["decode"](0xFF, context)
+    decode_output = _decode(ns, 0xFF, context)
 
-    # returns NoMatch class, advancing by the minimum instruction width (1 byte)
-    assert decode_output == (ns["NoMatch"](), 1)
+    # a format with no encodings matches nothing, at any size
+    assert decode_output == ns["NoMatch"]()
 
 
 def test_uc_generate_code_generate_and_eval_foo_extracts_field():
@@ -72,9 +82,9 @@ def test_uc_generate_code_generate_and_eval_foo_extracts_field():
     context = ns["Context"]()
 
     # 0x05 matches FOO/T1 (0000xxxx); operand a = 0x5 -> d = UInt(a)
-    decode_output = ns["decode"](0x05, context)
+    decode_output = _decode(ns, 0x05, context)
 
-    assert decode_output == (ns["FOO"](decoder_state=1, d=0x5), 1)
+    assert decode_output == ns["FOO"](d=0x5)
 
 
 def test_uc_generate_code_generate_and_eval_bar_extracts_field_and_flags():
@@ -83,9 +93,9 @@ def test_uc_generate_code_generate_and_eval_bar_extracts_field_and_flags():
     context = ns["Context"]()
 
     # 0x42 matches BAR/T1 (01xxxxxx); operand b = 0x02
-    decode_output = ns["decode"](0x42, context)
+    decode_output = _decode(ns, 0x42, context)
 
-    assert decode_output == (ns["BAR"](decoder_state=1, n=0x2, setflags=True), 1)
+    assert decode_output == ns["BAR"](n=0x2, setflags=True)
 
 
 def test_uc_generate_code_generate_and_eval_no_match_returns_nomatch():
@@ -94,9 +104,9 @@ def test_uc_generate_code_generate_and_eval_no_match_returns_nomatch():
     context = ns["Context"]()
 
     # 0x80 matches neither pattern
-    decode_output = ns["decode"](0x80, context)
+    decode_output = _decode(ns, 0x80, context)
 
-    assert decode_output == (ns["NoMatch"](), 1)
+    assert decode_output == ns["NoMatch"]()
 
 
 # A fixture whose decode block redirects via ``SEE`` when the operand is all-ones.
@@ -124,10 +134,10 @@ def test_uc_generate_code_generate_and_eval_see_returns_see_pseudo():
     context = ns["Context"]()
 
     # 0x05 does not trigger the redirect -> normal decode
-    assert ns["decode"](0x05, context) == (ns["FOO"](decoder_state=1, d=0x5), 1)
+    assert _decode(ns, 0x05, context) == ns["FOO"](d=0x5)
 
     # 0x0F (a == 0b1111) flags the SEE side effect -> See pseudo-instruction
-    assert ns["decode"](0x0F, context) == (ns["See"](decoder_state=1), 1)
+    assert _decode(ns, 0x0F, context) == ns["See"]()
 
 
 # A fixture whose decode block only *tests* one operand (``cond``) and ignores another
@@ -158,13 +168,10 @@ def test_uc_generate_code_generate_and_eval_unassigned_and_unused_fields_are_mem
 
     # 0x15: cond = 0b01 (read but never assigned to an output), opt = 0x5 (never
     # mentioned by the decode block) -- both are carried into the instruction object.
-    assert ns["decode"](0x15, context) == (
-        ns["FOO"](decoder_state=1, cond=0x1, opt=0x5),
-        1,
-    )
+    assert _decode(ns, 0x15, context) == ns["FOO"](cond=0x1, opt=0x5)
 
     # cond == 0b11 still flags UNPREDICTABLE
-    assert ns["decode"](0x35, context) == (ns["Unpredictable"](decoder_state=1), 1)
+    assert _decode(ns, 0x35, context) == ns["Unpredictable"]()
 
 
 def test_uc_generate_code_members_are_annotated_with_their_inferred_type():
@@ -217,14 +224,8 @@ def test_uc_generate_code_members_assigned_in_one_branch_only():
 
     # Every member is required, so the member the taken branch skipped is pre-set to
     # the zero of its type instead of raising UnboundLocalError.
-    assert ns["decode"](0x05, context) == (
-        ns["FOO"](decoder_state=1, wide=False, big=0, small=0x5),
-        1,
-    )
-    assert ns["decode"](0x0F, context) == (
-        ns["FOO"](decoder_state=1, wide=True, big=0xF, small=0),
-        1,
-    )
+    assert _decode(ns, 0x05, context) == ns["FOO"](wide=False, big=0, small=0x5)
+    assert _decode(ns, 0x0F, context) == ns["FOO"](wide=True, big=0xF, small=0)
 
 
 # One instruction whose two encodings type the same member differently: a truth value
@@ -266,8 +267,8 @@ def test_uc_generate_code_member_type_merges_across_encodings():
     # T1 never reads ``a``, so it is carried through; T2 turns it into ``x`` and does
     # not contribute an ``a`` member of its own -- but the struct has one, which T2
     # fills from the operand it extracted anyway.
-    assert ns["decode"](0x05, context) == (ns["FOO"](decoder_state=1, x=True, a=0x5), 1)
-    assert ns["decode"](0x15, context) == (ns["FOO"](decoder_state=1, x=0x5, a=0x5), 1)
+    assert _decode(ns, 0x05, context) == ns["FOO"](x=True, a=0x5)
+    assert _decode(ns, 0x15, context) == ns["FOO"](x=0x5, a=0x5)
 
 
 def test_uc_generate_code_emits_opcode_intenum():
@@ -301,3 +302,97 @@ def test_uc_generate_code_opcode_empty_format_still_has_pseudo_entries():
     assert ns["Opcode"].OP_UNDEFINED == -2
     assert ns["Opcode"].OP_UNPREDICTABLE == -3
     assert ns["Opcode"].OP_SEE == -4
+
+
+# Two encodings of different lengths whose fixed bits overlap: the 16-bit form is
+# ``0001`` followed by a 12-bit operand, the 32-bit form ``0001`` followed by 28 bits.
+# Read as a 32-bit word, the 16-bit form's operand would sit in bits 27..16.
+MIXED_SIZE_FORMAT = """
+instructions:
+- id: NARROW
+  mnemonic: NARROW
+  encodings:
+  - name: T1
+    length_bits: 16
+    pattern: 0001xxxxxxxxxxxx
+    bit_fields:
+    - skip: 4
+    - field: a
+      width: 12
+    decode: |
+      d = UInt(a);
+- id: WIDE
+  mnemonic: WIDE
+  encodings:
+  - name: T1
+    length_bits: 32
+    pattern: 0001xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    bit_fields:
+    - skip: 4
+    - field: b
+      width: 28
+    decode: |
+      n = UInt(b);
+"""
+
+
+def test_uc_generate_code_narrow_encoding_reads_its_own_width():
+    """A 16-bit encoding's operands sit at the offsets its own layout gives them.
+
+    The word handed to the 16-bit decoder is 16 bits wide and nothing else, so ``a``
+    occupies bits 11..0 -- not bits 27..16 of a word padded out to the width of the
+    widest instruction.
+    """
+    ns = _generate(MIXED_SIZE_FORMAT)
+
+    context = ns["Context"]()
+
+    assert _decode(ns, 0x1ABC, context, size=16) == ns["NARROW"](d=0xABC)
+
+
+def test_uc_generate_code_same_word_decodes_differently_per_size():
+    """The size selects the decoder, so one word can mean two different things."""
+    ns = _generate(MIXED_SIZE_FORMAT)
+
+    context = ns["Context"]()
+
+    # As a 32-bit word this is WIDE with a 28-bit operand ...
+    assert _decode(ns, 0x1000ABCD, context, size=32) == ns["WIDE"](n=0x000ABCD)
+    # ... while its low half read as a 16-bit instruction is NARROW.
+    assert _decode(ns, 0xABCD, context, size=16) == ns["NoMatch"]()
+    assert _decode(ns, 0x1BCD, context, size=16) == ns["NARROW"](d=0xBCD)
+
+
+def test_uc_generate_code_unused_size_answers_no_match():
+    """Asking for a size the instruction set has no encodings for is not an error."""
+    ns = _generate(MIXED_SIZE_FORMAT)
+
+    context = ns["Context"]()
+
+    assert _decode(ns, 0x1A, context, size=8) == ns["NoMatch"]()
+
+
+def test_uc_generate_code_supported_sizes_lists_the_populated_ones():
+    ns = _generate(MIXED_SIZE_FORMAT)
+
+    size = ns["InstructionSize"]
+    assert ns["get_supported_sizes"]() == (size.SIZE_16BIT, size.SIZE_32BIT)
+
+    ns = _generate(TEST_FORMAT)
+    assert ns["get_supported_sizes"]() == (ns["InstructionSize"].SIZE_8BIT,)
+
+
+def test_uc_generate_code_rejects_an_unsupported_encoding_length():
+    """A 12-bit encoding has no instruction size a caller could ask for it under."""
+    fmt = TEST_FORMAT.replace("pattern: 0000xxxx", "pattern: 0000xxxxxxxx")
+
+    with pytest.raises(ValueError, match="12 bits long"):
+        _generate(fmt)
+
+
+def test_uc_generate_code_rejects_length_bits_disagreeing_with_the_pattern():
+    """The pattern is the authority; a contradicting length_bits is a format bug."""
+    fmt = TEST_FORMAT.replace("length_bits: 8", "length_bits: 16", 1)
+
+    with pytest.raises(ValueError, match="length_bits is 16"):
+        _generate(fmt)

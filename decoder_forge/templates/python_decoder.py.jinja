@@ -19,7 +19,7 @@
 {%- endmacro -%}
 
 {% macro no_match() -%}
-    return NoMatch(), {{min_instr_bytes}}  # no match
+    return NoMatch()  # no match
 {%- endmacro -%}
 
 
@@ -39,12 +39,17 @@ from typing import ClassVar
 
 
 # --- decoder-forge additions -----------------------------------------------------
-class DecoderState(IntEnum):
-    """Bit-encoded decoder state flags set on each decoded instruction."""
-    DECODER_NONE = 0
-    DECODED_8BIT = 1
-    DECODED_16BIT = 2
-    DECODED_32BIT = 4
+class InstructionSize(IntEnum):
+    """Width of the instruction word handed to ``decode``.
+
+    An encoding is only ever matched by the decoder for its own size, so the caller has
+    to say which one applies: a 16-bit instruction is decoded from a bare 16-bit word,
+    not from one padded out to the width of the widest instruction. The values are bit
+    counts, so ``size // 8`` is the number of bytes the instruction occupies.
+    """
+    SIZE_8BIT = 8
+    SIZE_16BIT = 16
+    SIZE_32BIT = 32
 
 
 class Opcode(IntEnum):
@@ -61,21 +66,18 @@ class Opcode(IntEnum):
 class NoMatch:
     """Returned when no encoding matches the instruction word."""
     opcode: ClassVar[int] = Opcode.OP_NO_MATCH
-    decoder_state: int = 0
 
 
 @dataclass(frozen=True, eq=True)
 class Undefined:
     """Pseudo-instruction returned when a decode flags the UNDEFINED side effect."""
     opcode: ClassVar[int] = Opcode.OP_UNDEFINED
-    decoder_state: int
 
 
 @dataclass(frozen=True, eq=True)
 class Unpredictable:
     """Pseudo-instruction returned when a decode flags the UNPREDICTABLE side effect."""
     opcode: ClassVar[int] = Opcode.OP_UNPREDICTABLE
-    decoder_state: int
 
 
 @dataclass(frozen=True, eq=True)
@@ -87,10 +89,9 @@ class See:
     transpiled block).
     """
     opcode: ClassVar[int] = Opcode.OP_SEE
-    decoder_state: int
 
 
-def _apply_sideeffect(sideffect_flags, decoded, decoder_state):
+def _apply_sideeffect(sideffect_flags, decoded):
     """Map a side effect flagged during decode onto a pseudo-instruction.
 
     ``SEE``, ``UNDEFINED`` and ``UNPREDICTABLE`` set bits on ``sideffect_flags``.
@@ -100,11 +101,11 @@ def _apply_sideeffect(sideffect_flags, decoded, decoder_state):
     then ``UNDEFINED``, then ``UNPREDICTABLE``.
     """
     if sideffect_flags & SIDEFFECT_SEE:
-        return See(decoder_state=decoder_state)
+        return See()
     if sideffect_flags & SIDEFFECT_UNDEFINED:
-        return Undefined(decoder_state=decoder_state)
+        return Undefined()
     if sideffect_flags & SIDEFFECT_UNPREDICTABLE:
-        return Unpredictable(decoder_state=decoder_state)
+        return Unpredictable()
     return decoded
 
 
@@ -117,7 +118,6 @@ def _bits(instr, lsb, width):
 @dataclass(frozen=True, eq=True)
 class {{struct.name}}:
     opcode: ClassVar[int] = Opcode.OP_{{ struct.name.upper() }}
-    decoder_state: int
     {%- if struct.members|length > 0 %}
         {#- The annotation is how the value is represented in Python; the trailing
             comment names the ARM type it was inferred from, which also carries the
@@ -131,21 +131,24 @@ class {{struct.name}}:
 {%- endfor -%}
 
 {{""}}
-def get_decoder_eval_bytes():
-    return {{needed_bytes_for_code_eval}};
+def get_supported_sizes():
+    """The instruction sizes this decoder has encodings for."""
+    return ({% for size in supported_sizes %}InstructionSize.SIZE_{{size}}BIT, {% endfor %})
 
 {{""}}
-def get_min_instr_bytes():
-    return {{min_instr_bytes}};
+{%- for tree in trees %}
+def decode_{{tree.size}}bit(instr: int, ctx: Context):
+    """Decode one {{tree.size}}-bit instruction word.
 
-{{""}}
-def decode(instr: int, ctx: Context):
-    # ``ctx`` is the name arm-transpiller emits for the runtime context argument.
-    # Returns ``(result, n_bytes)``: the decoded instruction (or a NoMatch / See /
-    # Undefined / Unpredictable pseudo-instruction) and the number of bytes it occupies,
-    # so the caller can advance without a separate size pass.
+    ``instr`` holds exactly the {{tree.size}} bits of the instruction -- no padding and
+    no bits belonging to whatever follows it. ``ctx`` is the name arm-transpiller emits
+    for the runtime context argument. Returns the decoded instruction, or a NoMatch /
+    See / Undefined / Unpredictable pseudo-instruction.
+    """
+{%- if tree.flat_decode_tree|length > 0 %}
     sideffect_flags = SIDEFFECT_NONE
-{%- for pat, uid, depth, first_child, last_child in flat_decode_tree %}
+{%- endif %}
+{%- for pat, uid, depth, first_child, last_child in tree.flat_decode_tree %}
     {%- set origin = uid_to_pat[uid] | default(None) %}
     {{ gen_pat(pat, first_child, origin) | indent(depth*4, first=True) }}
     {%- if loop.nextitem is defined %}
@@ -160,5 +163,29 @@ def decode(instr: int, ctx: Context):
         {{no_match() | indent((depth-1)*4, first=True)}}
         {%- endif %}
     {%- endif %}
+{%- endfor %}
+    {{no_match()}}
+
+{{""}}
+{% endfor %}
+def decode(instr: int, ctx: Context, size: InstructionSize):
+    """Decode one instruction word of the given size.
+
+    The size is the caller's to determine -- this decoder does not classify. Each size
+    has its own decoder, matching the instruction against a word of exactly its own
+    width; ``decode`` only routes to the right one.
+
+    Args:
+        instr: The instruction word, ``size`` bits wide.
+        ctx: The runtime context the transpiled decode blocks thread their state through.
+        size: Which instruction size to decode ``instr`` as.
+
+    Returns:
+        The decoded instruction, or a NoMatch / See / Undefined / Unpredictable
+        pseudo-instruction. Sizes this instruction set does not use answer NoMatch.
+    """
+{%- for tree in trees %}
+    if size == InstructionSize.SIZE_{{tree.size}}BIT:
+        return decode_{{tree.size}}bit(instr, ctx)
 {%- endfor %}
     {{no_match()}}

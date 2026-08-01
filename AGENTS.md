@@ -33,7 +33,9 @@ YAML files in `formats/` (currently only `armv7-m.yaml`: 260 instructions, 369 e
 
 Jinja2 templates in `decoder_forge/templates/` emit a self-contained module: bit-pattern matching, one frozen dataclass per instruction, and `arm-transpiller`'s own `armruntime` embedded verbatim (`get_runtime_source("python")` — decoder-forge maintains no copy of the runtime and no adapter around it; the same call with `"c"` is what a C decoder target would embed).
 
-`decode(instr, ctx)` returns `(result, n_bytes)`. The number of bytes the matched instruction occupies is a literal known from each encoding's pattern, so variable-length (16/32-bit Thumb) decoding needs no separate size pass: the caller reads up to `get_decoder_eval_bytes()`, decodes once, and advances by the reported length.
+`decode(instr, ctx, size)` returns the decoded instruction. **The size is an input, not an output** — decoder-forge does not classify instruction widths, and a caller walking a variable-length stream has to determine each instruction's size itself before asking.
+
+Encodings are bucketed by their own bit length into one decode tree per `InstructionSize` (8/16/32), each built at that size's width and emitted as its own `decode_8bit` / `decode_16bit` / `decode_32bit` function; `decode` is a thin dispatcher over them. So a 16-bit encoding is matched against a bare 16-bit word and extracts its operands at the offsets its own `bit_fields` give them — it is never padded out to the width of the widest instruction, where its trailing bits would be the *next* instruction's and its operand offsets shifted by 16. Every size gets a function even if the format has no encodings of that length; the empty ones answer `NoMatch`, so asking for an unused size is not an error. An encoding whose pattern is not 8, 16 or 32 bits long has no size to be requested under and is a generation error (`encoding_size`), as is a `length_bits` contradicting the pattern.
 
 ### Generation pipeline (`generate_code.py`)
 
@@ -73,7 +75,7 @@ An instruction object's members are, in order:
 
 Runtime state is threaded through the `ctx` argument the transpiler emits. A transpiled `decode` block flags `SEE`/`UNDEFINED`/`UNPREDICTABLE` by setting bits on the local `sideffect_flags` variable — there are no hooks. Only blocks that can actually raise one route their return through `_apply_sideeffect`, decided at generation time via `extract_side_effects` (which reports explicit statements and ones raised inside runtime helpers such as `ThumbExpandImm`); the remaining encodings return the decoded instruction directly. 271 of the 369 ARMv7-M encodings can raise.
 
-`_apply_sideeffect` inspects `sideffect_flags` and, if a side effect was flagged, replaces the decoded instruction with a `See`/`Undefined`/`Unpredictable` pseudo-instruction — `SEE` wins (it redirects to another instruction, so the current decode does not apply), then `UNDEFINED`, then `UNPREDICTABLE`. A no-match yields `NoMatch`. Instructions carry no status field. `Context` is used exactly as the package defines it, which is what the C port needs (`Context` is a fixed struct there).
+`_apply_sideeffect` inspects `sideffect_flags` and, if a side effect was flagged, replaces the decoded instruction with a `See`/`Undefined`/`Unpredictable` pseudo-instruction — `SEE` wins (it redirects to another instruction, so the current decode does not apply), then `UNDEFINED`, then `UNPREDICTABLE`. A no-match yields `NoMatch`. All four are field-less: the size is what the caller passed in, so the result does not restate it. Instructions carry no status field. `Context` is used exactly as the package defines it, which is what the C port needs (`Context` is a fixed struct there).
 
 ## Code Conventions
 

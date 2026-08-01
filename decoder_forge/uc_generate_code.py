@@ -10,8 +10,7 @@ def uc_generate_code(
     printer,
     tengine: ITemplateEngine,
     input_yaml: str,
-    decoder_width: int,
     auto_format: bool = True,
 ):
     logger.info("Call: uc_generate_code")
-    generate_code(input_yaml, decoder_width, tengine, printer, auto_format=auto_format)
+    generate_code(input_yaml, tengine, printer, auto_format=auto_format)
