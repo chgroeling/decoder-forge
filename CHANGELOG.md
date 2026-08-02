@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Breaking:** a required `sideeffects` member on every instruction object in the
+  generated decoder, holding the bit set of `UNDEFINED` / `UNPREDICTABLE` / `SEE`
+  conditions the encoding's `decode` block flagged. The bits are the runtime's
+  `SIDEFFECT_*` constants, which the generated module already exports.
+
+### Removed
+
+- **Breaking:** the `Undefined`, `Unpredictable` and `See` pseudo-instructions, their
+  `Opcode` entries (`OP_UNDEFINED`, `OP_UNPREDICTABLE`, `OP_SEE`) and the
+  `_apply_sideeffect` helper that produced them. A flagged side effect no longer
+  replaces the decoded instruction: the instruction is returned with every field
+  decoded and reports the condition on its `sideeffects` member, so a caller can see both
+  what was decoded and what the architecture says about it. Which of the three
+  conditions matters, and in what order, is now the caller's to decide rather than a
+  precedence the decoder fixes. `NoMatch` is unchanged and remains the one result that
+  is not an instruction.
+
 ## [4.0.0]
 
 ### Added

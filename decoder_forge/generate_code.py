@@ -368,8 +368,9 @@ def _analyse_encoding(instr, encoding, size: int) -> dict:
     member_types = _member_types(members, program, input_types, name)
     # ``extract_side_effects`` reports whether the block can flag a side effect --
     # SEE, UNDEFINED or UNPREDICTABLE -- either through an explicit statement or via a
-    # runtime helper that raises one internally (e.g. ``ThumbExpandImm``). Any of the
-    # three routes the return through ``_apply_sideeffect``.
+    # runtime helper that raises one internally (e.g. ``ThumbExpandImm``). A block that
+    # cannot flag any of the three leaves ``sideffect_flags`` untouched, so its leaf
+    # spells the member's value out instead of reading the variable back.
     sideeffects = extract_side_effects(program)
     can_raise = (
         sideeffects["unpredictable"] or sideeffects["undefined"] or sideeffects["see"]
@@ -409,9 +410,11 @@ def _build_leaf(
       ``imm32`` or ``imm64`` depending on ``dp_operation``), which would otherwise be
       unbound locals.
 
-    The ``encoding`` member is the leaf's own: no ``decode`` block produces it, and it
-    names the form that matched (``Encoding.T1``, ...), which the shared struct would
-    otherwise not preserve.
+    Two members are the leaf's own, produced by no ``decode`` block: ``encoding`` names
+    the form that matched (``Encoding.T1``, ...), which the shared struct would
+    otherwise not preserve, and ``sideeffects`` carries the side effects the block
+    flagged, which is what lets a caller recognise an UNDEFINED, UNPREDICTABLE or SEE
+    condition on an instruction that is otherwise decoded in full.
 
     Args:
         analysis (dict): The encoding's analysis, as returned by
@@ -452,22 +455,19 @@ def _build_leaf(
         body.append("# decode")
         body.extend(analysis["decode_lines"])
 
-    # The encoding form is the one member no ``decode`` block produces: it is a property
-    # of the leaf that matched, not of the pseudocode it runs.
+    # The encoding form is a property of the leaf that matched, not of the pseudocode it
+    # runs; the side effects are what running that pseudocode flagged. A block that
+    # cannot flag any never touches ``sideffect_flags``, so its leaf names the constant
+    # rather than reading a variable it did not contribute to.
+    flagged = "sideffect_flags" if analysis["can_raise"] else "SIDEFFECT_NONE"
     args = ", ".join(
         [
             f"encoding=Encoding.{analysis['encoding']}",
+            f"sideeffects={flagged}",
             *(f"{member}={member}" for member in members),
         ]
     )
-    struct_call = f"{analysis['struct']}({args})"
-    if analysis["can_raise"]:
-        # A flagged side effect replaces the decoded instruction with an
-        # Undefined/Unpredictable pseudo-instruction; only wrap the blocks that
-        # can actually raise one.
-        body.append(f"return _apply_sideeffect(sideffect_flags, {struct_call})")
-    else:
-        body.append(f"return {struct_call}")
+    body.append(f"return {analysis['struct']}({args})")
 
     return {
         "name": analysis["name"],

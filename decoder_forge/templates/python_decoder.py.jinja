@@ -57,9 +57,8 @@ class Encoding(IntEnum):
 
     An instruction is spelled by several encodings -- named T1, T2, ... in an
     architecture manual -- that share one instruction object, so the form that matched
-    is only recoverable from the object's ``encoding`` member. The pseudo-instructions
-    (``NoMatch``, ``Undefined``, ``Unpredictable``, ``See``) have no encoding and carry
-    no such member.
+    is only recoverable from the object's ``encoding`` member. ``NoMatch`` is not a
+    decoded instruction and carries no such member.
     """
     {%- for name, id in encodings %}
     {{ name }} = {{ id }}
@@ -68,9 +67,6 @@ class Encoding(IntEnum):
 
 class Opcode(IntEnum):
     OP_NO_MATCH = -1
-    OP_UNDEFINED = -2
-    OP_UNPREDICTABLE = -3
-    OP_SEE = -4
     {%- for struct in structs %}
     OP_{{ struct.name.upper() }} = {{ struct_id_map[struct.name] }}
     {%- endfor %}
@@ -80,47 +76,6 @@ class Opcode(IntEnum):
 class NoMatch:
     """Returned when no encoding matches the instruction word."""
     opcode: ClassVar[int] = Opcode.OP_NO_MATCH
-
-
-@dataclass(frozen=True, eq=True)
-class Undefined:
-    """Pseudo-instruction returned when a decode flags the UNDEFINED side effect."""
-    opcode: ClassVar[int] = Opcode.OP_UNDEFINED
-
-
-@dataclass(frozen=True, eq=True)
-class Unpredictable:
-    """Pseudo-instruction returned when a decode flags the UNPREDICTABLE side effect."""
-    opcode: ClassVar[int] = Opcode.OP_UNPREDICTABLE
-
-
-@dataclass(frozen=True, eq=True)
-class See:
-    """Pseudo-instruction returned when a decode flags the SEE side effect.
-
-    ``SEE <encoding>`` redirects decoding to another instruction. The runtime only
-    records that the redirect fired (the target survives solely as a comment in the
-    transpiled block).
-    """
-    opcode: ClassVar[int] = Opcode.OP_SEE
-
-
-def _apply_sideeffect(sideffect_flags, decoded):
-    """Map a side effect flagged during decode onto a pseudo-instruction.
-
-    ``SEE``, ``UNDEFINED`` and ``UNPREDICTABLE`` set bits on ``sideffect_flags``.
-    Once the block has run, a flagged side effect replaces the decoded instruction with
-    the matching pseudo instruction; otherwise the decoded instruction stands. ``SEE``
-    wins (it redirects to another instruction, so the current decode does not apply),
-    then ``UNDEFINED``, then ``UNPREDICTABLE``.
-    """
-    if sideffect_flags & SIDEFFECT_SEE:
-        return See()
-    if sideffect_flags & SIDEFFECT_UNDEFINED:
-        return Undefined()
-    if sideffect_flags & SIDEFFECT_UNPREDICTABLE:
-        return Unpredictable()
-    return decoded
 
 
 def _bits(instr, lsb, width):
@@ -135,6 +90,10 @@ class {{struct.name}}:
     {#- The encoding form is a member like any other: all encodings of an instruction
         share this class, so which one matched is only known from the decoded object. #}
     encoding: Encoding
+    {#- The side effects the decode flagged, as a bit set of the SIDEFFECT_* constants.
+        The instruction is still decoded and handed over in full; what an UNDEFINED,
+        UNPREDICTABLE or SEE condition means for it is the caller's to decide. #}
+    sideeffects: SideffectFlags
     {%- if struct.members|length > 0 %}
         {#- The annotation is how the value is represented in Python; the trailing
             comment names the ARM type it was inferred from, which also carries the
@@ -159,8 +118,9 @@ def decode_{{tree.size}}bit(instr: int, ctx: Context):
 
     ``instr`` holds exactly the {{tree.size}} bits of the instruction -- no padding and
     no bits belonging to whatever follows it. ``ctx`` is the name arm-transpiller emits
-    for the runtime context argument. Returns the decoded instruction, or a NoMatch /
-    See / Undefined / Unpredictable pseudo-instruction.
+    for the runtime context argument. Returns the decoded instruction -- whose
+    ``sideeffects`` member reports any UNDEFINED / UNPREDICTABLE / SEE condition the
+    decode flagged -- or ``NoMatch``.
     """
 {%- if tree.flat_decode_tree|length > 0 %}
     sideffect_flags = SIDEFFECT_NONE
@@ -198,8 +158,9 @@ def decode(instr: int, ctx: Context, size: InstructionSize):
         size: Which instruction size to decode ``instr`` as.
 
     Returns:
-        The decoded instruction, or a NoMatch / See / Undefined / Unpredictable
-        pseudo-instruction. Sizes this instruction set does not use answer NoMatch.
+        The decoded instruction, or ``NoMatch`` if no encoding matches. Sizes this
+        instruction set does not use answer ``NoMatch`` too. A decoded instruction
+        carries the side effects its decode flagged on its ``sideeffects`` member.
     """
 {%- for tree in trees %}
     if size == InstructionSize.SIZE_{{tree.size}}BIT:

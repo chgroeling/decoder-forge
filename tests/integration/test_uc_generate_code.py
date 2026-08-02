@@ -61,6 +61,15 @@ def _enc(ns):
     return ns["Encoding"]
 
 
+def _no_sideeffects(ns):
+    """The ``sideeffects`` member of an instruction whose decode flagged nothing.
+
+    The constants come from arm-transpiller's runtime, which the decoder embeds, so a
+    caller reads them off the generated module rather than importing them separately.
+    """
+    return ns["SIDEFFECT_NONE"]
+
+
 def _decode(ns, instr: int, context, size: int = 8):
     """Decode ``instr`` as an instruction of ``size`` bits.
 
@@ -89,7 +98,9 @@ def test_uc_generate_code_generate_and_eval_foo_extracts_field():
     # 0x05 matches FOO/T1 (0000xxxx); operand a = 0x5 -> d = UInt(a)
     decode_output = _decode(ns, 0x05, context)
 
-    assert decode_output == ns["FOO"](encoding=_enc(ns).T1, d=0x5)
+    assert decode_output == ns["FOO"](
+        encoding=_enc(ns).T1, sideeffects=_no_sideeffects(ns), d=0x5
+    )
 
 
 def test_uc_generate_code_generate_and_eval_bar_extracts_field_and_flags():
@@ -100,7 +111,9 @@ def test_uc_generate_code_generate_and_eval_bar_extracts_field_and_flags():
     # 0x42 matches BAR/T1 (01xxxxxx); operand b = 0x02
     decode_output = _decode(ns, 0x42, context)
 
-    assert decode_output == ns["BAR"](encoding=_enc(ns).T1, n=0x2, setflags=True)
+    assert decode_output == ns["BAR"](
+        encoding=_enc(ns).T1, sideeffects=_no_sideeffects(ns), n=0x2, setflags=True
+    )
 
 
 def test_uc_generate_code_generate_and_eval_no_match_returns_nomatch():
@@ -133,16 +146,24 @@ instructions:
 """
 
 
-def test_uc_generate_code_generate_and_eval_see_returns_see_pseudo():
+def test_uc_generate_code_generate_and_eval_see_is_reported_on_the_instruction():
     ns = _generate(SEE_FORMAT)
 
     context = ns["Context"]()
 
-    # 0x05 does not trigger the redirect -> normal decode
-    assert _decode(ns, 0x05, context) == ns["FOO"](encoding=_enc(ns).T1, d=0x5)
+    # 0x05 does not trigger the redirect -> no side effect flagged
+    assert _decode(ns, 0x05, context) == ns["FOO"](
+        encoding=_enc(ns).T1, sideeffects=_no_sideeffects(ns), d=0x5
+    )
 
-    # 0x0F (a == 0b1111) flags the SEE side effect -> See pseudo-instruction
-    assert _decode(ns, 0x0F, context) == ns["See"]()
+    # 0x0F (a == 0b1111) flags SEE. The instruction is still decoded and handed back in
+    # full -- the redirect is reported on its ``sideeffects`` member, for the caller to
+    # act on or ignore.
+    decoded = _decode(ns, 0x0F, context)
+    assert decoded == ns["FOO"](
+        encoding=_enc(ns).T1, sideeffects=ns["SIDEFFECT_SEE"], d=0xF
+    )
+    assert decoded.sideeffects & ns["SIDEFFECT_SEE"]
 
 
 # A fixture whose decode block only *tests* one operand (``cond``) and ignores another
@@ -174,11 +195,16 @@ def test_uc_generate_code_generate_and_eval_unassigned_and_unused_fields_are_mem
     # 0x15: cond = 0b01 (read but never assigned to an output), opt = 0x5 (never
     # mentioned by the decode block) -- both are carried into the instruction object.
     assert _decode(ns, 0x15, context) == ns["FOO"](
-        encoding=_enc(ns).T1, cond=0x1, opt=0x5
+        encoding=_enc(ns).T1, sideeffects=_no_sideeffects(ns), cond=0x1, opt=0x5
     )
 
-    # cond == 0b11 still flags UNPREDICTABLE
-    assert _decode(ns, 0x35, context) == ns["Unpredictable"]()
+    # cond == 0b11 flags UNPREDICTABLE, which the members still decoded alongside it
+    assert _decode(ns, 0x35, context) == ns["FOO"](
+        encoding=_enc(ns).T1,
+        sideeffects=ns["SIDEFFECT_UNPREDICTABLE"],
+        cond=0x3,
+        opt=0x5,
+    )
 
 
 def test_uc_generate_code_members_are_annotated_with_their_inferred_type():
@@ -232,10 +258,18 @@ def test_uc_generate_code_members_assigned_in_one_branch_only():
     # Every member is required, so the member the taken branch skipped is pre-set to
     # the zero of its type instead of raising UnboundLocalError.
     assert _decode(ns, 0x05, context) == ns["FOO"](
-        encoding=_enc(ns).T1, wide=False, big=0, small=0x5
+        encoding=_enc(ns).T1,
+        sideeffects=_no_sideeffects(ns),
+        wide=False,
+        big=0,
+        small=0x5,
     )
     assert _decode(ns, 0x0F, context) == ns["FOO"](
-        encoding=_enc(ns).T1, wide=True, big=0xF, small=0
+        encoding=_enc(ns).T1,
+        sideeffects=_no_sideeffects(ns),
+        wide=True,
+        big=0xF,
+        small=0,
     )
 
 
@@ -278,22 +312,23 @@ def test_uc_generate_code_member_type_merges_across_encodings():
     # T1 never reads ``a``, so it is carried through; T2 turns it into ``x`` and does
     # not contribute an ``a`` member of its own -- but the struct has one, which T2
     # fills from the operand it extracted anyway.
-    assert _decode(ns, 0x05, context) == ns["FOO"](encoding=_enc(ns).T1, x=True, a=0x5)
-    assert _decode(ns, 0x15, context) == ns["FOO"](encoding=_enc(ns).T2, x=0x5, a=0x5)
+    assert _decode(ns, 0x05, context) == ns["FOO"](
+        encoding=_enc(ns).T1, sideeffects=_no_sideeffects(ns), x=True, a=0x5
+    )
+    assert _decode(ns, 0x15, context) == ns["FOO"](
+        encoding=_enc(ns).T2, sideeffects=_no_sideeffects(ns), x=0x5, a=0x5
+    )
 
 
 def test_uc_generate_code_emits_opcode_intenum():
     """The generated code exports an ``Opcode`` IntEnum with entries for every
-    instruction, ordered by their assigned ID, plus pseudo-instruction entries."""
+    instruction, ordered by their assigned ID, plus the ``NoMatch`` entry."""
     ns = _generate(TEST_FORMAT)
 
     assert "Opcode" in ns
     assert issubclass(ns["Opcode"], IntEnum)
 
     assert ns["Opcode"].OP_NO_MATCH == -1
-    assert ns["Opcode"].OP_UNDEFINED == -2
-    assert ns["Opcode"].OP_UNPREDICTABLE == -3
-    assert ns["Opcode"].OP_SEE == -4
 
     assert ns["Opcode"].OP_FOO == 0
     assert ns["Opcode"].OP_BAR == 1
@@ -353,15 +388,13 @@ def test_uc_generate_code_encoding_empty_format_has_no_entries():
     assert list(ns["Encoding"]) == []
 
 
-def test_uc_generate_code_opcode_empty_format_still_has_pseudo_entries():
-    """An empty format still exports the Opcode enum with pseudo-instruction entries."""
+def test_uc_generate_code_opcode_empty_format_still_has_the_no_match_entry():
+    """An empty format still exports the Opcode enum, with the NoMatch entry in it."""
     ns = _generate("")
 
     assert issubclass(ns["Opcode"], IntEnum)
     assert ns["Opcode"].OP_NO_MATCH == -1
-    assert ns["Opcode"].OP_UNDEFINED == -2
-    assert ns["Opcode"].OP_UNPREDICTABLE == -3
-    assert ns["Opcode"].OP_SEE == -4
+    assert [op.name for op in ns["Opcode"]] == ["OP_NO_MATCH"]
 
 
 # Two encodings of different lengths whose fixed bits overlap: the 16-bit form is
@@ -408,7 +441,7 @@ def test_uc_generate_code_narrow_encoding_reads_its_own_width():
     context = ns["Context"]()
 
     assert _decode(ns, 0x1ABC, context, size=16) == ns["NARROW"](
-        encoding=_enc(ns).T1, d=0xABC
+        encoding=_enc(ns).T1, sideeffects=_no_sideeffects(ns), d=0xABC
     )
 
 
@@ -420,12 +453,12 @@ def test_uc_generate_code_same_word_decodes_differently_per_size():
 
     # As a 32-bit word this is WIDE with a 28-bit operand ...
     assert _decode(ns, 0x1000ABCD, context, size=32) == ns["WIDE"](
-        encoding=_enc(ns).T1, n=0x000ABCD
+        encoding=_enc(ns).T1, sideeffects=_no_sideeffects(ns), n=0x000ABCD
     )
     # ... while its low half read as a 16-bit instruction is NARROW.
     assert _decode(ns, 0xABCD, context, size=16) == ns["NoMatch"]()
     assert _decode(ns, 0x1BCD, context, size=16) == ns["NARROW"](
-        encoding=_enc(ns).T1, d=0xBCD
+        encoding=_enc(ns).T1, sideeffects=_no_sideeffects(ns), d=0xBCD
     )
 
 

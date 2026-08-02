@@ -76,8 +76,11 @@ An instruction object's members are, in order:
   share a single class, so without it the result does not say which form was decoded.
   The entry's ID is the number in the name (`T1` is 1, not the position it occupies); a
   name without a number, or one whose number another name already claimed (`A1` and `T1`
-  in a format covering both instruction sets), gets the lowest free ID instead. The
-  pseudo-instructions have no encoding and no such member.
+  in a format covering both instruction sets), gets the lowest free ID instead. `NoMatch`
+  is not a decoded instruction and has no such member.
+- **The side effects the block flagged** — `sideeffects`, a bit set of the runtime's
+  `SIDEFFECT_*` constants. The other member no `decode` block produces; see
+  [Side effects](#side-effects).
 - **What the block assigns** — `extract_output_variables`.
 - **Plus the encoding's own `bit_fields` that never become one of them** — fields the block merely tests (`extract_unassigned_inputs`, e.g. `firstcond`/`mask` in `IT`) and fields it does not mention at all (`option` in `DSB`, the coprocessor register numbers of `MCR`). Both are passed through verbatim so no encoded information is lost. The candidate set is restricted to `bit_fields` because the transpiler also reports enum/constant tokens (`SRType_LSL`, `TRUE`) as inputs.
 - **Minus the variables subsumed by another output** — `extract_subsumed_variables`. A variable the block splices verbatim into another output, and reads nowhere else, is a bit-slice of that output and adds nothing. Only `I1`/`I2` in `B` T4 and `BL` T1 qualify across the whole format: they are bits 23 and 22 of the `imm32` they help build. Keeping them duplicated information in `BL` and forced `B` T1/T2/T3 to invent a value for a field their encoding has no notion of. The analysis is width-aware (a truncating `SignExtend`/`ZeroExtend` does not preserve its operands), which is why it takes the encoding's `input_types` and lives upstream; a read in any other position — a condition, an arithmetic operand, a bit index — keeps the variable, which is what separates `I1` from `n` in `LDM` T1 (read only as the index in `registers<n>`) and from `dp_operation` in the VFP encodings (read only as an `if` selector).
@@ -89,9 +92,11 @@ An instruction object's members are, in order:
 
 ### Side effects
 
-Runtime state is threaded through the `ctx` argument the transpiler emits. A transpiled `decode` block flags `SEE`/`UNDEFINED`/`UNPREDICTABLE` by setting bits on the local `sideffect_flags` variable — there are no hooks. Only blocks that can actually raise one route their return through `_apply_sideeffect`, decided at generation time via `extract_side_effects` (which reports explicit statements and ones raised inside runtime helpers such as `ThumbExpandImm`); the remaining encodings return the decoded instruction directly. 271 of the 369 ARMv7-M encodings can raise.
+Runtime state is threaded through the `ctx` argument the transpiler emits. A transpiled `decode` block flags `SEE`/`UNDEFINED`/`UNPREDICTABLE` by setting bits on the local `sideffect_flags` variable — there are no hooks. Its value ends up on the decoded instruction's `sideeffects` member, and that is the whole of what the decoder does with it: **the decoder reports side effects, it does not act on them.** An encoding that flags `UNDEFINED` is still decoded and returned with every field filled in, and it is the caller who decides what an `UNDEFINED`, `UNPREDICTABLE` or `SEE` condition means for it — which of the three matters, and in what order, is a policy the decoder has no business fixing. `SEE` names its redirect target in a comment on the flagging line only; the target is not otherwise recorded.
 
-`_apply_sideeffect` inspects `sideffect_flags` and, if a side effect was flagged, replaces the decoded instruction with a `See`/`Undefined`/`Unpredictable` pseudo-instruction — `SEE` wins (it redirects to another instruction, so the current decode does not apply), then `UNDEFINED`, then `UNPREDICTABLE`. A no-match yields `NoMatch`. All four are field-less: the size is what the caller passed in, so the result does not restate it. Instructions carry no status field. `Context` is used exactly as the package defines it, which is what the C port needs (`Context` is a fixed struct there).
+Whether a block can flag anything is decided at generation time via `extract_side_effects` (which reports explicit statements and ones raised inside runtime helpers such as `ThumbExpandImm`). 271 of the 369 ARMv7-M encodings can; the other 98 never touch `sideffect_flags`, so their leaves pass `SIDEFFECT_NONE` rather than reading a variable they did not contribute to.
+
+The one result that is not an instruction is `NoMatch`, returned when no encoding matches and for a size the instruction set has no encodings of. It is field-less: the size is what the caller passed in, so the result does not restate it, and nothing was decoded, so it has neither an `encoding` nor a `sideeffects` member. `Context` is used exactly as the package defines it, which is what the C port needs (`Context` is a fixed struct there).
 
 ## Code Conventions
 

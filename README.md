@@ -8,7 +8,7 @@ Generate efficient decoder source code from YAML descriptions of bit patterns �
 - **Automatic code generation** — produces a self-contained Python module with a `decode(instr, ctx, size)` entry point that matches patterns by specificity (most fixed bits first).
 - **ARM pseudocode transpilation** — encoding decode logic is written in ARM pseudocode and transpiled to Python via [`arm-transpiller`](https://github.com/chgroeling/arm-transpiller).
 - **One decoder per instruction size** — 8/16/32-bit encodings each get their own decode tree, built at their own width. A 16-bit instruction is matched against a bare 16-bit word, so its trailing bits are its own rather than the next instruction's. Which size applies is the caller's to say.
-- **Side-effect handling** — `UNDEFINED`, `UNPREDICTABLE`, and `SEE` conditions from the ARM ARM are propagated through runtime side effects and surfaced as pseudo-instructions.
+- **Side-effect reporting** — `UNDEFINED`, `UNPREDICTABLE`, and `SEE` conditions from the ARM ARM are collected while the decode block runs and reported on the decoded instruction's `sideeffects` member. The instruction is still decoded in full; what the condition means for it is the caller's to decide.
 
 ## Installation
 
@@ -108,11 +108,22 @@ The generated module exposes:
 | `get_supported_sizes() -> tuple[InstructionSize, ...]` | The sizes this instruction set has encodings for |
 | `Encoding` | `T1`, `T2`, … — the encoding forms the instruction set names |
 | `Context` | Runtime context passed through to the transpiled decode block |
-| `NoMatch` / `Undefined` / `Unpredictable` / `See` | Pseudo-instructions |
+| `NoMatch` | Returned when no encoding matches the word |
+| `SIDEFFECT_NONE` / `SIDEFFECT_UNPREDICTABLE` / `SIDEFFECT_UNDEFINED` / `SIDEFFECT_SEE` | The bits an instruction's `sideeffects` member is read against |
 
 `instr` holds exactly `size` bits — no padding, and no bits belonging to whatever follows it. A size the instruction set does not use answers `NoMatch` rather than raising.
 
-One frozen dataclass per instruction carries all decoded fields as required members, each annotated with its Python type and (as a trailing comment) its ARM type. All encodings of an instruction share that one class, so every instruction object also carries an `encoding` member naming the form it was decoded from (`ADD_immediate(encoding=Encoding.T4, …)`). The pseudo-instructions have no encoding and no such member.
+One frozen dataclass per instruction carries all decoded fields as required members, each annotated with its Python type and (as a trailing comment) its ARM type. All encodings of an instruction share that one class, so every instruction object also carries an `encoding` member naming the form it was decoded from (`ADD_immediate(encoding=Encoding.T4, …)`). `NoMatch` is not a decoded instruction and has no such member.
+
+Every instruction also carries a `sideeffects` member — the bit set of `UNDEFINED`, `UNPREDICTABLE` and `SEE` conditions its decode flagged. The decoder does not act on them, so an instruction that flags one is still returned with all of its fields decoded:
+
+```python
+result = decode(0xCA00, ctx, InstructionSize.SIZE_16BIT)
+if not isinstance(result, NoMatch) and result.sideeffects & SIDEFFECT_UNPREDICTABLE:
+    ...  # LDM with an empty register list -- decoded, but architecturally unpredictable
+```
+
+`NoMatch` is the one result without a `sideeffects` member: nothing was decoded, so nothing flagged a condition.
 
 ## Development
 
