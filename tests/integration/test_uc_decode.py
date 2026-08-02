@@ -43,12 +43,12 @@ def _decode(instr_hex: str, size: int) -> str:
 
 
 def test_uc_decode_writes_the_decoded_instruction_to_the_printer():
-    assert _decode("05", 8) == "0x05 FOO(d=5)\n"
+    assert _decode("05", 8) == "0x05 FOO(encoding=<Encoding.T1: 1>, d=5)\n"
 
 
 def test_uc_decode_decodes_the_word_at_the_requested_size():
     # The same operand nibble, but the 16-bit encoding reads a 12-bit field.
-    assert _decode("1abc", 16) == "0x1abc BAR(n=2748)\n"
+    assert _decode("1abc", 16) == "0x1abc BAR(encoding=<Encoding.T1: 1>, n=2748)\n"
 
 
 def test_uc_decode_reports_a_word_that_does_not_fit_the_size():

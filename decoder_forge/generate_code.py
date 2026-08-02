@@ -1,7 +1,10 @@
 import logging
+import re
 import shutil
 import subprocess
 import yaml
+
+from itertools import count
 
 from decoder_forge.bit_pattern import BitPattern
 from decoder_forge.pattern_algorithms import (
@@ -62,6 +65,42 @@ def _format_code(code: str) -> str:
     except subprocess.CalledProcessError as e:
         logger.warning("ruff format failed: %s", e.stderr.strip())
         return code
+
+
+def _encoding_id_map(instructions) -> dict[str, int]:
+    """Assign every encoding name in the format the ID its ``Encoding`` entry carries.
+
+    An instruction's encoding forms are named T1, T2, ... and the number in the name is
+    the value a reader expects the entry to have, so a name ending in digits keeps them
+    (``T1`` is 1, not the zero-based position it happens to occupy). Any other name --
+    and any name whose number another one already took, as ``A1``/``T1`` would in a
+    format covering both instruction sets -- gets the lowest free ID instead, so the map
+    stays one-to-one whatever the format calls its encodings.
+
+    Args:
+        instructions (list[dict]): The format's ``instructions`` entries.
+
+    Returns:
+        dict[str, int]: Encoding name to ID, in first-appearance order.
+
+    Example:
+        >>> _encoding_id_map([{"encodings": [{"name": "T1"}, {"name": "T2"}]}])
+        {'T1': 1, 'T2': 2}
+    """
+
+    ids: dict[str, int] = {}
+    for instr in instructions:
+        for encoding in instr.get("encodings", []):
+            name = encoding["name"]
+            if name in ids:
+                continue
+            digits = re.search(r"\d+$", name)
+            claimed = set(ids.values())
+            wanted = int(digits.group()) if digits else None
+            if wanted is None or wanted in claimed:
+                wanted = next(i for i in count(1) if i not in claimed)
+            ids[name] = wanted
+    return ids
 
 
 def _merge_members(existing: list[str], new: list[str]) -> list[str]:
@@ -294,8 +333,9 @@ def _analyse_encoding(instr, encoding, size: int) -> dict:
             it is decoded from and the size a caller asks for it under.
 
     Returns:
-        dict: Analysis with keys ``name``, ``struct``, ``members``, ``member_types``,
-        ``operands``, ``unbound``, ``extractions``, ``decode_lines`` and ``can_raise``.
+        dict: Analysis with keys ``name``, ``struct``, ``encoding``, ``members``,
+        ``member_types``, ``operands``, ``unbound``, ``extractions``, ``decode_lines``
+        and ``can_raise``.
     """
 
     # All encodings (T1, T2, ...) of one instruction share a single struct named
@@ -338,6 +378,9 @@ def _analyse_encoding(instr, encoding, size: int) -> dict:
     return {
         "name": name,
         "struct": struct,
+        # All encodings of an instruction share its struct, so which form matched is
+        # only recoverable from the decoded object if the leaf records it.
+        "encoding": encoding["name"],
         "members": members,
         "member_types": member_types,
         "operands": {bf["field"] for bf in bit_fields if "field" in bf},
@@ -365,6 +408,10 @@ def _build_leaf(
     * members the block assigns on some paths only (``VMOV_immediate`` assigns
       ``imm32`` or ``imm64`` depending on ``dp_operation``), which would otherwise be
       unbound locals.
+
+    The ``encoding`` member is the leaf's own: no ``decode`` block produces it, and it
+    names the form that matched (``Encoding.T1``, ...), which the shared struct would
+    otherwise not preserve.
 
     Args:
         analysis (dict): The encoding's analysis, as returned by
@@ -405,7 +452,14 @@ def _build_leaf(
         body.append("# decode")
         body.extend(analysis["decode_lines"])
 
-    args = ", ".join(f"{member}={member}" for member in members)
+    # The encoding form is the one member no ``decode`` block produces: it is a property
+    # of the leaf that matched, not of the pseudocode it runs.
+    args = ", ".join(
+        [
+            f"encoding=Encoding.{analysis['encoding']}",
+            *(f"{member}={member}" for member in members),
+        ]
+    )
     struct_call = f"{analysis['struct']}({args})"
     if analysis["can_raise"]:
         # A flagged side effect replaces the decoded instruction with an
@@ -468,11 +522,12 @@ def _load(input_yaml: str):
         input_yaml (str): YAML in the ``instructions``/``encodings`` format.
 
     Returns:
-        tuple: ``(pat_repo, structs, struct_id_map, buckets)`` where ``pat_repo`` maps
-        each ``BitPattern`` to its leaf metadata, ``structs`` is the de-duplicated
-        output dataclass list (each member carrying its Python annotation and the ARM
-        type it was inferred from), ``struct_id_map`` maps struct names to enumerated
-        IDs, and ``buckets`` groups the patterns by the size they decode under.
+        tuple: ``(pat_repo, structs, struct_id_map, encoding_id_map, buckets)`` where
+        ``pat_repo`` maps each ``BitPattern`` to its leaf metadata, ``structs`` is the
+        de-duplicated output dataclass list (each member carrying its Python annotation
+        and the ARM type it was inferred from), ``struct_id_map`` maps struct names to
+        enumerated IDs, ``encoding_id_map`` maps encoding names (``T1``, ...) to theirs,
+        and ``buckets`` groups the patterns by the size they decode under.
 
     Raises:
         ValueError: If an encoding's length is not a supported instruction size.
@@ -489,6 +544,7 @@ def _load(input_yaml: str):
             struct = instr["id"]
             if struct not in struct_id_map:
                 struct_id_map[struct] = len(struct_id_map)
+    encoding_id_map = _encoding_id_map(instructions)
 
     # One struct per instruction; its members are contributed by all encodings, so both
     # the member set and their types are merged encoding by encoding (insertion order
@@ -535,7 +591,7 @@ def _load(input_yaml: str):
         }
         for name, member_types in structs.items()
     ]
-    return pat_repo, struct_list, struct_id_map, buckets
+    return pat_repo, struct_list, struct_id_map, encoding_id_map, buckets
 
 
 def generate_code(input_yaml, tengine, printer, auto_format=True):
@@ -569,7 +625,7 @@ def generate_code(input_yaml, tengine, printer, auto_format=True):
 
     logger.info("Call: generate_code")
 
-    pat_repo, structs, struct_id_map, buckets = _load(input_yaml)
+    pat_repo, structs, struct_id_map, encoding_id_map, buckets = _load(input_yaml)
 
     # Each size is decoded by a tree of its own, built at that size's width. Sizes the
     # format has no encoding for still get a decoder -- an empty one, so that asking for
@@ -599,6 +655,9 @@ def generate_code(input_yaml, tengine, printer, auto_format=True):
         "pat_repo": pat_repo,
         "structs": structs,
         "struct_id_map": struct_id_map,
+        # Sorted by ID so the emitted enum reads T1, T2, ... rather than in the order
+        # the format happens to introduce the forms.
+        "encodings": sorted(encoding_id_map.items(), key=lambda item: item[1]),
         "uid_to_pat": uid_to_pat,
         "trees": trees,
         "supported_sizes": [size for size in INSTRUCTION_SIZES if buckets[size]],

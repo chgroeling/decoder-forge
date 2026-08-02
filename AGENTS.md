@@ -71,6 +71,13 @@ A member whose type stays undetermined is logged as a warning — the block then
 
 An instruction object's members are, in order:
 
+- **The encoding form that matched** — `encoding`, an `Encoding` enum entry (`T1`, `T2`,
+  ...). It is the one member no `decode` block produces: all encodings of an instruction
+  share a single class, so without it the result does not say which form was decoded.
+  The entry's ID is the number in the name (`T1` is 1, not the position it occupies); a
+  name without a number, or one whose number another name already claimed (`A1` and `T1`
+  in a format covering both instruction sets), gets the lowest free ID instead. The
+  pseudo-instructions have no encoding and no such member.
 - **What the block assigns** — `extract_output_variables`.
 - **Plus the encoding's own `bit_fields` that never become one of them** — fields the block merely tests (`extract_unassigned_inputs`, e.g. `firstcond`/`mask` in `IT`) and fields it does not mention at all (`option` in `DSB`, the coprocessor register numbers of `MCR`). Both are passed through verbatim so no encoded information is lost. The candidate set is restricted to `bit_fields` because the transpiler also reports enum/constant tokens (`SRType_LSL`, `TRUE`) as inputs.
 - **Minus the variables subsumed by another output** — `extract_subsumed_variables`. A variable the block splices verbatim into another output, and reads nowhere else, is a bit-slice of that output and adds nothing. Only `I1`/`I2` in `B` T4 and `BL` T1 qualify across the whole format: they are bits 23 and 22 of the `imm32` they help build. Keeping them duplicated information in `BL` and forced `B` T1/T2/T3 to invent a value for a field their encoding has no notion of. The analysis is width-aware (a truncating `SignExtend`/`ZeroExtend` does not preserve its operands), which is why it takes the encoding's `input_types` and lives upstream; a read in any other position — a condition, an arithmetic operand, a bit index — keeps the variable, which is what separates `I1` from `n` in `LDM` T1 (read only as the index in `registers<n>`) and from `dp_operation` in the VFP encodings (read only as an `if` selector).

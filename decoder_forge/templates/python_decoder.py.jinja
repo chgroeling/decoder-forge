@@ -52,6 +52,20 @@ class InstructionSize(IntEnum):
     SIZE_32BIT = 32
 
 
+class Encoding(IntEnum):
+    """Which encoding form of an instruction was decoded.
+
+    An instruction is spelled by several encodings -- named T1, T2, ... in an
+    architecture manual -- that share one instruction object, so the form that matched
+    is only recoverable from the object's ``encoding`` member. The pseudo-instructions
+    (``NoMatch``, ``Undefined``, ``Unpredictable``, ``See``) have no encoding and carry
+    no such member.
+    """
+    {%- for name, id in encodings %}
+    {{ name }} = {{ id }}
+    {%- endfor %}
+
+
 class Opcode(IntEnum):
     OP_NO_MATCH = -1
     OP_UNDEFINED = -2
@@ -118,6 +132,9 @@ def _bits(instr, lsb, width):
 @dataclass(frozen=True, eq=True)
 class {{struct.name}}:
     opcode: ClassVar[int] = Opcode.OP_{{ struct.name.upper() }}
+    {#- The encoding form is a member like any other: all encodings of an instruction
+        share this class, so which one matched is only known from the decoded object. #}
+    encoding: Encoding
     {%- if struct.members|length > 0 %}
         {#- The annotation is how the value is represented in Python; the trailing
             comment names the ARM type it was inferred from, which also carries the

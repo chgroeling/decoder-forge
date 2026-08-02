@@ -106,12 +106,13 @@ The generated module exposes:
 | `decode_8bit` / `decode_16bit` / `decode_32bit` `(instr, ctx)` | The per-size decoders `decode` routes to; call directly if the size is already known |
 | `InstructionSize` | `SIZE_8BIT` / `SIZE_16BIT` / `SIZE_32BIT`, valued as bit counts |
 | `get_supported_sizes() -> tuple[InstructionSize, ...]` | The sizes this instruction set has encodings for |
+| `Encoding` | `T1`, `T2`, … — the encoding forms the instruction set names |
 | `Context` | Runtime context passed through to the transpiled decode block |
 | `NoMatch` / `Undefined` / `Unpredictable` / `See` | Pseudo-instructions |
 
 `instr` holds exactly `size` bits — no padding, and no bits belonging to whatever follows it. A size the instruction set does not use answers `NoMatch` rather than raising.
 
-One frozen dataclass per instruction carries all decoded fields as required members, each annotated with its Python type and (as a trailing comment) its ARM type.
+One frozen dataclass per instruction carries all decoded fields as required members, each annotated with its Python type and (as a trailing comment) its ARM type. All encodings of an instruction share that one class, so every instruction object also carries an `encoding` member naming the form it was decoded from (`ADD_immediate(encoding=Encoding.T4, …)`). The pseudo-instructions have no encoding and no such member.
 
 ## Development
 
