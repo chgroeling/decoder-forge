@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   already took — gets the lowest free ID instead. The pseudo-instructions (`NoMatch`,
   `Undefined`, `Unpredictable`, `See`) have no encoding and no such member.
 
+### Changed
+
+- Bump arm-transpiller dependency to v2.0.1, which emits an inline comment on the same
+  line as the statement it belongs to.
+
 ## [3.0.0]
 
 ### Added
